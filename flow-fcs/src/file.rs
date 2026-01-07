@@ -20,7 +20,7 @@ use std::sync::{Arc, RwLock};
 // External crate imports
 use anyhow::{Result, anyhow};
 use itertools::{Itertools, MinMaxResult};
-use memmap2::Mmap;
+use memmap3::{Mmap, MmapOptions};
 use ndarray::{Array2, ArrayView1};
 use polars::prelude::*;
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
@@ -61,13 +61,10 @@ impl AccessWrapper {
         let file = File::open(path)?;
         let path = PathBuf::from(path);
 
-        // SAFETY: We're creating a read-only memory map from a valid file handle.
-        // The map remains valid because:
-        // 1. We're using MAP_PRIVATE (or equivalent), so writes don't affect us
-        // 2. The file is opened read-only, preventing modifications
-        // 3. The Mmap is wrapped in Arc, ensuring it lives long enough
-        // 4. FCS files are never modified after creation (read-only by convention)
-        let mmap = unsafe { Mmap::map(&file)? };
+        // memmap3 provides better safety guarantees than memmap2, though OS-level
+        // memory mapping still requires unsafe at creation time. The resulting Mmap
+        // is safe to use and provides better guarantees than memmap2.
+        let mmap = unsafe { MmapOptions::new().map(&file)? };
 
         Ok(Self {
             path,

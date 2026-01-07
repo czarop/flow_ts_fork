@@ -54,8 +54,7 @@ serde_json = { workspace = true }
 uuid = { workspace = true, features = ["v4"] } # For generating UUIDs/GUIDs
 memchr = { workspace = true } # SIMD-accelerated string searching in metadata parsing
 rustc-hash = { workspace = true } # A speedy, non-cryptographic hashing algorithm used by rustc
-memmap2 = { workspace = true }  # For memory-mapping large files
-# TODO: check out https://crates.io/crates/memmap3 as a `safe` replacement 
+memmap3 = { workspace = true }  # For memory-mapping large files (safe, zero-unsafe replacement for memmap2) 
 
 # DX improvement
 itertools = { workspace = true } # For iterating over collections

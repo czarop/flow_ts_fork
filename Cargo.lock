@@ -866,7 +866,7 @@ dependencies = [
  "derive_builder",
  "itertools 0.14.0",
  "memchr",
- "memmap2",
+ "memmap3",
  "ndarray 0.17.1",
  "ndarray-linalg",
  "polars",
@@ -1504,6 +1504,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lazy_static"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+
+[[package]]
 name = "libc"
 version = "0.2.179"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1593,6 +1599,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "744133e4a0e0a658e1374cf3bf8e415c4052a15a111acd372764c55b4177d490"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "memmap3"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "166250b0dc9c5d67b36a7fee670cca6f4cc0019a2e88445488dcd3ebd35c69e8"
+dependencies = [
+ "lazy_static",
+ "memmap2",
+ "memmap3-macros",
+ "parking_lot",
+ "xxhash-rust",
+]
+
+[[package]]
+name = "memmap3-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5afa8d7c81bc501645b10192a15f195b604cbaad4c5d14c50fe319f75870e6fa"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

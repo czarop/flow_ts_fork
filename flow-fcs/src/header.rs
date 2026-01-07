@@ -3,7 +3,7 @@ use super::version::Version;
 use anyhow::{Result, anyhow};
 use core::str;
 // use image::EncodableLayout;
-use memmap2::Mmap;
+use memmap3::Mmap;
 use serde::{Serialize, Serializer, ser::SerializeMap};
 use std::{char, ops::RangeInclusive};
 

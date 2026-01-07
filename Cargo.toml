@@ -71,8 +71,7 @@ serde_json = "1.0.148"
 uuid = { version = "1.18.1", features = ["v4"] } # For generating UUIDs/GUIDs
 memchr = "2.7.6" # SIMD-accelerated string searching in metadata parsing
 rustc-hash = "2.1" # A speedy, non-cryptographic hashing algorithm used by rustc
-memmap2 = "0.9.8"  # For memory-mapping large files
-# TODO: check out https://crates.io/crates/memmap3 as a `safe` replacement 
+memmap3 = "0.1"  # For memory-mapping large files (safe, zero-unsafe replacement for memmap2) 
 
 # DX improvement
 itertools = "0.14" # For iterating over collections

@@ -8,7 +8,7 @@ use super::{
     },
 };
 use anyhow::{Result, anyhow};
-use memmap2::Mmap;
+use memmap3::Mmap;
 use regex::bytes::Regex;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
