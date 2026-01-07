@@ -149,100 +149,68 @@ pub fn parse_spillover(value: &str) -> Option<MixedKeyword> {
     })
 }
 
-/// Unified parameter extraction result for Pn*, Gn*, Rn* patterns
+/// Known prefixes for parameter-related keywords
 ///
-/// This struct holds the parsed components of parameter-related keywords,
-/// allowing uniform handling of parameter, gate, and region keywords.
-pub struct ParameterParts {
-    pub param_number: usize,
-    pub suffix: String,
-}
+/// These prefixes are used for parameter (P), gate (G, deprecated), and region (R) keywords.
+/// All follow the pattern `{prefix}{number}{suffix}`.
+const PARAMETER_KEYWORD_PREFIXES: &[&str] = &["P", "G", "R"];
 
-/// Extracts parameter number and suffix from parameter keywords
+/// Extracts suffix from parameter keywords
 ///
 /// Handles patterns like:
-/// - `P123N` -> `ParameterParts { param_number: 123, suffix: "N" }`
-/// - `G456E` -> `ParameterParts { param_number: 456, suffix: "E" }` (deprecated gate keywords)
-/// - `R789W` -> `ParameterParts { param_number: 789, suffix: "W" }` (region keywords)
+/// - `P123N` -> `Some("N")`
+/// - `G456E` -> `Some("E")` (deprecated gate keywords)
+/// - `R789W` -> `Some("W")` (region keywords)
+///
+/// The parameter number is already embedded in the keyword name and can be
+/// extracted separately if needed. This function only extracts the suffix
+/// for pattern matching purposes.
 ///
 /// # Arguments
 /// * `key` - Keyword name without `$` prefix (e.g., "P1N", "G2E", "R3W")
 ///
 /// # Returns
-/// `Some(ParameterParts)` if the pattern matches, `None` otherwise
-pub fn extract_parameter_parts(key: &str) -> Option<ParameterParts> {
-    // Try Pn* pattern first
-    if let Some(rest) = key.strip_prefix("P") {
-        let mut chars = rest.chars();
-        if let Some(first_char) = chars.next() {
-            if first_char.is_numeric() {
-                let mut param_str = first_char.to_string();
-                param_str.extend(chars.by_ref().take_while(|c| c.is_numeric()));
-
-                if let Ok(param_number) = param_str.parse::<usize>() {
-                    let suffix: String = chars.collect();
-                    return Some(ParameterParts {
-                        param_number,
-                        suffix,
-                    });
-                }
-            }
+/// `Some(suffix)` if the pattern matches, `None` otherwise
+///
+/// # Note
+/// This function assumes the key has already been validated as a parameter keyword
+/// (e.g., via `is_parameter_keyword`). It will find the matching prefix and extract the suffix.
+pub fn extract_parameter_suffix(key: &str) -> Option<String> {
+    let mut chars = key.chars();
+    // Skip the first letter (we already know it's a parameter keyword)
+    chars.next();
+    if let Some(first_char) = chars.next() {
+        if first_char.is_numeric() {
+            // Skip over the numeric part
+            chars.by_ref().take_while(|c| c.is_numeric()).for_each(drop);
+            let suffix: String = chars.collect();
+            return Some(suffix);
         }
     }
-
-    // Try Gn* pattern (deprecated)
-    if let Some(rest) = key.strip_prefix("G") {
-        let mut chars = rest.chars();
-        if let Some(first_char) = chars.next() {
-            if first_char.is_numeric() {
-                let mut param_str = first_char.to_string();
-                param_str.extend(chars.by_ref().take_while(|c| c.is_numeric()));
-
-                if let Ok(param_number) = param_str.parse::<usize>() {
-                    let suffix: String = chars.collect();
-                    return Some(ParameterParts {
-                        param_number,
-                        suffix,
-                    });
-                }
-            }
-        }
-    }
-
-    // Try Rn* pattern
-    if let Some(rest) = key.strip_prefix("R") {
-        let mut chars = rest.chars();
-        if let Some(first_char) = chars.next() {
-            if first_char.is_numeric() {
-                let mut param_str = first_char.to_string();
-                param_str.extend(chars.by_ref().take_while(|c| c.is_numeric()));
-
-                if let Ok(param_number) = param_str.parse::<usize>() {
-                    let suffix: String = chars.collect();
-                    return Some(ParameterParts {
-                        param_number,
-                        suffix,
-                    });
-                }
-            }
-        }
-    }
-
     None
 }
 
-/// Checks if a keyword is a parameter keyword (P followed by digits)
+/// Checks if a keyword is a parameter keyword
 ///
-/// Parameter keywords follow the pattern `$PnX` where `n` is a number and `X` is a suffix.
-/// Examples: `$P1N`, `$P2S`, `$P3E`
+/// Parameter keywords follow the pattern `{prefix}nX` where:
+/// - `prefix` is one of the known prefixes (P, G, R)
+/// - `n` is a number
+/// - `X` is a suffix
+///
+/// Examples: `$P1N`, `$G2E`, `$R3W`
 ///
 /// # Arguments
 /// * `key` - Keyword name to check (with or without `$` prefix)
 ///
 /// # Returns
-/// `true` if the keyword matches the parameter pattern, `false` otherwise
+/// `true` if the keyword matches any parameter keyword pattern, `false` otherwise
 pub fn is_parameter_keyword(key: &str) -> bool {
-    key.strip_prefix("P")
-        .map(|rest| rest.chars().next().map_or(false, |c| c.is_numeric()))
-        .unwrap_or(false)
+    for prefix in PARAMETER_KEYWORD_PREFIXES {
+        if let Some(rest) = key.strip_prefix(prefix) {
+            if rest.chars().next().map_or(false, |c| c.is_numeric()) {
+                return true;
+            }
+        }
+    }
+    false
 }
