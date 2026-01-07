@@ -112,6 +112,46 @@ pub enum MixedKeyword {
     PnL(Vec<usize>),
 }
 
+impl StringableKeyword for MixedKeyword {
+    fn get_str(&self) -> Cow<'_, str> {
+        match self {
+            Self::PnCalibration(f1, s) => Cow::Owned(format!("PnCalibration({}, {})", f1, s)),
+            Self::PnD(s, f1, f2) => Cow::Owned(format!("PnD({}, {}, {})", s, f1, f2)),
+            Self::PnE(f1, f2) => Cow::Owned(format!("PnE({}, {})", f1, f2)),
+            Self::GnE(f1, f2) => Cow::Owned(format!("GnE({}, {})", f1, f2)),
+            Self::PnL(vec) => Cow::Owned(format!(
+                "PnL({})",
+                vec.iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )),
+            Self::RnW(vec) => Cow::Owned(format!(
+                "RnW({})",
+                vec.iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )),
+            Self::SPILLOVER {
+                n_parameters,
+                parameter_names,
+                matrix_values,
+            } => Cow::Owned(format!(
+                "SPILLOVER({}, {}, {})",
+                n_parameters,
+                parameter_names.join(", "),
+                matrix_values
+                    .iter()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )),
+            _ => Cow::Borrowed(""),
+        }
+    }
+}
+
 impl Eq for MixedKeyword {}
 impl Hash for MixedKeyword {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
