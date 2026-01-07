@@ -1,0 +1,19 @@
+[package]
+name = "peacoqc-cli"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Command-line tool for PeacoQC flow cytometry quality control"
+
+[[bin]]
+name = "peacoqc"
+path = "src/main.rs"
+
+[dependencies]
+# flow-fcs = "0.1.0"
+# peacoqc-rs = "0.1.0"
+anyhow.workspace = true
+serde_json.workspace = true
+clap = "4.5.54"
+indicatif = "0.18.3"
