@@ -9,9 +9,7 @@ description = "High-level Flow Cytometry Standard (FCS) file struct and operatio
 keywords = [
     "flow",
     "cytometry",
-    "standard",
     "fcs",
-    "bioinformatics",
     "science",
     "parser",
 ]
