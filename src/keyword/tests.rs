@@ -8,13 +8,19 @@ mod fixed_keywords {
     #[test]
     fn test_parse_par() {
         let result = match_and_parse_keyword("$PAR", "10");
-        assert!(matches!(result, KeywordCreationResult::Int(IntegerKeyword::PAR(10))));
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Int(IntegerKeyword::PAR(10))
+        ));
     }
 
     #[test]
     fn test_parse_tot() {
         let result = match_and_parse_keyword("$TOT", "1000");
-        assert!(matches!(result, KeywordCreationResult::Int(IntegerKeyword::TOT(1000))));
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Int(IntegerKeyword::TOT(1000))
+        ));
     }
 
     #[test]
@@ -29,7 +35,7 @@ mod fixed_keywords {
 
     #[test]
     fn test_parse_guid() {
-        let result = match_and_parse_keyword("$GUID", "12345678-1234-1234-1234-123456789abc");
+        let result = match_and_parse_keyword("GUID", "12345678-1234-1234-1234-123456789abc");
         if let KeywordCreationResult::String(StringKeyword::GUID(guid)) = result {
             assert_eq!(guid.as_ref(), "12345678-1234-1234-1234-123456789abc");
         } else {
@@ -40,13 +46,19 @@ mod fixed_keywords {
     #[test]
     fn test_parse_byteord() {
         let result = match_and_parse_keyword("$BYTEORD", "1,2,3,4");
-        assert!(matches!(result, KeywordCreationResult::Byte(ByteKeyword::BYTEORD(_))));
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Byte(ByteKeyword::BYTEORD(_))
+        ));
     }
 
     #[test]
     fn test_parse_datatype() {
         let result = match_and_parse_keyword("$DATATYPE", "F");
-        assert!(matches!(result, KeywordCreationResult::Byte(ByteKeyword::DATATYPE(_))));
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Byte(ByteKeyword::DATATYPE(_))
+        ));
     }
 
     #[test]
@@ -58,7 +70,10 @@ mod fixed_keywords {
     #[test]
     fn test_parse_begindata() {
         let result = match_and_parse_keyword("$BEGINDATA", "256");
-        assert!(matches!(result, KeywordCreationResult::Int(IntegerKeyword::BeginData(256))));
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Int(IntegerKeyword::BeginData(256))
+        ));
     }
 }
 
@@ -110,7 +125,10 @@ mod parameter_keywords {
     #[test]
     fn test_parse_p5r() {
         let result = match_and_parse_keyword("$P5R", "1024");
-        assert!(matches!(result, KeywordCreationResult::Int(IntegerKeyword::PnR(1024))));
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Int(IntegerKeyword::PnR(1024))
+        ));
     }
 
     #[test]
@@ -341,16 +359,22 @@ mod integration {
     #[test]
     fn test_end_to_end_parsing() {
         let result = match_and_parse_keyword("$PAR", "10");
-        assert!(matches!(result, KeywordCreationResult::Int(IntegerKeyword::PAR(10))));
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Int(IntegerKeyword::PAR(10))
+        ));
     }
 
     #[test]
     fn test_arc_str_sharing() {
         let result1 = match_and_parse_keyword("$FIL", "test.fcs");
         let result2 = match_and_parse_keyword("$FIL", "test.fcs");
-        
-        if let (KeywordCreationResult::String(StringKeyword::FIL(name1)), 
-                KeywordCreationResult::String(StringKeyword::FIL(name2))) = (result1, result2) {
+
+        if let (
+            KeywordCreationResult::String(StringKeyword::FIL(name1)),
+            KeywordCreationResult::String(StringKeyword::FIL(name2)),
+        ) = (result1, result2)
+        {
             // Arc::ptr_eq would check if they're the same allocation
             assert_eq!(name1, name2);
         } else {
@@ -358,4 +382,3 @@ mod integration {
         }
     }
 }
-
