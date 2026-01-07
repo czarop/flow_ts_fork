@@ -159,7 +159,6 @@ impl StringableKeyword for MixedKeyword {
                     .collect::<Vec<_>>()
                     .join(", ")
             )),
-            _ => Cow::Borrowed(""),
         }
     }
 }
