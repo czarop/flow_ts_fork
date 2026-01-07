@@ -3,8 +3,8 @@ use super::{
     datatype::FcsDataType,
     header::Header,
     keyword::{
-        ByteKeyword, IntegerKeyword, IntegerableKeyword, Keyword, KeywordCreationResult,
-        MixedKeyword, StringKeyword, StringableKeyword, match_and_parse_keyword,
+        ByteKeyword, FloatKeyword, IntegerKeyword, IntegerableKeyword, Keyword,
+        KeywordCreationResult, MixedKeyword, StringKeyword, match_and_parse_keyword,
     },
 };
 use anyhow::{Result, anyhow};
@@ -12,6 +12,7 @@ use memmap2::Mmap;
 use regex::bytes::Regex;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 pub type KeywordMap = FxHashMap<String, Keyword>;
 
@@ -144,14 +145,14 @@ impl Metadata {
 
     /// Validates if a GUID is present in the file's metadata, and if not, generates a new one.
     pub fn validate_guid(&mut self) {
-        if let Err(_) = self.get_string_keyword("GUID") {
+        if self.get_string_keyword("GUID").is_err() {
             self.insert_string_keyword("GUID".to_string(), Uuid::new_v4().to_string());
         }
     }
 
     /// Confirm that no stored keyword has a value greater than the $PAR keyword indicates
-    pub fn validate_number_of_parameters(&self) -> Result<()> {
-        let n_params = self.get_number_of_parameters()?;
+    fn validate_number_of_parameters(&self) -> Result<()> {
+        let n_params = self.get_number_of_parameters_as_usize()?;
         let n_params_string = n_params.to_string();
         let n_digits = n_params_string.chars().count().to_string();
         let regex_string = r"[PR]\d{1,".to_string() + &n_digits + "}[BENRDFGLOPSTVIW]";
@@ -183,13 +184,13 @@ impl Metadata {
     }
     /// Generic function to get the unwrapped unsigned integer value associated with a numeric keyword (e.g. $PAR, $TOT, etc.)
     fn get_keyword_value_as_usize(&self, keyword: &str) -> Result<&usize> {
-        Ok(self.get_numeric_keyword(keyword)?.get_usize())
+        Ok(self.get_integer_keyword(keyword)?.get_usize())
     }
 
     /// Return the number of parameters in the file from the $PAR keyword in the metadata TEXT section
     /// # Errors
     /// Will return `Err` if the $PAR keyword is not present in the metadata keywords hashmap
-    pub fn get_number_of_parameters(&self) -> Result<&usize> {
+    pub fn get_number_of_parameters_as_usize(&self) -> Result<&usize> {
         self.get_keyword_value_as_usize("$PAR")
     }
 
@@ -226,11 +227,25 @@ impl Metadata {
     /// Returns a keyword that holds numeric data from the keywords hashmap, if it exists
     /// # Errors
     /// Will return `Err` if the keyword is not present in the keywords hashmap
-    pub fn get_numeric_keyword(&self, keyword: &str) -> Result<&IntegerKeyword> {
+    pub fn get_integer_keyword(&self, keyword: &str) -> Result<&IntegerKeyword> {
         if let Some(keyword) = self.keywords.get(keyword) {
             match keyword {
-                Keyword::Int(numeric) => Ok(numeric),
-                _ => Err(anyhow!("Keyword is not numeric variant")),
+                Keyword::Int(integer) => Ok(integer),
+                _ => Err(anyhow!("Keyword is not integer variant")),
+            }
+        } else {
+            Err(anyhow!("No {keyword} keyword stored."))
+        }
+    }
+
+    /// Returns a keyword that holds numeric data from the keywords hashmap, if it exists
+    /// # Errors
+    /// Will return `Err` if the keyword is not present in the keywords hashmap
+    pub fn get_float_keyword(&self, keyword: &str) -> Result<&FloatKeyword> {
+        if let Some(keyword) = self.keywords.get(keyword) {
+            match keyword {
+                Keyword::Float(float) => Ok(float),
+                _ => Err(anyhow!("Keyword is not float variant")),
             }
         } else {
             Err(anyhow!("No {keyword} keyword stored."))
@@ -282,7 +297,7 @@ impl Metadata {
     /// General function to get a given parameter's string keyword from the file's metadata (e.g. `$PnN` or `$PnS`)
     /// # Errors
     /// Will return `Err` if the keyword is not present in the keywords hashmap
-    fn get_parameter_string_metadata(
+    pub fn get_parameter_string_metadata(
         &self,
         parameter_number: usize,
         suffix: &str,
@@ -295,14 +310,14 @@ impl Metadata {
     /// Generic function to get a given parameter's string keyword from the file's metadata (e.g. `$PnN` or `$PnS`)
     /// # Errors
     /// Will return `Err` if the keyword is not present in the keywords hashmap
-    fn get_parameter_numeric_metadata(
+    pub fn get_parameter_numeric_metadata(
         &self,
         parameter_number: usize,
         suffix: &str,
     ) -> Result<&IntegerKeyword> {
         // Interpolate the parameter number into the keyword:
         let keyword = format!("$P{parameter_number}{suffix}");
-        self.get_numeric_keyword(&keyword)
+        self.get_integer_keyword(&keyword)
     }
 
     /// Get excitation wavelength(s) for a parameter from `$PnL` keyword
@@ -316,7 +331,7 @@ impl Metadata {
         let keyword = format!("$P{parameter_number}L");
 
         // Try as integer keyword first (older FCS format)
-        if let Ok(int_keyword) = self.get_numeric_keyword(&keyword) {
+        if let Ok(int_keyword) = self.get_integer_keyword(&keyword) {
             if let IntegerKeyword::PnL(wavelength) = int_keyword {
                 return Ok(Some(*wavelength));
             }
@@ -336,11 +351,11 @@ impl Metadata {
     /// Return the name of the parameter's channel from the `$PnN` keyword in the metadata TEXT section, where `n` is the provided parameter index (1-based)
     /// # Errors
     /// Will return `Err` if the keyword is not present in the keywords hashmap
-    pub fn get_parameter_channel_name(&self, parameter_number: usize) -> Result<&String> {
+    pub fn get_parameter_channel_name(&self, parameter_number: usize) -> Result<&str> {
         if let StringKeyword::PnN(name) =
             self.get_parameter_string_metadata(parameter_number, "N")?
         {
-            Ok(name)
+            Ok(name.as_ref())
         } else {
             Err(anyhow!(
                 "$P{parameter_number}N keyword not found in metadata TEXT section",
@@ -351,11 +366,11 @@ impl Metadata {
     /// Return the label name of the parameter from the `$PnS` keyword in the metadata TEXT section, where `n` is the provided parameter number
     /// # Errors
     /// Will return `Err` if the keyword is not present in the keywords hashmap
-    pub fn get_parameter_label(&self, parameter_number: usize) -> Result<&String> {
+    pub fn get_parameter_label(&self, parameter_number: usize) -> Result<&str> {
         if let StringKeyword::PnS(label) =
             self.get_parameter_string_metadata(parameter_number, "S")?
         {
-            Ok(label)
+            Ok(label.as_ref())
         } else {
             Err(anyhow!(
                 "$P{parameter_number}S keyword not found in metadata TEXT section",
@@ -377,7 +392,20 @@ impl Metadata {
 
     /// Insert or update a string keyword in the metadata
     pub fn insert_string_keyword(&mut self, key: String, value: String) {
-        let keyword = StringKeyword::GUID(value);
-        self.keywords.insert(key, Keyword::String(keyword));
+        let normalized_key = if key.starts_with('$') {
+            key
+        } else {
+            format!("${key}")
+        };
+
+        let parsed = match_and_parse_keyword(&normalized_key, value.as_str());
+        let string_keyword = match parsed {
+            KeywordCreationResult::String(string_keyword) => string_keyword,
+            // If parsing fails (or parses to a non-string keyword), fall back to `Other`.
+            _ => StringKeyword::Other(Arc::from(value)),
+        };
+
+        self.keywords
+            .insert(normalized_key, Keyword::String(string_keyword));
     }
 }
