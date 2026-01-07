@@ -18,7 +18,6 @@ pub type EventDataFrame = Arc<DataFrame>;
 pub type EventDatum = f32;
 pub type ChannelName = Arc<str>;
 pub type LabelName = Arc<str>;
-pub type ParameterCount = usize;
 pub type ParameterMap = FxHashMap<ChannelName, Parameter>;
 
 /// Instructions for parameter processing transformations

@@ -385,6 +385,7 @@ pub trait StringableKeyword {
 pub trait IntegerableKeyword {
     fn get_usize(&self) -> &usize;
 }
+#[allow(unused)]
 pub trait FloatableKeyword {
     fn get_f32(&self) -> &f32;
 }

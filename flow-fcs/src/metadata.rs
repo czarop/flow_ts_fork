@@ -164,6 +164,7 @@ impl Metadata {
     }
 
     /// Confirm that no stored keyword has a value greater than the $PAR keyword indicates
+    #[allow(unused)]
     fn validate_number_of_parameters(&self) -> Result<()> {
         let n_params = self.get_number_of_parameters()?;
         let n_params_string = n_params.to_string();
