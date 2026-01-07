@@ -2,6 +2,11 @@
 
 A high-performance Rust library for reading, parsing, and manipulating Flow Cytometry Standard (FCS) files.
 
+:construction: 
+> **⚠️ Under Construction**: This library is actively under development. APIs may change, and some features may be incomplete. Use with caution in production environments.
+>
+:construction:
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Repository](https://img.shields.io/badge/github-jrmoynihan%2Fflow--fcs-blue)](https://github.com/jrmoynihan/flow-fcs)
 
