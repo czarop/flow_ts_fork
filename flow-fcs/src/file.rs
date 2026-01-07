@@ -1,6 +1,6 @@
 // Internal crate imports
 use crate::{
-    ChannelName, TransformType,
+    TransformType,
     byteorder::ByteOrder,
     header::Header,
     keyword::{IntegerableKeyword, StringableKeyword},
@@ -12,20 +12,18 @@ use rayon::iter::IntoParallelRefIterator;
 use ndarray_linalg::Inverse;
 use std::borrow::Cow;
 use std::fs::File;
-use std::num::NonZero;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 // External crate imports
 use anyhow::{Result, anyhow};
 use itertools::{Itertools, MinMaxResult};
 use memmap3::{Mmap, MmapOptions};
-use ndarray::{Array2, ArrayView1};
+use ndarray::Array2;
 use polars::prelude::*;
-use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+use rayon::iter::ParallelIterator;
 use rayon::slice::ParallelSlice;
-use strum_macros::Display;
 
 /// A shareable wrapper around the file path and memory-map
 ///

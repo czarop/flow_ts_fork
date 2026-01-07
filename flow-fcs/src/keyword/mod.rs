@@ -2,8 +2,6 @@ mod helpers;
 mod parsing;
 #[cfg(test)]
 mod tests;
-
-pub use helpers::*;
 use parsing::*;
 
 use crate::{byteorder::ByteOrder, datatype::FcsDataType};
@@ -45,6 +43,7 @@ type LowerBound = f32;
 type UpperBound = f32;
 
 #[derive(Clone, Debug, Display, Serialize, Deserialize, PartialEq)]
+#[allow(deprecated)]
 pub enum MixedKeyword {
     /// Specifies the conversion of arbitrary signal units, recorded as parameter values (uncompensated or compensated)
     /// to some well defined unit. For example, mean equivalent soluble fluorochrome (MESF) or antibody molecules.
@@ -125,6 +124,7 @@ pub enum MixedKeyword {
 }
 
 impl StringableKeyword for MixedKeyword {
+    #[allow(deprecated)]
     fn get_str(&self) -> Cow<'_, str> {
         match self {
             Self::PnCalibration(f1, s) => Cow::Owned(format!("PnCalibration({}, {})", f1, s)),
@@ -166,6 +166,7 @@ impl StringableKeyword for MixedKeyword {
 
 impl Eq for MixedKeyword {}
 impl Hash for MixedKeyword {
+    #[allow(deprecated)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
             Self::PnCalibration(f1, s) => {
@@ -254,6 +255,7 @@ impl Hash for FloatKeyword {
 }
 
 #[derive(Clone, Debug, Display, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[allow(deprecated)]
 pub enum StringKeyword {
     /// The name of the cytometer used to acquire the data (FCS 1.0+)
     CYT(Arc<str>),
@@ -421,6 +423,7 @@ impl FloatableKeyword for FloatKeyword {
 
 impl StringableKeyword for StringKeyword {
     /// Get a reference to the string value (if it exists) from a StringKeyword variant
+    #[allow(deprecated)]
     fn get_str(&self) -> Cow<'_, str> {
         match self {
             Self::CYT(value)

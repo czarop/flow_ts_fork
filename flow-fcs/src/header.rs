@@ -5,7 +5,7 @@ use core::str;
 // use image::EncodableLayout;
 use memmap3::Mmap;
 use serde::{Serialize, Serializer, ser::SerializeMap};
-use std::{char, ops::RangeInclusive};
+use std::ops::RangeInclusive;
 
 /// Contains FCS version and byte offsets to text, data, and analysis segments
 ///
