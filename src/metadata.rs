@@ -152,7 +152,7 @@ impl Metadata {
 
     /// Confirm that no stored keyword has a value greater than the $PAR keyword indicates
     fn validate_number_of_parameters(&self) -> Result<()> {
-        let n_params = self.get_number_of_parameters_as_usize()?;
+        let n_params = self.get_number_of_parameters()?;
         let n_params_string = n_params.to_string();
         let n_digits = n_params_string.chars().count().to_string();
         let regex_string = r"[PR]\d{1,".to_string() + &n_digits + "}[BENRDFGLOPSTVIW]";
@@ -190,7 +190,7 @@ impl Metadata {
     /// Return the number of parameters in the file from the $PAR keyword in the metadata TEXT section
     /// # Errors
     /// Will return `Err` if the $PAR keyword is not present in the metadata keywords hashmap
-    pub fn get_number_of_parameters_as_usize(&self) -> Result<&usize> {
+    pub fn get_number_of_parameters(&self) -> Result<&usize> {
         self.get_keyword_value_as_usize("$PAR")
     }
 
