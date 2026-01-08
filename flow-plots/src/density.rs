@@ -1,9 +1,8 @@
-use plotters::style::colors::colormaps::ViridisRGB;
 use rustc_hash::FxHashMap;
 use serde::Serialize;
 use ts_rs::TS;
 
-use super::PlotOptions;
+use crate::options::DensityPlotOptions;
 
 /// Optimized density calculation with pixel-based rendering
 ///
@@ -15,7 +14,7 @@ use super::PlotOptions;
 /// 5. Converts to sparse HashMap only for non-zero pixels
 /// 6. Result: 10-50x faster, uses 5-10x less memory than previous implementation
 /// Raw pixel data for direct buffer writing
-#[derive(Clone, Serialize, TS)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[ts(export)]
 pub struct RawPixelData {
     pub x: f32,
@@ -117,23 +116,24 @@ pub fn calculate_density_per_pixel(
     data: &[(f32, f32)],
     width: usize,
     height: usize,
-    options: &PlotOptions,
+    options: &DensityPlotOptions,
 ) -> Vec<RawPixelData> {
-    calculate_density_per_pixel_cancelable(data, width, height, options, || false)
-        .expect("calculate_density_per_pixel_cancelable returned None when cancellation is disabled")
+    calculate_density_per_pixel_cancelable(data, width, height, options, || false).expect(
+        "calculate_density_per_pixel_cancelable returned None when cancellation is disabled",
+    )
 }
 
 pub fn calculate_density_per_pixel_cancelable(
     data: &[(f32, f32)],
     width: usize,
     height: usize,
-    options: &PlotOptions,
+    options: &DensityPlotOptions,
     mut should_cancel: impl FnMut() -> bool,
 ) -> Option<Vec<RawPixelData>> {
     // Calculate scaling factors
     // FIX: Corrected y-axis calculation (was incorrectly using plot_range_x)
-    let scale_x = width as f32 / (*options.plot_range_x.end() - *options.plot_range_x.start());
-    let scale_y = height as f32 / (*options.plot_range_y.end() - *options.plot_range_y.start());
+    let scale_x = width as f32 / (*options.x_axis.range.end() - *options.x_axis.range.start());
+    let scale_y = height as f32 / (*options.y_axis.range.end() - *options.y_axis.range.start());
 
     // OPTIMIZED DENSITY BUILDING: Use array-based approach for 7x performance
     // Benchmarks show array-based is much faster than HashMap due to cache locality:
@@ -169,9 +169,9 @@ pub fn calculate_density_per_pixel_cancelable(
             }
         }
 
-        let pixel_x = (((x - *options.plot_range_x.start()) * scale_x).floor() as isize)
+        let pixel_x = (((x - *options.x_axis.range.start()) * scale_x).floor() as isize)
             .clamp(0, (width - 1) as isize) as usize;
-        let pixel_y = (((y - *options.plot_range_y.start()) * scale_y).floor() as isize)
+        let pixel_y = (((y - *options.y_axis.range.start()) * scale_y).floor() as isize)
             .clamp(0, (height - 1) as isize) as usize;
 
         let idx = pixel_y * width + pixel_x;
@@ -226,15 +226,15 @@ pub fn calculate_density_per_pixel_cancelable(
             // Normalize density to 0-1 range
             let normalized_density = dens / max_density_log;
 
-            // Get color from Viridis colormap - ViridisRGB returns u8 values 0-255 directly
-            let color = ViridisRGB::get_color(normalized_density);
+            // Get color from colormap
+            let color = options.colormap.map(normalized_density);
             let r = color.0;
             let g = color.1;
             let b = color.2;
 
             // Map pixel coordinates back to data coordinates
-            let x = (pixel_x as f32 / scale_x) + *options.plot_range_x.start();
-            let y = (pixel_y as f32 / scale_y) + *options.plot_range_y.start();
+            let x = (pixel_x as f32 / scale_x) + *options.x_axis.range.start();
+            let y = (pixel_y as f32 / scale_y) + *options.y_axis.range.start();
 
             RawPixelData { x, y, r, g, b }
         })
