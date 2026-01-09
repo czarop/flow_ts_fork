@@ -1,0 +1,712 @@
+---
+title: "Documentation System Guide"
+date: "2025-12-19"
+author: "Flow Team"
+category: "guides"
+tags: ["guide", "documentation", "automation", "mdsvex", "svelte"]
+related_benchmarks: []
+related_files: ["src/scripts/extract-benchmarks.ts", "src/scripts/extract-feature-history.ts", "src/scripts/build-search-index.ts", "src/scripts/generate-changelog.ts"]
+impact: []
+alternatives_considered: []
+---
+
+# Documentation System Guide
+
+## Summary
+
+Flow's documentation system is a comprehensive, automated platform that transforms `.svx` (Svelte + Markdown) files into a searchable, browsable documentation website. The system is organized by crate (flow-fcs, flow-plots, flow-gates), with separate routes for benchmarks, tests, and design decisions. It automatically extracts benchmarks, indexes content, tracks feature history, and generates a changelog—all from frontmatter metadata.
+
+## Architecture
+
+### Core Components
+
+**1. Documentation Routes (Crate-based)**
+- Routes organized by crate: `/flow-fcs`, `/flow-plots`, `/flow-gates`
+- Each crate has sub-routes: `/benchmarks`, `/tests`, `/design-decisions`
+- Search functionality (⌘K / Ctrl+K)
+- Interactive benchmark viewer
+- Responsive design with Tailwind CSS
+
+**2. Content Format (`.svx` files)**
+- MDSvex: Markdown + Svelte components
+- Frontmatter for structured metadata
+- Code syntax highlighting
+- Embedded Svelte components
+
+**3. Automation Scripts**
+- Extract benchmarks from Criterion results (organized by crate)
+- Build search index from all docs (with crate and tag filtering)
+- Extract feature history from frontmatter (grouped by crate)
+- Generate changelog automatically (organized by crate and tags)
+
+## Creating Documentation
+
+### File Structure
+
+Documentation is organized by crate, with separate routes for benchmarks, tests, and design decisions:
+
+```
+src/routes/
+├── flow-fcs/
+│   ├── benchmarks/      # Benchmark documentation for flow-fcs
+│   ├── tests/           # Test documentation for flow-fcs
+│   └── design-decisions/ # Design decisions for flow-fcs
+├── flow-plots/
+│   ├── benchmarks/      # Benchmark documentation for flow-plots
+│   ├── tests/           # Test documentation for flow-plots
+│   └── design-decisions/ # Design decisions for flow-plots
+├── flow-gates/
+│   ├── benchmarks/      # Benchmark documentation for flow-gates
+│   ├── tests/           # Test documentation for flow-gates
+│   └── design-decisions/ # Design decisions for flow-gates
+└── guides/              # General guides (if needed)
+    └── documentation-system/
+```
+
+### Document Template
+
+Every `.svx` file must include frontmatter and follow this structure:
+
+```svelte
+---
+title: "Your Feature Title"
+date: "YYYY-MM-DD"
+author: "Your Name"
+crate: "flow-fcs|flow-plots|flow-gates"
+tags: ["performance", "features", "architecture", "tag1", "tag2"]
+related_benchmarks: ["benchmark_name"]
+related_files: ["path/to/file.rs", "path/to/other.ts"]
+impact:
+  - metric: "Description of metric"
+    before: "Old value"
+    after: "New value"
+    improvement: "X% faster | Xms saved | etc"
+alternatives_considered:
+  - "Option 1 (rejected: reason)"
+  - "Option 2 (rejected: reason)"
+---
+
+# Your Feature Title
+
+## Summary
+2-3 sentences describing what was changed, why, and key results.
+
+## Problem Statement
+Describe the problem or need that motivated the change.
+
+## Implementation Details
+- Key design decisions with code examples
+- Reference specific files and line numbers
+- Explain architectural choices
+- Include diagrams if applicable
+
+## Alternatives Considered
+For each alternative:
+- Describe the approach
+- Explain why it was rejected
+- Document trade-offs
+
+## Performance Impact (if applicable)
+- Include benchmark results with actual numbers
+- Show before/after comparisons
+- Explain real-world impact
+- Reference benchmark files
+
+## Testing
+- List related test files and functions
+- Describe how to verify the implementation
+- Include commands to run tests
+
+## Future Considerations
+- Known limitations
+- Potential improvements
+- When to revisit decisions
+```
+
+### Frontmatter Fields
+
+**Required:**
+- `title`: Human-readable title
+- `date`: ISO format (YYYY-MM-DD)
+- `author`: Your name
+- `crate`: One of: `flow-fcs`, `flow-plots`, `flow-gates`
+- `tags`: Array of relevant tags (e.g., `["performance", "features", "architecture"]`)
+
+**Optional but Recommended:**
+- `related_benchmarks`: Array of benchmark names (for filtering/linking)
+- `related_files`: Array of file paths (for commit hash extraction)
+- `impact`: Array of objects with metric, before, after, improvement
+- `alternatives_considered`: Array of rejected approaches with reasons
+
+**Note:** Categories like "performance", "features", and "architecture" are now tags instead of a separate category field. This allows articles to have multiple tags for better filtering and searchability.
+
+### Code Citations
+
+Reference code using this format (update paths to match your crate structure):
+
+**Single line:**
+```
+File: `flow-plots/src/cache.rs` (line 120)
+```
+
+**Line range:**
+```
+File: `flow-plots/src/cache.rs` (lines 120-150)
+```
+
+**Specific function:**
+```
+Function: `apply_arcsinh_transform_polars` in `flow-fcs/src/file.rs`
+```
+
+### Writing Style
+
+- **Clear and concise**: Write for developers unfamiliar with the code
+- **Honest**: Document trade-offs and limitations
+- **Measured**: Include actual benchmark data, not estimates
+- **Complete**: Cover all required sections
+- **Maintained**: Update if implementation changes significantly
+
+## Automation Scripts
+
+### 1. Extract Benchmarks
+
+**Purpose:** Extracts Criterion benchmark results and generates structured JSON.
+
+**Location:** `src/scripts/extract-benchmarks.ts`
+
+**Usage:**
+```bash
+bun run docs:extract-benchmarks
+```
+
+**Output:** `/static/benchmarks.json`
+
+**What it does:**
+- Scans `target/criterion/` for `estimates.json` files (per crate)
+- Extracts mean, std_dev, median, confidence intervals
+- Groups by crate, then by benchmark group
+- Formats as searchable JSON organized by crate
+
+### 2. Extract Feature History
+
+**Purpose:** Extracts commit hashes and dates for each documentation file.
+
+**Location:** `src/scripts/extract-feature-history.ts`
+
+**Usage:**
+```bash
+bun run docs:extract-feature-history
+```
+
+**Output:** `/static/feature-history.json`
+
+**What it does:**
+- Reads frontmatter from all `.svx` files
+- Uses `related_files` to find implementation commits
+- Extracts commit hash, date, and author
+- Groups by crate and generates timeline for feature cards per crate
+
+### 3. Build Search Index
+
+**Purpose:** Creates searchable index of all documentation.
+
+**Location:** `src/scripts/build-search-index.ts`
+
+**Usage:**
+```bash
+bun run docs:build-search
+```
+
+**Output:** `/static/search-index.json`
+
+**What it does:**
+- Scans all `.svx` files recursively
+- Extracts frontmatter (including `crate` and `tags`) and content
+- Strips markdown formatting
+- Creates fuzzy-searchable index with crate and tag filtering
+
+### 4. Generate Changelog
+
+**Purpose:** Auto-generates `CHANGELOG.md` from documentation frontmatter.
+
+**Location:** `src/scripts/generate-changelog.ts`
+
+**Usage:**
+```bash
+bun run docs:generate-changelog
+```
+
+**Output:** `/CHANGELOG.md`
+
+**What it does:**
+- Reads frontmatter from all `.svx` files
+- Groups by crate first, then by tags (performance, features, architecture)
+- Sorts by date (most recent first)
+- Includes impact metrics and links to crate-specific routes
+
+### 5. Run All Scripts
+
+**Purpose:** Execute all documentation automation at once.
+
+**Usage:**
+```bash
+bun run docs:build
+```
+
+**What it runs:**
+1. `docs:extract-benchmarks`
+2. `docs:extract-feature-history`
+3. `docs:build-search`
+4. `docs:generate-changelog`
+
+**When to run:**
+- After adding/editing documentation
+- Before committing changes
+- Before building for production
+
+## Workflow
+
+### Adding New Documentation
+
+**1. Create the file in the appropriate crate route:**
+```bash
+# For a benchmark in flow-fcs:
+touch src/routes/flow-fcs/benchmarks/my-benchmark/+page.svx
+
+# For a test in flow-plots:
+touch src/routes/flow-plots/tests/my-test/+page.svx
+
+# For a design decision in flow-gates:
+touch src/routes/flow-gates/design-decisions/my-decision/+page.svx
+```
+
+**2. Add frontmatter and content** (use template above)
+- Set `crate` field to match the route (e.g., `flow-fcs`)
+- Add appropriate tags like `["performance"]`, `["features"]`, or `["architecture"]`
+
+**3. Run automation:**
+```bash
+bun run docs:build
+```
+
+**4. Verify locally:**
+```bash
+bun run dev
+# Visit http://localhost:5173/flow-fcs/benchmarks/my-benchmark
+# (or your specific route)
+```
+
+**5. Search for your doc:**
+Press ⌘K and search for your document title
+
+**6. Commit:**
+```bash
+git add .
+git commit -m "docs: add my-feature documentation"
+```
+
+### Editing Existing Documentation
+
+**1. Edit the `.svx` file** directly
+
+**2. Update frontmatter if needed:**
+- Change `date` to today
+- Update `tags` if categorization changed
+- Add to `impact` if there are new metrics
+- Update `related_files` if implementation changed
+
+**3. Rebuild automation:**
+```bash
+bun run docs:build
+```
+
+**4. Verify changes:**
+```bash
+bun run dev
+# Visit your specific route to see changes
+```
+
+### Adding Benchmark Documentation
+
+If your feature includes benchmarks:
+
+**1. Run the benchmark:**
+```bash
+cd flow-fcs  # or flow-plots, flow-gates
+cargo bench
+cd ..
+```
+
+**2. Extract benchmark data:**
+```bash
+bun run docs:extract-benchmarks
+```
+
+**3. Create benchmark documentation:**
+Create a new file in the appropriate crate's benchmarks route:
+```bash
+touch src/routes/flow-fcs/benchmarks/your-benchmark/+page.svx
+```
+
+**4. Add benchmark name to frontmatter:**
+```yaml
+crate: "flow-fcs"
+tags: ["performance", "benchmarks"]
+related_benchmarks: ["your_benchmark_name"]
+```
+
+**5. View in benchmark viewer:**
+Visit `/flow-fcs/benchmarks` to see your results
+
+## Search Functionality
+
+### Using Search
+
+**Keyboard shortcut:** ⌘K (Mac) / Ctrl+K (Windows/Linux)
+
+**Navigation:**
+- **Arrow keys**: Navigate results
+- **Enter**: Open selected result
+- **Escape**: Close search modal
+
+**Search targets:**
+- Document titles
+- Content text
+- Tags
+- Crate names
+
+### Search Index Structure
+
+The search index (`/static/search-index.json`) contains:
+
+```json
+{
+  "documents": [
+    {
+      "title": "Document Title",
+      "path": "/flow-fcs/benchmarks/document",
+      "crate": "flow-fcs",
+      "tags": ["performance", "benchmarks"],
+      "excerpt": "First 200 characters...",
+      "date": "2025-10-11"
+    }
+  ]
+}
+```
+
+## Feature History
+
+### Timeline Cards
+
+Each crate's documentation page displays feature timeline cards showing:
+- Feature title
+- Crate badge
+- Tags
+- Publication date
+- Impact metrics summary
+- Git commit hash
+- Link to full documentation
+
+### How It Works
+
+**1. Frontmatter provides metadata:**
+```yaml
+crate: "flow-fcs"
+tags: ["performance", "benchmarks"]
+related_files: ["flow-fcs/src/file.rs", "flow-fcs/src/cache.rs"]
+impact:
+  - metric: "Cache hit latency"
+    improvement: "94x faster"
+```
+
+**2. Script extracts commit information:**
+- Searches git history for commits modifying `related_files`
+- Extracts first commit hash after doc creation date
+- Associates commit with documentation
+
+**3. Timeline displays:**
+- Cards sorted by date (most recent first)
+- Commit hash links to git history
+- Impact metrics highlighted
+- Filterable by crate and tags
+
+## Benchmark Viewer
+
+### Accessing Benchmarks
+
+Visit crate-specific benchmark routes to see:
+- `/flow-fcs/benchmarks` - All flow-fcs benchmarks
+- `/flow-plots/benchmarks` - All flow-plots benchmarks
+- `/flow-gates/benchmarks` - All flow-gates benchmarks
+
+Each benchmark page displays:
+- All Criterion benchmarks for that crate
+- Performance metrics (mean, median, std dev)
+- Confidence intervals
+- Historical trends (when available)
+
+### Benchmark Data Structure
+
+Benchmarks are organized by group:
+
+```json
+{
+  "groups": {
+    "cache_performance": {
+      "benchmarks": [
+        {
+          "name": "cache_hit",
+          "mean": 846.5,
+          "unit": "ns",
+          "std_dev": 12.3,
+          "median": 840.1,
+          "confidence_interval": {
+            "lower": 834.2,
+            "upper": 858.8,
+            "confidence": 0.95
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Linking to Benchmarks
+
+Reference benchmarks in documentation:
+
+```markdown
+See benchmark results: `/flow-fcs/benchmarks#cache_performance`
+```
+
+Or use `related_benchmarks` frontmatter for automatic linking. The crate field determines which benchmark route to link to.
+
+## Changelog
+
+### Automatic Generation
+
+The `CHANGELOG.md` is automatically generated from documentation frontmatter:
+
+**Format:** Follows [Keep a Changelog](https://keepachangelog.com/)
+
+**Sections:** Organized by crate (flow-fcs, flow-plots, flow-gates), then by tags:
+- **Performance** - Optimizations and speed improvements (tagged with "performance")
+- **Features** - New functionality (tagged with "features")
+- **Architecture** - System design changes (tagged with "architecture")
+
+**Entry format:**
+```markdown
+### [flow-fcs] Feature Title - YYYY-MM-DD
+
+Brief description from frontmatter
+
+**Tags:** performance, benchmarks
+**Impact:**
+- Metric: improvement
+
+[Read more](/flow-fcs/benchmarks/feature)
+```
+
+### Updating Changelog
+
+**Never edit `CHANGELOG.md` directly.** Instead:
+
+1. Update documentation frontmatter (ensure `crate` and `tags` are set)
+2. Run `bun run docs:generate-changelog`
+3. Commit the generated changelog
+
+## Best Practices
+
+### When to Document
+
+**✅ Always document:**
+- New features or significant functionality
+- Performance optimizations (especially with benchmarks)
+- Architecture changes or refactoring
+- Design decisions with trade-offs
+- Public API changes
+
+**⚠️ Consider documenting:**
+- Bug fixes that required design decisions
+- Complex algorithms or implementations
+- Non-obvious workarounds
+
+**❌ Don't document:**
+- Trivial changes or typo fixes
+- Self-explanatory code
+- Temporary debugging code
+
+### Documentation Quality
+
+**Good documentation:**
+- Provides context (why, not just what)
+- Includes actual measurements (not guesses)
+- Documents alternatives and trade-offs
+- References specific code locations
+- Honest about limitations
+
+**Poor documentation:**
+- Only describes what the code does
+- Uses vague terms ("faster", "better")
+- Ignores alternatives or trade-offs
+- Becomes outdated quickly
+- Over-optimistic about results
+
+### Maintenance
+
+**Keep documentation fresh:**
+- Update when implementation changes significantly
+- Add new benchmarks when performance improves
+- Document breaking changes immediately
+- Archive deprecated documentation (move to `/docs-archive/`)
+
+**Review periodically:**
+- Check that links still work
+- Verify benchmarks are current
+- Update screenshots if UI changed
+- Remove outdated caveats
+
+## Troubleshooting
+
+### Search not working
+
+**Problem:** Search modal doesn't appear or returns no results
+
+**Solutions:**
+1. Rebuild search index: `bun run docs:build-search`
+2. Check browser console for errors
+3. Verify `/static/search-index.json` exists
+4. Clear browser cache
+
+### Benchmarks not appearing
+
+**Problem:** Benchmark viewer shows no data
+
+**Solutions:**
+1. Run benchmarks: `cd flow-fcs && cargo bench` (or flow-plots, flow-gates)
+2. Extract benchmarks: `bun run docs:extract-benchmarks`
+3. Check `/static/benchmarks.json` exists and is organized by crate
+4. Verify Criterion output in `target/criterion/` for the specific crate
+
+### Documentation not rendering
+
+**Problem:** `.svx` file shows blank page or error
+
+**Solutions:**
+1. Check frontmatter is valid YAML (no syntax errors)
+2. Verify frontmatter is between `---` markers
+3. Check for missing required fields (title, date, author, crate, tags)
+4. Ensure `crate` field matches the route (e.g., file in `flow-fcs/` should have `crate: "flow-fcs"`)
+5. Review browser console for mdsvex parsing errors
+6. Ensure file is in correct directory structure (`{crate}/{benchmarks|tests|design-decisions}/`)
+
+### Commit hashes not appearing
+
+**Problem:** Feature timeline cards show no commit hash
+
+**Solutions:**
+1. Add `related_files` to frontmatter
+2. Ensure files exist and have git history
+3. Run `bun run docs:extract-feature-history`
+4. Check `/static/feature-history.json` for your doc
+
+### Changelog not updating
+
+**Problem:** `CHANGELOG.md` doesn't reflect recent docs
+
+**Solutions:**
+1. Verify frontmatter has `date`, `crate`, `tags`, and `impact`
+2. Run `bun run docs:generate-changelog`
+3. Check script output for errors
+4. Ensure date format is YYYY-MM-DD
+5. Ensure `crate` field is one of: `flow-fcs`, `flow-plots`, `flow-gates`
+
+## Advanced Usage
+
+### Embedding Svelte Components
+
+MDSvex allows embedding Svelte components in documentation:
+
+```svelte
+<script>
+  import BenchmarkChart from '$lib/components/BenchmarkChart.svelte';
+  import { benchmarkData } from './my-data.js';
+</script>
+
+## Performance Results
+
+<BenchmarkChart data={benchmarkData} />
+```
+
+### Custom Layouts
+
+Override the default layout for specific docs:
+
+```svelte
+---
+crate: "flow-fcs"
+tags: ["performance"]
+layout: custom-layout
+---
+```
+
+Then create `/src/lib/layouts/custom-layout.svelte`.
+
+### Code Block Metadata
+
+Add metadata to code blocks for better rendering:
+
+````markdown
+```rust title="flow-plots/src/cache.rs" {1,5-7}
+// Line 1 is highlighted
+fn cache_key(guid: &str, options: &PlotOptions) -> String {
+    format!("{}::{:?}", guid, options)
+}
+// Lines 5-7 are highlighted
+let key = cache_key(&guid, &options);
+let cached = PLOT_CACHE.get(&key);
+```
+````
+
+## Resources
+
+### Files to Reference
+
+**Documentation:**
+- This guide: `/guides/documentation-system`
+- AGENTS.md: Project conventions
+
+**Scripts:**
+- Extract benchmarks: `src/scripts/extract-benchmarks.ts`
+- Extract features: `src/scripts/extract-feature-history.ts`
+- Build search: `src/scripts/build-search-index.ts`
+- Generate changelog: `src/scripts/generate-changelog.ts`
+
+**Components:**
+- Doc sidebar: `src/lib/components/DocSidebar.svelte`
+- Doc search: `src/lib/components/DocSearch.svelte`
+- Benchmark chart: `src/lib/components/BenchmarkChart.svelte`
+
+**Configuration:**
+- Package scripts: `package.json` (docs:* commands)
+- Svelte config: `svelte.config.js` (mdsvex setup)
+
+### External Resources
+
+- [MDSvex Documentation](https://mdsvex.com/)
+- [SvelteKit Documentation](https://kit.svelte.dev/)
+- [Keep a Changelog](https://keepachangelog.com/)
+- [Criterion Benchmarks](https://github.com/bheisler/criterion.rs)
+
+## Support
+
+For questions or issues with the documentation system:
+1. Review this guide thoroughly
+2. Browse existing documentation in `/flow-fcs`, `/flow-plots`, `/flow-gates` for examples
+3. Search existing docs with ⌘K for examples
+4. Review AGENTS.md for project conventions
+5. Examine automation script source code
+
+Happy documenting! 📚

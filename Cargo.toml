@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "flow-fcs",
-    "flow-plots",
-    "flow-gates",
+    "fcs",
+    "plots",
+    "gates",
     "peacoqc-rs",
     "peacoqc-cli",
 ]
@@ -21,21 +21,21 @@ check = "cargo check --workspace"
 clippy = "cargo clippy --workspace"
 fmt = "cargo fmt --workspace"
 dry-release-all = "cargo smart-release"
-dry-release-flow-fcs = "cargo smart-release flow-fcs --update-crates-index"
-dry-release-flow-plots = "cargo smart-release flow-plots"
-dry-release-flow-gates = "cargo smart-release flow-gates"
+dry-release-fcs = "cargo smart-release fcs --update-crates-index"
+dry-release-plots = "cargo smart-release plots"
+dry-release-gates = "cargo smart-release gates"
 dry-release-peacoqc-rs = "cargo smart-release peacoqc-rs"
 dry-release-peacoqc-cli = "cargo smart-release peacoqc-cli"
 changelog-all = "cargo changelog --workspace"
-changelog-flow-fcs = "cargo changelog --write flow-fcs"
-changelog-flow-plots = "cargo changelog flow-plots"
-changelog-flow-gates = "cargo changelog flow-gates"
+changelog-fcs = "cargo changelog --write fcs"
+changelog-plots = "cargo changelog plots"
+changelog-gates = "cargo changelog gates"
 changelog-peacoqc-rs = "cargo changelog peacoqc-rs"
 changelog-peacoqc-cli = "cargo changelog peacoqc-cli"
 publish-all = "cargo smart-release --execute"
-publish-flow-fcs = "cargo smart-release flow-fcs --execute"
-publish-flow-plots = "cargo smart-release flow-plots --execute"
-publish-flow-gates = "cargo smart-release flow-gates --execute"
+publish-fcs = "cargo smart-release fcs --execute"
+publish-plots = "cargo smart-release plots --execute"
+publish-gates = "cargo smart-release gates --execute"
 publish-peacoqc-rs = "cargo smart-release peacoqc-rs --execute"
 publish-peacoqc-cli = "cargo smart-release peacoqc-cli --execute"
 

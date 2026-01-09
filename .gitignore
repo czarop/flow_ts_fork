@@ -1,1 +1,32 @@
-/target
+# Rust build artifacts
+target/
+**/target/
+
+# Node.js
+node_modules/
+
+# SvelteKit
+.svelte-kit/
+/build
+
+# IDE
+.cursor/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+gate_cache.rs
+gate_storage.rs
+commands.rs
