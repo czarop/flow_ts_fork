@@ -1,9 +1,15 @@
 #[cfg(test)]
 mod polars_tests {
-    use crate::{Fcs, parameter::ParameterProcessing};
-    use polars::prelude::Column;
+    use std::sync::Arc;
 
-    fn create_test_fcs() -> Result<Fcs> {
+    use crate::{
+        Fcs, Header, Metadata, Parameter, TransformType,
+        file::AccessWrapper,
+        parameter::{ParameterMap, ParameterProcessing},
+    };
+    use polars::{frame::DataFrame, prelude::Column};
+
+    fn create_test_fcs() -> Result<Fcs, Box<dyn std::error::Error>> {
         use std::fs::File;
         use std::io::Write;
 
@@ -409,7 +415,7 @@ mod polars_tests {
 
     #[test]
     fn test_parameter_with_label() {
-        use crate::fcs::parameter::ParameterBuilder;
+        use crate::parameter::ParameterBuilder;
 
         let param = ParameterBuilder::default()
             .parameter_number(1_usize)
@@ -430,7 +436,7 @@ mod polars_tests {
 
     #[test]
     fn test_generate_plot_options_fluorescence() {
-        use crate::fcs::parameter::ParameterBuilder;
+        use crate::parameter::ParameterBuilder;
 
         let param = ParameterBuilder::default()
             .parameter_number(1_usize)
@@ -467,7 +473,7 @@ mod polars_tests {
 
     #[test]
     fn test_generate_plot_options_scatter() {
-        use crate::fcs::parameter::{ParameterBuilder, ParameterCategory};
+        use crate::parameter::{ParameterBuilder, ParameterCategory};
 
         let param = ParameterBuilder::default()
             .parameter_number(1_usize)
@@ -527,7 +533,7 @@ mod polars_tests {
 
     #[test]
     fn test_has_compensation() {
-        use crate::fcs::keyword::{Keyword, MixedKeyword};
+        use crate::keyword::{Keyword, MixedKeyword};
 
         let mut fcs = create_test_fcs().expect("Failed to create test FCS");
 
@@ -556,7 +562,7 @@ mod polars_tests {
 
     #[test]
     fn test_apply_file_compensation() {
-        use crate::fcs::keyword::{Keyword, MixedKeyword};
+        use crate::keyword::{Keyword, MixedKeyword};
 
         let mut fcs = create_test_fcs().expect("Failed to create test FCS");
 
