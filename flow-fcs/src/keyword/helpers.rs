@@ -176,18 +176,27 @@ const PARAMETER_KEYWORD_PREFIXES: &[&str] = &["P", "G", "R"];
 /// This function assumes the key has already been validated as a parameter keyword
 /// (e.g., via `is_parameter_keyword`). It will find the matching prefix and extract the suffix.
 pub fn extract_parameter_suffix(key: &str) -> Option<String> {
-    let mut chars = key.chars();
     // Skip the first letter (we already know it's a parameter keyword)
-    chars.next();
-    if let Some(first_char) = chars.next() {
-        if first_char.is_numeric() {
-            // Skip over the numeric part
-            chars.by_ref().take_while(|c| c.is_numeric()).for_each(drop);
-            let suffix: String = chars.collect();
-            return Some(suffix);
+    let rest = key.chars().skip(1).collect::<String>();
+
+    // Find where the numeric part ends
+    let numeric_end = rest
+        .char_indices()
+        .find(|(_, c)| !c.is_numeric())
+        .map(|(idx, _)| idx);
+
+    if let Some(end_idx) = numeric_end {
+        // Extract suffix after numeric part
+        let suffix = rest[end_idx..].to_string();
+        if suffix.is_empty() {
+            None
+        } else {
+            Some(suffix)
         }
+    } else {
+        // No suffix found (e.g., "P1" with no suffix)
+        None
     }
-    None
 }
 
 /// Checks if a keyword is a parameter keyword

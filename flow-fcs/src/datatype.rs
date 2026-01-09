@@ -6,7 +6,7 @@ use strum_macros::Display;
 ///
 /// FCS files can store data in different numeric formats. The most common is
 /// single-precision floating point (F), which is also the default.
-#[derive(Default, Display, Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Default, Display, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum FcsDataType {
     /// Unsigned binary integer
     I,
@@ -42,11 +42,23 @@ impl FcsDataType {
         }
     }
 
-    /// Returns the number of bytes per event for the data type as an unsigned integer
+    /// Returns the number of bytes for the data type based on the number of bits
+    ///
+    /// This is used in conjunction with `$PnB` to determine the actual bytes per parameter.
+    /// For `I` (integer) type, the actual bytes depend on `$PnB` (e.g., 16 bits = 2 bytes, 32 bits = 4 bytes).
+    /// For `F` (float32), always 4 bytes.
+    /// For `D` (float64), always 8 bytes.
+    ///
+    /// # Arguments
+    /// * `bits` - Number of bits from `$PnB` keyword
+    ///
+    /// # Returns
+    /// Number of bytes for this data type with the given bit width
     #[must_use]
-    pub const fn get_bytes_per_event(&self) -> usize {
+    pub fn get_bytes_for_bits(&self, bits: usize) -> usize {
         match self {
-            Self::I | Self::F => 4,
+            Self::I => (bits + 7) / 8, // Convert bits to bytes, rounding up
+            Self::F => 4,
             Self::D => 8,
             Self::A => 0,
         }

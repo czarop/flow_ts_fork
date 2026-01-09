@@ -100,21 +100,30 @@ impl Metadata {
             } else {
                 // This is a value - parse and store the keyword-value pair
                 if !current_key.is_empty() {
+                    // Normalize key: ensure it has $ prefix (FCS spec requires it)
+                    // Store with $ prefix for consistent lookups
+                    let normalized_key: String = if current_key.starts_with('$') {
+                        current_key.clone()
+                    } else {
+                        format!("${}", current_key)
+                    };
+
                     match match_and_parse_keyword(&current_key, text) {
                         KeywordCreationResult::Int(int_keyword) => {
-                            keywords.insert(current_key.clone(), Keyword::Int(int_keyword));
+                            keywords.insert(normalized_key.clone(), Keyword::Int(int_keyword));
                         }
                         KeywordCreationResult::Float(float_keyword) => {
-                            keywords.insert(current_key.clone(), Keyword::Float(float_keyword));
+                            keywords.insert(normalized_key.clone(), Keyword::Float(float_keyword));
                         }
                         KeywordCreationResult::String(string_keyword) => {
-                            keywords.insert(current_key.clone(), Keyword::String(string_keyword));
+                            keywords
+                                .insert(normalized_key.clone(), Keyword::String(string_keyword));
                         }
                         KeywordCreationResult::Byte(byte_keyword) => {
-                            keywords.insert(current_key.clone(), Keyword::Byte(byte_keyword));
+                            keywords.insert(normalized_key.clone(), Keyword::Byte(byte_keyword));
                         }
                         KeywordCreationResult::Mixed(mixed_keyword) => {
-                            keywords.insert(current_key.clone(), Keyword::Mixed(mixed_keyword));
+                            keywords.insert(normalized_key.clone(), Keyword::Mixed(mixed_keyword));
                         }
                         KeywordCreationResult::UnableToParse => {
                             eprintln!(
@@ -227,6 +236,96 @@ impl Metadata {
         }
     }
 
+    /// Get the data type for a specific channel/parameter (FCS 3.2+)
+    ///
+    /// First checks for `$PnDATATYPE` keyword to see if this parameter has a specific data type override.
+    /// If not found, falls back to the default `$DATATYPE` keyword.
+    ///
+    /// # Arguments
+    /// * `parameter_number` - 1-based parameter index
+    ///
+    /// # Errors
+    /// Will return `Err` if neither `$PnDATATYPE` nor `$DATATYPE` is present
+    pub fn get_data_type_for_channel(&self, parameter_number: usize) -> Result<FcsDataType> {
+        // First try to get parameter-specific data type (FCS 3.2+)
+        if let Ok(pn_datatype_keyword) =
+            self.get_parameter_numeric_metadata(parameter_number, "DATATYPE")
+        {
+            if let IntegerKeyword::PnDATATYPE(datatype_code) = pn_datatype_keyword {
+                // Map datatype code to enum: 0=I, 1=F, 2=D
+                match datatype_code {
+                    0 => Ok(FcsDataType::I),
+                    1 => Ok(FcsDataType::F),
+                    2 => Ok(FcsDataType::D),
+                    _ => Err(anyhow!(
+                        "Invalid $P{}DATATYPE code: {}",
+                        parameter_number,
+                        datatype_code
+                    )),
+                }
+            } else {
+                // Shouldn't happen, but fall back to default
+                Ok(self.get_data_type()?.clone())
+            }
+        } else {
+            // Fall back to default $DATATYPE
+            Ok(self.get_data_type()?.clone())
+        }
+    }
+
+    /// Calculate the total bytes per event by summing bytes per parameter
+    ///
+    /// Uses `$PnB` (bits per parameter) divided by 8 to get bytes per parameter,
+    /// then sums across all parameters. This is more accurate than using `$DATATYPE`
+    /// which only provides a default value.
+    ///
+    /// # Errors
+    /// Will return `Err` if the number of parameters cannot be determined or
+    /// if any required `$PnB` keyword is missing
+    pub fn calculate_bytes_per_event(&self) -> Result<usize> {
+        let number_of_parameters = self.get_number_of_parameters()?;
+        let mut total_bytes = 0;
+
+        for param_num in 1..=*number_of_parameters {
+            // Get $PnB (bits per parameter)
+            let bits = self.get_parameter_numeric_metadata(param_num, "B")?;
+            if let IntegerKeyword::PnB(bits_value) = bits {
+                // Convert bits to bytes (round up if not divisible by 8)
+                let bytes = (bits_value + 7) / 8;
+                total_bytes += bytes;
+            } else {
+                return Err(anyhow!(
+                    "$P{}B keyword found but is not the expected PnB variant",
+                    param_num
+                ));
+            }
+        }
+
+        Ok(total_bytes)
+    }
+
+    /// Get bytes per parameter for a specific channel
+    ///
+    /// Uses `$PnB` (bits per parameter) divided by 8 to get bytes per parameter.
+    ///
+    /// # Arguments
+    /// * `parameter_number` - 1-based parameter index
+    ///
+    /// # Errors
+    /// Will return `Err` if the `$PnB` keyword is missing for this parameter
+    pub fn get_bytes_per_parameter(&self, parameter_number: usize) -> Result<usize> {
+        let bits = self.get_parameter_numeric_metadata(parameter_number, "B")?;
+        if let IntegerKeyword::PnB(bits_value) = bits {
+            // Convert bits to bytes (round up if not divisible by 8)
+            Ok((bits_value + 7) / 8)
+        } else {
+            Err(anyhow!(
+                "$P{}B keyword found but is not the expected PnB variant",
+                parameter_number
+            ))
+        }
+    }
+
     /// Return the byte order from the $BYTEORD keyword in the metadata TEXT section, unwraps and returns it if it exists.
     /// # Errors
     /// Will return `Err` if the $BYTEORD keyword is not present in the keywords hashmap
@@ -321,7 +420,7 @@ impl Metadata {
         self.get_string_keyword(&keyword)
     }
 
-    /// Generic function to get a given parameter's string keyword from the file's metadata (e.g. `$PnN` or `$PnS`)
+    /// Generic function to get a given parameter's integer keyword from the file's metadata (e.g. `$PnN`, `$PnS`, `$PnDATATYPE`)
     /// # Errors
     /// Will return `Err` if the keyword is not present in the keywords hashmap
     pub fn get_parameter_numeric_metadata(
