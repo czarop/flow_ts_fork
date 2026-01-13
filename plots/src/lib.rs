@@ -76,7 +76,7 @@ pub fn create_axis_specs(
     y_transform: &TransformType,
 ) -> anyhow::Result<(Range<f32>, Range<f32>)> {
     // For linear scales, use nice number bounds
-    // For arcsinh, ensure we use proper transformed bounds
+    // For arcsinh and biexponential, ensure we use proper transformed bounds
     let x_spec = match x_transform {
         TransformType::Linear => {
             let min = plot_range_x.start();
@@ -84,7 +84,7 @@ pub fn create_axis_specs(
             let (nice_min, nice_max) = nice_bounds(*min, *max);
             nice_min..nice_max
         }
-        TransformType::Arcsinh { cofactor: _ } => {
+        TransformType::Arcsinh { cofactor: _ } | TransformType::Biexponential { .. } => {
             // Keep the transformed range but we'll format nicely in the formatter
             *plot_range_x.start()..*plot_range_x.end()
         }
@@ -97,7 +97,7 @@ pub fn create_axis_specs(
             let (nice_min, nice_max) = nice_bounds(*min, *max);
             nice_min..nice_max
         }
-        TransformType::Arcsinh { cofactor: _ } => {
+        TransformType::Arcsinh { cofactor: _ } | TransformType::Biexponential { .. } => {
             // Keep the transformed range but we'll format nicely in the formatter
             *plot_range_y.start()..*plot_range_y.end()
         }

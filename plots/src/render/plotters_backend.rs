@@ -3,7 +3,7 @@ use crate::create_axis_specs;
 use crate::density_calc::RawPixelData;
 use crate::options::DensityPlotOptions;
 use crate::render::{ProgressInfo, RenderConfig};
-use flow_fcs::TransformType;
+use flow_fcs::{TransformType, Transformable};
 
 /// Format a value using the transform type
 ///
@@ -14,6 +14,12 @@ fn format_transform_value(transform: &TransformType, value: &f32) -> String {
         TransformType::Arcsinh { cofactor } => {
             // Convert from transformed space back to original space
             let original_value = (value / cofactor).sinh() * cofactor;
+            // Make nice rounded labels in original space
+            format!("{:.1e}", original_value)
+        }
+        TransformType::Biexponential { .. } => {
+            // Convert from transformed space back to original space using inverse transform
+            let original_value = transform.inverse_transform(value);
             // Make nice rounded labels in original space
             format!("{:.1e}", original_value)
         }
