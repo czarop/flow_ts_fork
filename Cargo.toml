@@ -83,3 +83,10 @@ strum_macros = "0.27.2" # For enum-like types
 regex = "1.11.3" # For regular expressions
 bytemuck = { version = "1.24", features = ["derive"] } # Bytemuck for zero-copy bit-cast conversions between types
 rand = "0.9.2"
+
+# CLI
+clap = { version = "4.5.54", features = ["derive", "cargo"] }
+
+# Logging/Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
