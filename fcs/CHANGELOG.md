@@ -5,17 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.2 (2026-01-13)
 
 <csr-id-9c44f94e6b8e0236a47361a7dc7156b90d25f37c/>
 <csr-id-f64872e441add42bc9d19280d4411df628ff853e/>
 <csr-id-661e8e00088c6bee38bc02a8a2830f284cd49ac4/>
 <csr-id-2fc9efdd0a9bfeadd0613dd309d811067acc709f/>
 <csr-id-621d3aded59ff51f953c6acdb75027c4541a8b97/>
+<csr-id-037f74e0e364ebfc8d68cf672dca0f758a3f2952/>
 
 ### Chore
 
  - <csr-id-9c44f94e6b8e0236a47361a7dc7156b90d25f37c/> bump version number in Cargo.toml for flow-fcs
+
+### Chore
+
+ - <csr-id-3292c46b282d226aa48c2a83bc17c50896bb8341/> update CHANGELOG for upcoming release
+   - Documented unreleased changes including version bump, enhancements in FCS file parsing, benchmarking capabilities, and metadata processing improvements.
+   - Updated plotting backend and TypeScript bindings for pixel data.
+   - Refactored folder names for better organization and removed unused imports.
+   - Added comprehensive documentation and R helper functions for improved usability.
 
 ### Chore
 
@@ -64,9 +73,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 18 commits contributed to the release over the course of 5 calendar days.
+ - 19 commits contributed to the release over the course of 5 calendar days.
  - 5 days passed between releases.
- - 10 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 11 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -76,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Update CHANGELOG for upcoming release ([`3292c46`](https://github.com/jrmoynihan/flow/commit/3292c46b282d226aa48c2a83bc17c50896bb8341))
     - Update CHANGELOG for upcoming release ([`037f74e`](https://github.com/jrmoynihan/flow/commit/037f74e0e364ebfc8d68cf672dca0f758a3f2952))
     - Update CHANGELOG for upcoming release ([`621d3ad`](https://github.com/jrmoynihan/flow/commit/621d3aded59ff51f953c6acdb75027c4541a8b97))
     - Update CHANGELOG for upcoming release ([`2fc9efd`](https://github.com/jrmoynihan/flow/commit/2fc9efdd0a9bfeadd0613dd309d811067acc709f))
@@ -95,9 +105,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Merge pull request #2 from jrmoynihan:flow-fcs ([`46431c0`](https://github.com/jrmoynihan/flow/commit/46431c0431afb4b7fa7de240595ac5726e693242))
     - Release flow-fcs v0.1.1 ([`c3413e1`](https://github.com/jrmoynihan/flow/commit/c3413e1a46a64f0a798ea0fe4d08134117a8c1ca))
 </details>
-
-<csr-unknown>
-Add example QC plot output imageImprove keyword parsing and validationAdd transform functionality improvementsUpdate keyword tests with additional coverageIntroduced new benchmarking scripts for analyzing performance of dataframe parsing.Added support for various data types and improved parsing efficiency in FCS data handling.Implemented conditional parallelization based on dataset size to optimize performance.Created a new analyze_benchmarks binary for analyzing benchmark results and extracting insights.Updated Cargo.toml to include necessary dependencies for benchmarking and data processing.Updated FcsDataType enum to include Copy trait for improved memory efficiency.Refactored get_bytes_per_event method to get_bytes_for_bits, allowing dynamic byte calculation based on parameter bits.Added new methods in Metadata for retrieving data types and calculating total bytes per event, improving accuracy in data handling.Normalized keyword storage in metadata to ensure consistent lookups with $ prefix.Enhanced parameter metadata extraction to support new FCS specifications.<csr-unknown/>
 
 ## 0.1.1 (2026-01-08)
 
