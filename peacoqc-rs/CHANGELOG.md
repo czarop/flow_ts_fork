@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.0 (2026-01-14)
 
 <csr-id-9eceaee3506dcde315676f0d99dc893acc7430b7/>
 <csr-id-deb1cae21a7b99c937335413c7f0ab6ee339365c/>
@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-5ac6927216aefa9779c9185841c9e4b6ee12355a/>
 <csr-id-1347675f8a5648b939e368949cd30f5b6ec4b379/>
 <csr-id-037f74e0e364ebfc8d68cf672dca0f758a3f2952/>
+<csr-id-3292c46b282d226aa48c2a83bc17c50896bb8341/>
 
 ### Chore
 
@@ -24,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-56accd5d225e545fe0c79e84922ecc8c21272a7e/> remove .DS_Store files from git tracking
    - Remove macOS .DS_Store files that were previously tracked
    - These files are already in .gitignore and should not be committed
+
+### Chore
+
+ - <csr-id-734654c97306d477fe98eda2ed151a92c1e49050/> Update CHANGELOG for upcoming release
+   - Documented unreleased changes including version bump, enhancements in FCS file parsing, benchmarking capabilities, and metadata processing improvements.
+   - Updated plotting backend and TypeScript bindings for pixel data.
+   - Refactored folder names for better organization and removed unused imports.
+   - Added comprehensive documentation and R helper functions for improved usability.
 
 ### Chore
 
@@ -46,13 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-42a6b5d7214e1ecc6fbad2c74572f9974c4f6a9f/> add FCS specification PDF and example QC plot
    - Add FCS 3.1 implementation guidance PDF for reference
-- Add example QC plot output image
-- Add comprehensive README for peacoqc-rs library
-- Add R helper functions for compatibility and reference
-- Update examples with improved usage patterns
-- Add KDE performance analysis documentation
-- Add KDE benchmark for performance testing
-- Update existing benchmarks
 
 ### New Features
 
@@ -61,29 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-e08f165f1b18fdee7d303db125685066f6846ac2/> add QC plotting functionality
    - Reformatted Cargo.toml for improved readability and added new dependencies `plotters` and `image` for plotting.
-- Introduced `create_qc_plots` and `QCPlotConfig` in the library for enhanced quality control visualization.
-- Updated module imports to include the new `plots` module.
-- Refactor isolation tree implementation with improved performance
-- Enhance MAD outlier detection algorithm
-- Improve peak detection with better density estimation
-- Refactor margins, monotonic, and doublets detection
-- Update stats module with improved median/MAD calculations
-- Enhance trait-based design for better extensibility
-- Add parallel processing optimizations
-- Added core modules for PeacoQC analysis, including quality control algorithms for removing margins and doublets.
-- Implemented data structures and traits for handling FCS data.
-- Introduced configuration options for various QC methods (MAD, Isolation Tree).
-- Created example usage scripts and a command-line interface for user interaction.
-- Included comprehensive tests for all new functionalities to ensure reliability.
 
 ### Bug Fixes
 
  - <csr-id-1cb95844e0c987752bf9f12854f03457c26bc408/> implement dynamic grid sizing for QC plots
    - Add calculate_grid_dimensions function that creates square-ish grids
-- Grid dimensions now adapt based on number of plots needed
-- Fixes issue where plots failed to generate for files with >24 parameters
-- Add PlotError variant to error enum for better error handling
-- Fix plotters API usage and error conversions
 
 ### Refactor
 
@@ -102,8 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 18 commits contributed to the release over the course of 7 calendar days.
- - 13 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 19 commits contributed to the release over the course of 7 calendar days.
+ - 14 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -113,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Update CHANGELOG for upcoming release ([`734654c`](https://github.com/jrmoynihan/flow/commit/734654c97306d477fe98eda2ed151a92c1e49050))
     - Release flow-fcs v0.1.2 ([`57f4eb7`](https://github.com/jrmoynihan/flow/commit/57f4eb7de85c2b41ef886db446f63d753c5faf05))
     - Update CHANGELOG for upcoming release ([`3292c46`](https://github.com/jrmoynihan/flow/commit/3292c46b282d226aa48c2a83bc17c50896bb8341))
     - Update CHANGELOG for upcoming release ([`037f74e`](https://github.com/jrmoynihan/flow/commit/037f74e0e364ebfc8d68cf672dca0f758a3f2952))
@@ -134,29 +119,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
-- Add example QC plot output image
-- Add comprehensive README for peacoqc-rs library
-- Add R helper functions for compatibility and reference
-- Update examples with improved usage patterns
-- Add KDE performance analysis documentation
-- Add KDE benchmark for performance testing
-- Update existing benchmarksIntroduced create_qc_plots and QCPlotConfig in the library for enhanced quality control visualization.
-- Updated module imports to include the new plots module.
-- Refactor isolation tree implementation with improved performance
-- Enhance MAD outlier detection algorithm
-- Improve peak detection with better density estimation
-- Refactor margins, monotonic, and doublets detection
-- Update stats module with improved median/MAD calculations
-- Enhance trait-based design for better extensibility
-- Add parallel processing optimizations
-- Added core modules for PeacoQC analysis, including quality control algorithms for removing margins and doublets.
-- Implemented data structures and traits for handling FCS data.
-- Introduced configuration options for various QC methods (MAD, Isolation Tree).
-- Created example usage scripts and a command-line interface for user interaction.
-- Included comprehensive tests for all new functionalities to ensure reliability.
-- Grid dimensions now adapt based on number of plots needed
-  - Fixes issue where plots failed to generate for files with >24 parameters
-- Add PlotError variant to error enum for better error handling
-- Fix plotters API usage and error conversions
-<csr-unknown/>
+Add example QC plot output imageAdd comprehensive README for peacoqc-rs libraryAdd R helper functions for compatibility and referenceUpdate examples with improved usage patternsAdd KDE performance analysis documentationAdd KDE benchmark for performance testingUpdate existing benchmarksIntroduced create_qc_plots and QCPlotConfig in the library for enhanced quality control visualization.Updated module imports to include the new plots module.Refactor isolation tree implementation with improved performanceEnhance MAD outlier detection algorithmImprove peak detection with better density estimationRefactor margins, monotonic, and doublets detectionUpdate stats module with improved median/MAD calculationsEnhance trait-based design for better extensibilityAdd parallel processing optimizationsAdded core modules for PeacoQC analysis, including quality control algorithms for removing margins and doublets.Implemented data structures and traits for handling FCS data.Introduced configuration options for various QC methods (MAD, Isolation Tree).Created example usage scripts and a command-line interface for user interaction.Included comprehensive tests for all new functionalities to ensure reliability.Grid dimensions now adapt based on number of plots neededFixes issue where plots failed to generate for files with >24 parametersAdd PlotError variant to error enum for better error handlingFix plotters API usage and error conversions<csr-unknown/>
 
