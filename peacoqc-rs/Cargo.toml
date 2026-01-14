@@ -1,6 +1,6 @@
 [package]
 name="peacoqc-rs"
-version= "0.1.1"
+version="0.1.1"
 edition.workspace=true
 authors.workspace=true
 license.workspace=true
@@ -39,3 +39,9 @@ harness=false
 [[bench]]
 name   ="kde_bench"
 harness=false
+
+[package.metadata.scripts]
+test       ="cargo test"
+dry-release="cargo smart-release --update-crates-index"
+publish    ="cargo smart-release --execute"
+changelog  ="cargo changelog --write"

@@ -1,24 +1,32 @@
 [package]
-name = "peacoqc-cli"
-version = "0.1.0"
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-description = "Command-line tool for PeacoQC flow cytometry quality control"
+name             ="peacoqc-cli"
+version          ="0.1.0"
+edition.workspace=true
+authors.workspace=true
+license.workspace=true
+description      ="Command-line tool for PeacoQC flow cytometry quality control"
 
 [[bin]]
-name = "peacoqc"
-path = "src/main.rs"
+name="peacoqc"
+path="src/main.rs"
 
 [dependencies]
-flow-fcs = { path = "../fcs", version = "^0.1.2" }
-peacoqc-rs = { path = "../peacoqc-rs", version = "^0.1.1", features = ["flow-fcs"] }
-anyhow.workspace = true
-serde_json.workspace = true
-clap = { version = "4.5.54", features = ["derive", "cargo"] }
-indicatif = "0.18.3"
-rayon.workspace = true
-walkdir = "2.5"
-tracing.workspace = true
-tracing-subscriber = { workspace = true }
-dialoguer = "0.12"
+flow-fcs={ path="../fcs", version="^0.1.2" }
+peacoqc-rs={ path="../peacoqc-rs", version="^0.1.1", features=[
+    "flow-fcs",
+] }
+anyhow.workspace=true
+serde_json.workspace=true
+clap={ version="4.5.54", features=["derive", "cargo"] }
+indicatif="0.18.3"
+rayon.workspace=true
+walkdir="2.5"
+tracing.workspace=true
+tracing-subscriber={ workspace=true }
+dialoguer="0.12"
+
+[package.metadata.scripts]
+test       ="cargo test"
+dry-release="cargo smart-release --update-crates-index"
+publish    ="cargo smart-release --execute"
+changelog  ="cargo changelog --write"
