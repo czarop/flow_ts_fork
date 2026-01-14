@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.1 (2026-01-14)
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Release peacoqc-cli v0.1.0 ([`ee76027`](https://github.com/jrmoynihan/flow/commit/ee760271b139b2a192d7065d08063fe5ecf0ffbf))
+</details>
+
 ## 0.1.0 (2026-01-14)
 
 <csr-id-9eceaee3506dcde315676f0d99dc893acc7430b7/>
@@ -14,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-1347675f8a5648b939e368949cd30f5b6ec4b379/>
 <csr-id-037f74e0e364ebfc8d68cf672dca0f758a3f2952/>
 <csr-id-3292c46b282d226aa48c2a83bc17c50896bb8341/>
+<csr-id-734654c97306d477fe98eda2ed151a92c1e49050/>
 
 ### Chore
 
@@ -86,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 19 commits contributed to the release over the course of 7 calendar days.
+ - 20 commits contributed to the release over the course of 7 calendar days.
  - 14 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -97,6 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release peacoqc-rs v0.1.0 ([`ae4bc91`](https://github.com/jrmoynihan/flow/commit/ae4bc91414dde199edfdac0965c9df44e9036f2f))
     - Update CHANGELOG for upcoming release ([`734654c`](https://github.com/jrmoynihan/flow/commit/734654c97306d477fe98eda2ed151a92c1e49050))
     - Release flow-fcs v0.1.2 ([`57f4eb7`](https://github.com/jrmoynihan/flow/commit/57f4eb7de85c2b41ef886db446f63d753c5faf05))
     - Update CHANGELOG for upcoming release ([`3292c46`](https://github.com/jrmoynihan/flow/commit/3292c46b282d226aa48c2a83bc17c50896bb8341))
@@ -117,7 +139,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Refactor and improve QC algorithms ([`89520c5`](https://github.com/jrmoynihan/flow/commit/89520c5f677d2ca74c9777765b160554cca49eb5))
     - Initialize PeacoQC library for flow cytometry quality control ([`bcf9880`](https://github.com/jrmoynihan/flow/commit/bcf9880c6dcff0414818a09746adf8a315d14444))
 </details>
-
-<csr-unknown>
-Add example QC plot output imageAdd comprehensive README for peacoqc-rs libraryAdd R helper functions for compatibility and referenceUpdate examples with improved usage patternsAdd KDE performance analysis documentationAdd KDE benchmark for performance testingUpdate existing benchmarksIntroduced create_qc_plots and QCPlotConfig in the library for enhanced quality control visualization.Updated module imports to include the new plots module.Refactor isolation tree implementation with improved performanceEnhance MAD outlier detection algorithmImprove peak detection with better density estimationRefactor margins, monotonic, and doublets detectionUpdate stats module with improved median/MAD calculationsEnhance trait-based design for better extensibilityAdd parallel processing optimizationsAdded core modules for PeacoQC analysis, including quality control algorithms for removing margins and doublets.Implemented data structures and traits for handling FCS data.Introduced configuration options for various QC methods (MAD, Isolation Tree).Created example usage scripts and a command-line interface for user interaction.Included comprehensive tests for all new functionalities to ensure reliability.Grid dimensions now adapt based on number of plots neededFixes issue where plots failed to generate for files with >24 parametersAdd PlotError variant to error enum for better error handlingFix plotters API usage and error conversions<csr-unknown/>
 
