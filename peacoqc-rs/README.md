@@ -56,6 +56,10 @@ let result = peacoqc(&fcs, &config)?;
 let clean_fcs = fcs.filter(&result.good_cells)?;
 
 println!("Removed {:.2}% of events", result.percentage_removed);
+
+// Export QC results for downstream analysis
+result.export_csv_boolean("qc_results.csv")?;
+result.export_json_metadata(&config, "qc_metadata.json")?;
 ```
 
 See `examples/basic_usage.rs` for a complete working example.
@@ -157,6 +161,110 @@ let clean_fcs = fcs.filter(&result.good_cells)?;
   - `peaks`: Peak detection results per channel
   - `n_bins`: Number of bins used
   - `events_per_bin`: Events per bin
+  - `export_csv_boolean()`: Export as boolean CSV (0/1 values)
+  - `export_csv_numeric()`: Export as numeric CSV (2000/6000 values, R-compatible)
+  - `export_json_metadata()`: Export comprehensive QC metrics as JSON
+
+## Export Formats
+
+PeacoQC-RS supports multiple export formats for QC results, enabling integration with various downstream analysis tools.
+
+### Boolean CSV (Recommended)
+
+Export QC results as a CSV file with 0/1 values:
+
+```rust
+result.export_csv_boolean("qc_results.csv")?;
+```
+
+**Format:**
+```csv
+PeacoQC
+1
+1
+0
+1
+```
+
+- `1` = good event (keep)
+- `0` = bad event (remove)
+
+**Use cases:**
+- pandas: `df[df['PeacoQC'] == 1]`
+- R: `df[df$PeacoQC == 1, ]`
+- SQL: `WHERE PeacoQC = 1`
+- General data analysis workflows
+
+### Numeric CSV (R-Compatible)
+
+Export QC results as a CSV file with numeric codes matching the R PeacoQC package:
+
+```rust
+result.export_csv_numeric("qc_results_r.csv", 2000, 6000)?;
+```
+
+**Format:**
+```csv
+PeacoQC
+2000
+2000
+6000
+2000
+```
+
+- `2000` (or custom good_value) = good event (keep)
+- `6000` (or custom bad_value) = bad event (remove)
+
+**Use cases:**
+- Compatibility with existing R PeacoQC workflows
+- FlowJo CSV import
+- Legacy analysis pipelines
+
+### JSON Metadata
+
+Export comprehensive QC metrics and configuration as JSON:
+
+```rust
+result.export_json_metadata(&config, "qc_metadata.json")?;
+```
+
+**Format:**
+```json
+{
+  "n_events_before": 713904,
+  "n_events_after": 631400,
+  "n_events_removed": 82504,
+  "percentage_removed": 11.56,
+  "it_percentage": 0.0,
+  "mad_percentage": 11.56,
+  "consecutive_percentage": 0.0,
+  "n_bins": 1427,
+  "events_per_bin": 500,
+  "channels_analyzed": ["FL1-A", "FL2-A"],
+  "config": {
+    "qc_mode": "All",
+    "mad": 6.0,
+    "it_limit": 0.6,
+    "consecutive_bins": 5,
+    "remove_zeros": false
+  }
+}
+```
+
+**Use cases:**
+- Programmatic access to QC metrics
+- Reporting and documentation
+- Provenance tracking
+- Quality control dashboards
+
+### Custom Column Names
+
+You can specify custom column names for CSV exports:
+
+```rust
+result.export_csv_boolean_with_name("qc_results.csv", "QC_Status")?;
+result.export_csv_numeric_with_name("qc_results_r.csv", 2000, 6000, "PeacoQC_Status")?;
+```
 
 ## Quality Control Methods
 
