@@ -7,6 +7,7 @@ use crate::qc::peaks::{
     ChannelPeakFrame, PeakDetectionConfig, create_breaks, determine_peaks_all_channels,
 };
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use tracing::{debug, info, trace, warn};
 
 /// Quality control mode
@@ -92,11 +93,10 @@ pub struct PeacoQCConfig {
 
     /// Preprocessing: Apply arcsinh transformation to fluorescence channels (requires flow-fcs feature)
     /// This matches the original R implementation's `flowCore::transform()` step
-    /// Uses the default cofactor (200.0) for arcsinh transformation
     #[cfg(feature = "flow-fcs")]
     pub apply_transformation: bool,
 
-    /// Transformation cofactor for arcsinh (default: 200.0, typical for flow cytometry)
+    /// Transformation cofactor for arcsinh (default: 2000.0, typical for flow cytometry)
     /// Only used if `apply_transformation` is true
     #[cfg(feature = "flow-fcs")]
     pub transform_cofactor: f32,
@@ -122,7 +122,7 @@ impl Default for PeacoQCConfig {
             #[cfg(feature = "flow-fcs")]
             apply_transformation: true,
             #[cfg(feature = "flow-fcs")]
-            transform_cofactor: 200.0,
+            transform_cofactor: 2000.0,
         }
     }
 }
@@ -153,6 +153,106 @@ pub struct PeacoQCResult {
 
     /// Events per bin
     pub events_per_bin: usize,
+}
+
+impl PeacoQCResult {
+    /// Export QC results as boolean CSV (0/1 values)
+    ///
+    /// This format is recommended for general use. See [`crate::qc::export::export_csv_boolean`] for details.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use peacoqc_rs::{PeacoQCResult, PeacoQCConfig};
+    /// # let result: PeacoQCResult = todo!();
+    /// result.export_csv_boolean("qc_results.csv")?;
+    /// # Ok::<(), peacoqc_rs::PeacoQCError>(())
+    /// ```
+    pub fn export_csv_boolean(&self, path: impl AsRef<Path>) -> Result<()> {
+        crate::qc::export::export_csv_boolean(self, path, None)
+    }
+
+    /// Export QC results as boolean CSV with custom column name
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use peacoqc_rs::{PeacoQCResult, PeacoQCConfig};
+    /// # let result: PeacoQCResult = todo!();
+    /// result.export_csv_boolean_with_name("qc_results.csv", "QC_Status")?;
+    /// # Ok::<(), peacoqc_rs::PeacoQCError>(())
+    /// ```
+    pub fn export_csv_boolean_with_name(
+        &self,
+        path: impl AsRef<Path>,
+        column_name: &str,
+    ) -> Result<()> {
+        crate::qc::export::export_csv_boolean(self, path, Some(column_name))
+    }
+
+    /// Export QC results as numeric CSV (2000/6000 or custom values)
+    ///
+    /// This format is compatible with the R PeacoQC package output.
+    /// Default values match R implementation: 2000 = good, 6000 = bad.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use peacoqc_rs::{PeacoQCResult, PeacoQCConfig};
+    /// # let result: PeacoQCResult = todo!();
+    /// // R-compatible format
+    /// result.export_csv_numeric("qc_results_r.csv", 2000, 6000)?;
+    /// # Ok::<(), peacoqc_rs::PeacoQCError>(())
+    /// ```
+    pub fn export_csv_numeric(
+        &self,
+        path: impl AsRef<Path>,
+        good_value: u16,
+        bad_value: u16,
+    ) -> Result<()> {
+        crate::qc::export::export_csv_numeric(self, path, good_value, bad_value, None)
+    }
+
+    /// Export QC results as numeric CSV with custom column name
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use peacoqc_rs::{PeacoQCResult, PeacoQCConfig};
+    /// # let result: PeacoQCResult = todo!();
+    /// result.export_csv_numeric_with_name("qc_results_r.csv", 2000, 6000, "PeacoQC_Status")?;
+    /// # Ok::<(), peacoqc_rs::PeacoQCError>(())
+    /// ```
+    pub fn export_csv_numeric_with_name(
+        &self,
+        path: impl AsRef<Path>,
+        good_value: u16,
+        bad_value: u16,
+        column_name: &str,
+    ) -> Result<()> {
+        crate::qc::export::export_csv_numeric(self, path, good_value, bad_value, Some(column_name))
+    }
+
+    /// Export QC results as JSON metadata
+    ///
+    /// This format includes comprehensive QC metrics and configuration.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use peacoqc_rs::{PeacoQCResult, PeacoQCConfig};
+    /// # let result: PeacoQCResult = todo!();
+    /// # let config: PeacoQCConfig = todo!();
+    /// result.export_json_metadata(&config, "qc_metadata.json")?;
+    /// # Ok::<(), peacoqc_rs::PeacoQCError>(())
+    /// ```
+    pub fn export_json_metadata(
+        &self,
+        config: &PeacoQCConfig,
+        path: impl AsRef<Path>,
+    ) -> Result<()> {
+        crate::qc::export::export_json_metadata(self, config, path)
+    }
 }
 
 /// Main PeacoQC quality control function
