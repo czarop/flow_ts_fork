@@ -22,6 +22,15 @@ pub enum PeacoQCError {
     
     #[error("No peaks detected")]
     NoPeaksDetected,
+    
+    #[error("Export error: {0}")]
+    ExportError(String),
+    
+    #[error("Invalid path: {0}")]
+    InvalidPath(String),
+    
+    #[error("Write error: {0}")]
+    WriteError(String),
 }
 
 pub type Result<T> = std::result::Result<T, PeacoQCError>;

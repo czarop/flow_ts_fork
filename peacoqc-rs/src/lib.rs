@@ -99,6 +99,7 @@ pub use error::{PeacoQCError, Result};
 pub use qc::{
     DoubletConfig, DoubletResult, MarginConfig, MarginResult, PeacoQCConfig, PeacoQCResult, QCMode,
     peacoqc, remove_doublets, remove_margins,
+    export_csv_boolean, export_csv_numeric, export_json_metadata, QCExportFormat, QCExportOptions,
 };
 
 #[cfg(feature = "flow-fcs")]

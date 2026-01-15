@@ -6,6 +6,7 @@ pub mod consecutive;
 pub mod isolation_tree;
 pub mod monotonic;
 pub mod peacoqc;
+pub mod export;
 
 pub use margins::{remove_margins, MarginConfig, MarginResult};
 pub use doublets::{remove_doublets, DoubletConfig, DoubletResult};
@@ -15,3 +16,6 @@ pub use consecutive::{remove_short_regions, ConsecutiveConfig};
 pub use isolation_tree::{isolation_tree_detect, IsolationTreeConfig, IsolationTreeResult};
 pub use monotonic::{find_increasing_decreasing_channels, MonotonicConfig, MonotonicResult};
 pub use peacoqc::{peacoqc, PeacoQCConfig, PeacoQCResult, QCMode};
+pub use export::{
+    export_csv_boolean, export_csv_numeric, export_json_metadata, QCExportFormat, QCExportOptions,
+};
