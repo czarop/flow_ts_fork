@@ -1,9 +1,10 @@
 use anyhow::Result;
 use clap::Parser;
+use dialoguer::{Confirm, Input};
 use flow_fcs::Fcs;
 use peacoqc_rs::{
     DoubletConfig, FcsFilter, MarginConfig, PeacoQCConfig, PeacoQCData, QCMode, peacoqc,
-    remove_doublets, remove_margins,
+    remove_doublets, remove_margins, create_qc_plots, QCPlotConfig,
 };
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
@@ -84,6 +85,24 @@ struct Cli {
     #[arg(long, default_value = "PeacoQC")]
     csv_column_name: String,
 
+    /// Generate QC plots after processing (if not specified, will prompt interactively)
+    #[arg(long)]
+    plots: Option<bool>,
+
+    /// Directory to save QC plots (defaults to same directory as input file if not specified)
+    #[arg(long, value_name = "PLOT_DIR")]
+    plot_dir: Option<PathBuf>,
+
+    /// Cofactor for arcsinh transformation (default: 2000)
+    /// Lower values = more compression, higher values = less compression
+    #[arg(long, default_value = "2000")]
+    cofactor: f32,
+
+    /// Iterate over multiple cofactor values (comma-separated, e.g., "1000,2000,5000")
+    /// When specified, QC will be run for each cofactor value
+    #[arg(long, value_delimiter = ',')]
+    cofactors: Option<Vec<f32>>,
+
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
@@ -126,6 +145,10 @@ struct FileResult {
     consecutive_percentage: f64,
     processing_time_ms: u128,
     error: Option<String>,
+    cofactor_used: f32,
+    // Store data needed for plot generation
+    fcs_data: Option<Fcs>,
+    qc_result: Option<peacoqc_rs::PeacoQCResult>,
 }
 
 /// Collect all FCS files from input paths (handles files and directories)
@@ -196,6 +219,9 @@ fn process_single_file(
             consecutive_percentage: result.consecutive_percentage,
             processing_time_ms: start_time.elapsed().as_millis(),
             error: None,
+            cofactor_used: result.cofactor_used,
+            fcs_data: Some(result.fcs_data),
+            qc_result: Some(result.qc_result),
         },
         Err(e) => FileResult {
             filename,
@@ -209,6 +235,9 @@ fn process_single_file(
             consecutive_percentage: 0.0,
             processing_time_ms: start_time.elapsed().as_millis(),
             error: Some(e.to_string()),
+            cofactor_used: config.cofactor,
+            fcs_data: None,
+            qc_result: None,
         },
     }
 }
@@ -221,6 +250,10 @@ struct InternalResult {
     it_percentage: Option<f64>,
     mad_percentage: Option<f64>,
     consecutive_percentage: f64,
+    cofactor_used: f32,
+    // Store data needed for plot generation
+    fcs_data: Fcs,
+    qc_result: peacoqc_rs::PeacoQCResult,
 }
 
 /// Processing configuration
@@ -239,6 +272,9 @@ struct ProcessingConfig {
     export_csv_numeric: Option<PathBuf>,
     export_json: Option<PathBuf>,
     csv_column_name: String,
+    cofactor: f32,
+    generate_plots: bool,
+    plot_dir: Option<PathBuf>,
 }
 
 /// Internal function to process a single file (called from process_single_file)
@@ -325,15 +361,16 @@ fn process_file_internal(
 
     // Apply compensation and transformation (matching R implementation behavior)
     // Transformation is CRITICAL for MAD detection - without it, raw fluorescence ranges
+    let cofactor = config.cofactor;
     if has_compensation {
-        info!("Applying compensation and arcsinh transformation (cofactor=2000, matching R PeacoQC preprocessing)");
-        match peacoqc_rs::preprocess_fcs(current_fcs, true, true, 2000.0) {
+        info!("Applying compensation and arcsinh transformation (cofactor={}, matching R PeacoQC preprocessing)", cofactor);
+        match peacoqc_rs::preprocess_fcs(current_fcs, true, true, cofactor) {
             Ok(preprocessed_fcs) => {
                 current_fcs = preprocessed_fcs;
                 let n_events_after = current_fcs.get_event_count_from_dataframe();
                 info!(
-                    "Preprocessing complete: {} events (compensation + arcsinh transform applied, cofactor=2000)",
-                    n_events_after
+                    "Preprocessing complete: {} events (compensation + arcsinh transform applied, cofactor={})",
+                    n_events_after, cofactor
                 );
             }
             Err(e) => {
@@ -351,11 +388,11 @@ fn process_file_internal(
         }
     } else {
         // No compensation available - still apply transformation for better MAD results
-        info!("No compensation available, applying arcsinh transformation only (cofactor=2000)");
-        match peacoqc_rs::preprocess_fcs(current_fcs, false, true, 2000.0) {
+        info!("No compensation available, applying arcsinh transformation only (cofactor={})", cofactor);
+        match peacoqc_rs::preprocess_fcs(current_fcs, false, true, cofactor) {
             Ok(preprocessed_fcs) => {
                 current_fcs = preprocessed_fcs;
-                info!("Transformation applied (arcsinh with cofactor=2000)");
+                info!("Transformation applied (arcsinh with cofactor={})", cofactor);
             }
             Err(e) => {
                 warn!(
@@ -515,6 +552,9 @@ fn process_file_internal(
         it_percentage: peacoqc_result.it_percentage,
         mad_percentage: peacoqc_result.mad_percentage,
         consecutive_percentage: peacoqc_result.consecutive_percentage,
+        cofactor_used: cofactor,
+        fcs_data: current_fcs,
+        qc_result: peacoqc_result,
     })
 }
 
@@ -549,43 +589,114 @@ fn main() -> Result<()> {
         std::fs::create_dir_all(output_dir)?;
     }
 
-    // Prepare processing configuration
-    let processing_config = ProcessingConfig {
-        channels: args.channels,
-        qc_mode: args.qc_mode.into(),
-        mad: args.mad,
-        it_limit: args.it_limit,
-        consecutive_bins: args.consecutive_bins,
-        remove_zeros: args.remove_zeros,
-        remove_margins: args.remove_margins,
-        remove_doublets: args.remove_doublets,
-        doublet_nmad: args.doublet_nmad,
-        export_csv: args.export_csv,
-        export_csv_numeric: args.export_csv_numeric,
-        export_json: args.export_json,
-        csv_column_name: args.csv_column_name,
+    // Determine cofactors to use
+    let cofactors_to_use = if let Some(ref cofactors) = args.cofactors {
+        cofactors.clone()
+    } else {
+        vec![args.cofactor]
     };
 
-    // Process files in parallel
-    let total_files = input_files.len();
-    let results: Vec<FileResult> = input_files
-        .par_iter()
-        .enumerate()
-        .map(|(idx, input_path)| {
-            if total_files > 1 {
-                info!(
-                    "Processing file {}/{}: {}",
-                    idx + 1,
-                    total_files,
-                    input_path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("unknown")
-                );
-            }
-            process_single_file(input_path, args.output.as_deref(), &processing_config)
-        })
-        .collect();
+    // Determine if plots should be generated
+    let generate_plots = if let Some(plots_flag) = args.plots {
+        plots_flag  // Use the flag value directly - this fixes the bug where --plots true didn't work
+    } else {
+        // Prompt user interactively if not specified
+        Confirm::new()
+            .with_prompt("Generate QC plots?")
+            .default(true)
+            .interact()
+            .unwrap_or(false)
+    };
+
+    // Determine plot directory
+    let plot_dir = if generate_plots {
+        if let Some(ref dir) = args.plot_dir {
+            Some(dir.clone())
+        } else {
+            // Prompt for directory with default
+            let default_dir = if input_files.len() == 1 {
+                input_files[0]
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .to_path_buf()
+            } else {
+                Path::new(".").to_path_buf()
+            };
+
+            let default_str = default_dir.to_string_lossy().to_string();
+            let dir_input: String = Input::new()
+                .with_prompt(format!("Plot directory (default: {})", default_str))
+                .default(default_str)
+                .interact()
+                .unwrap_or_default();
+
+            Some(PathBuf::from(dir_input))
+        }
+    } else {
+        None
+    };
+
+    // Create plot directory if needed
+    if let Some(ref dir) = plot_dir {
+        std::fs::create_dir_all(dir)?;
+    }
+
+    // Convert qc_mode once before the loop
+    let qc_mode = args.qc_mode.into();
+
+    // Process files with each cofactor
+    let mut all_results: Vec<FileResult> = Vec::new();
+    
+    for cofactor in &cofactors_to_use {
+        if cofactors_to_use.len() > 1 {
+            println!("\n🔄 Processing with cofactor: {}\n", cofactor);
+        }
+
+        // Prepare processing configuration
+        let mut processing_config = ProcessingConfig {
+            channels: args.channels.clone(),
+            qc_mode: qc_mode,
+            mad: args.mad,
+            it_limit: args.it_limit,
+            consecutive_bins: args.consecutive_bins,
+            remove_zeros: args.remove_zeros,
+            remove_margins: args.remove_margins,
+            remove_doublets: args.remove_doublets,
+            doublet_nmad: args.doublet_nmad,
+            export_csv: args.export_csv.clone(),
+            export_csv_numeric: args.export_csv_numeric.clone(),
+            export_json: args.export_json.clone(),
+            csv_column_name: args.csv_column_name.clone(),
+            cofactor: *cofactor,
+            generate_plots: false, // Will handle plots after all processing
+            plot_dir: plot_dir.clone(),
+        };
+
+        // Process files in parallel
+        let total_files = input_files.len();
+        let results: Vec<FileResult> = input_files
+            .par_iter()
+            .enumerate()
+            .map(|(idx, input_path)| {
+                if total_files > 1 {
+                    info!(
+                        "Processing file {}/{}: {}",
+                        idx + 1,
+                        total_files,
+                        input_path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("unknown")
+                    );
+                }
+                process_single_file(input_path, args.output.as_deref(), &processing_config)
+            })
+            .collect();
+
+        all_results.extend(results);
+    }
+
+    let results = all_results;
 
     // Print results
     let total_time = start_time.elapsed().as_secs_f64();
@@ -680,6 +791,41 @@ fn main() -> Result<()> {
                 std::fs::write(report_path, serde_json::to_string_pretty(&combined_report)?)?;
             }
         }
+    }
+
+    // Handle plot generation
+    if generate_plots && !successful.is_empty() {
+        println!("\n📊 Generating QC plots...");
+
+        // Generate plots for each successful file
+        for result in &successful {
+            if let (Some(fcs_data), Some(qc_result)) = (&result.fcs_data, &result.qc_result) {
+                let plot_filename = result
+                    .input_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| {
+                        if cofactors_to_use.len() > 1 {
+                            format!("{}_cofactor{:.0}_qc_plot.png", s, result.cofactor_used)
+                        } else {
+                            format!("{}_qc_plot.png", s)
+                        }
+                    })
+                    .unwrap_or_else(|| "qc_plot.png".to_string());
+                
+                let plot_path = plot_dir.as_ref().unwrap().join(&plot_filename);
+
+                match create_qc_plots(fcs_data, qc_result, &plot_path, QCPlotConfig::default()) {
+                    Ok(()) => {
+                        println!("   ✅ Generated plot: {}", plot_path.display());
+                    }
+                    Err(e) => {
+                        warn!("   ⚠️  Failed to generate plot for {}: {}", result.filename, e);
+                    }
+                }
+            }
+        }
+        println!();
     }
 
     // Exit with error code if any files failed

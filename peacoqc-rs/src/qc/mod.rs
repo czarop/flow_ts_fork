@@ -7,6 +7,7 @@ pub mod isolation_tree;
 pub mod monotonic;
 pub mod peacoqc;
 pub mod export;
+pub mod plots;
 
 pub use margins::{remove_margins, MarginConfig, MarginResult};
 pub use doublets::{remove_doublets, DoubletConfig, DoubletResult};
@@ -19,3 +20,4 @@ pub use peacoqc::{peacoqc, PeacoQCConfig, PeacoQCResult, QCMode};
 pub use export::{
     export_csv_boolean, export_csv_numeric, export_json_metadata, QCExportFormat, QCExportOptions,
 };
+pub use plots::{create_qc_plots, QCPlotConfig};

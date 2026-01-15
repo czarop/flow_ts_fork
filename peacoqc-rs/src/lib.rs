@@ -100,6 +100,7 @@ pub use qc::{
     DoubletConfig, DoubletResult, MarginConfig, MarginResult, PeacoQCConfig, PeacoQCResult, QCMode,
     peacoqc, remove_doublets, remove_margins,
     export_csv_boolean, export_csv_numeric, export_json_metadata, QCExportFormat, QCExportOptions,
+    create_qc_plots, QCPlotConfig,
 };
 
 #[cfg(feature = "flow-fcs")]
