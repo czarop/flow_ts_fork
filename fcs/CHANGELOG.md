@@ -5,12 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.4 (2026-01-18)
+
+### Refactor
+
+ - <csr-id-6da76b758d02b9da1abcd3052323f81992dc3fdd/> clean up unused imports and improve code readability
+   - Removed unused imports from write.rs and peaks.rs.
+   - Updated the loop in isolation_tree.rs to ignore unused variables for clarity.
+   - Standardized string conversion in plots.rs for consistency.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Clean up unused imports and improve code readability ([`6da76b7`](https://github.com/jrmoynihan/flow/commit/6da76b758d02b9da1abcd3052323f81992dc3fdd))
+</details>
+
 ## 0.1.3 (2026-01-18)
 
 <csr-id-8d232b2838f65aa621a81031183d4c954d787543/>
 <csr-id-4649c7af16150d05880ddab4e732e9dee374d01b/>
 <csr-id-5bd48e4049f6afc1539dc0a23d41d0d0f98ee6f7/>
 <csr-id-d3aa6cdc5a806703131a3ffac63506142f052da9/>
+<csr-id-339d07ac60343b172cd5962310abbc7899fdc770/>
 
 ### Chore
 
@@ -55,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 10 commits contributed to the release over the course of 3 calendar days.
+ - 11 commits contributed to the release over the course of 3 calendar days.
  - 4 days passed between releases.
  - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -67,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.1.3, peacoqc-rs v0.1.2 ([`f08823c`](https://github.com/jrmoynihan/flow/commit/f08823cabcae5223efe4250471dd75ea7fcaa936))
     - Update categories in Cargo.toml files ([`339d07a`](https://github.com/jrmoynihan/flow/commit/339d07ac60343b172cd5962310abbc7899fdc770))
     - Release flow-fcs v0.1.3, peacoqc-rs v0.1.2 ([`607fcae`](https://github.com/jrmoynihan/flow/commit/607fcae78304d51ce8d156e82e5dba48a1b6dbfa))
     - Update Cargo.toml scripts and dependency versions ([`d3aa6cd`](https://github.com/jrmoynihan/flow/commit/d3aa6cdc5a806703131a3ffac63506142f052da9))
@@ -78,9 +107,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add FCS file writing and modification utilities ([`31bd355`](https://github.com/jrmoynihan/flow/commit/31bd355c1457beae0a9852adfc9dd1bdab7a3cf4))
     - Update Cargo.toml files for consistency and improvements ([`4649c7a`](https://github.com/jrmoynihan/flow/commit/4649c7af16150d05880ddab4e732e9dee374d01b))
 </details>
-
-<csr-unknown>
-duplicate_fcs_file: Copy existing FCS fileedit_metadata_and_save: Modify metadata and persist changesfilter_events: Remove events based on boolean maskconcatenate_events: Combine multiple FCS files into a single new fileadd_column: Add a new parameter column to an existing FCS file<csr-unknown/>
 
 ## 0.1.2 (2026-01-13)
 

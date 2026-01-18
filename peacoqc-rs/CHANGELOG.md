@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-be95b5180e4ffe4826bcb9a3833295d35a9b7ced/>
 <csr-id-5bd48e4049f6afc1539dc0a23d41d0d0f98ee6f7/>
 <csr-id-005a1cc9bd0bef0c9354d1f16b1fa077828359a3/>
+<csr-id-339d07ac60343b172cd5962310abbc7899fdc770/>
 
 ### Chore
 
@@ -35,6 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Enhance keywords and categories for better discoverability
    - Ensure consistent dependency declarations and script commands
 
+### Refactor
+
+ - <csr-id-6da76b758d02b9da1abcd3052323f81992dc3fdd/> clean up unused imports and improve code readability
+   - Removed unused imports from write.rs and peaks.rs.
+   - Updated the loop in isolation_tree.rs to ignore unused variables for clarity.
+   - Standardized string conversion in plots.rs for consistency.
+
+### Bug Fixes
+
+ - <csr-id-0f4f447a4dbc2a47b6e5959f07da70ef465f95b9/> remove duplicate debug module declaration in qc mod.rs
+
 ### Chore
 
  - <csr-id-339d07ac60343b172cd5962310abbc7899fdc770/> update categories in Cargo.toml files
@@ -50,14 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-c6e843a730bc3352229c02a60be3b167e9f2d14d/> md formatting on dev notes
  - <csr-id-06a15cc61b34171896102c8de48c275fb811e78d/> consolidate and clean up documentation
    - Create DEV_NOTES.md consolidating technical implementation details
-- Update QUICK_START.md with cleaner examples
-- Update README.md with improved documentation
-- Add .gitignore entry for test artifacts
-- Boolean CSV format description and use cases
-- Numeric CSV format (R-compatible) description
-- JSON metadata format with example structure
-- Custom column name examples
-- Integration notes for downstream tools (pandas, R, SQL)
 
 ### New Features
 
@@ -71,18 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    for significant performance improvements.
    
    - Add realfft dependency for efficient FFT operations
-- Implement FFT-based convolution for KDE computation
-- Update benchmarks to reflect FFT implementation
-- Update performance analysis documentation
-- 30-87x faster for typical use cases (1k-50k events)
-- Better scaling for larger datasets
-- No accuracy loss - all tests pass
-- export_csv_boolean() and export_csv_boolean_with_name()
-- export_csv_numeric() and export_csv_numeric_with_name()
-- export_json_metadata()
-- Boolean CSV (0/1 values) for general use
-- Numeric CSV (2000/6000 values) for R compatibility
-- JSON metadata with comprehensive QC metrics
 
 ### Other
 
@@ -113,9 +105,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 21 commits contributed to the release over the course of 3 calendar days.
+ - 24 commits contributed to the release over the course of 3 calendar days.
  - 3 days passed between releases.
- - 17 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 19 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -125,6 +117,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Clean up unused imports and improve code readability ([`6da76b7`](https://github.com/jrmoynihan/flow/commit/6da76b758d02b9da1abcd3052323f81992dc3fdd))
+    - Remove duplicate debug module declaration in qc mod.rs ([`0f4f447`](https://github.com/jrmoynihan/flow/commit/0f4f447a4dbc2a47b6e5959f07da70ef465f95b9))
+    - Release flow-fcs v0.1.3, peacoqc-rs v0.1.2 ([`f08823c`](https://github.com/jrmoynihan/flow/commit/f08823cabcae5223efe4250471dd75ea7fcaa936))
     - Update categories in Cargo.toml files ([`339d07a`](https://github.com/jrmoynihan/flow/commit/339d07ac60343b172cd5962310abbc7899fdc770))
     - Release flow-fcs v0.1.3, peacoqc-rs v0.1.2 ([`607fcae`](https://github.com/jrmoynihan/flow/commit/607fcae78304d51ce8d156e82e5dba48a1b6dbfa))
     - Update Cargo.toml scripts and dependency versions ([`d3aa6cd`](https://github.com/jrmoynihan/flow/commit/d3aa6cdc5a806703131a3ffac63506142f052da9))
@@ -149,7 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add export formats documentationAdd comprehensive documentation for export formats:Includes code examples for each export format. Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines.Performance improvements:Benchmarks show ~48x speedup for default bin size (1k events),reducing KDE time from ~1.4ms to ~29µs per bin. add convenience export methods to PeacoQCResultAdd methods to PeacoQCResult for easier export:These methods wrap the export functions and provide a moreergonomic API for users. add export module for QC resultsAdd export functionality to support multiple output formats:<csr-unknown/>
+Update QUICK_START.md with cleaner examplesUpdate README.md with improved documentationAdd .gitignore entry for test artifactsBoolean CSV format description and use casesNumeric CSV format (R-compatible) descriptionJSON metadata format with example structureCustom column name examplesIntegration notes for downstream tools (pandas, R, SQL)Implement FFT-based convolution for KDE computationUpdate benchmarks to reflect FFT implementationUpdate performance analysis documentation30-87x faster for typical use cases (1k-50k events)Better scaling for larger datasetsNo accuracy loss - all tests passexport_csv_boolean() and export_csv_boolean_with_name()export_csv_numeric() and export_csv_numeric_with_name()export_json_metadata()Boolean CSV (0/1 values) for general useNumeric CSV (2000/6000 values) for R compatibilityJSON metadata with comprehensive QC metrics<csr-unknown/>
 
 ## 0.1.1 (2026-01-14)
 
