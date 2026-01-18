@@ -16,7 +16,7 @@ keywords=[
 categories=["science", "visualization"]
 
 [dependencies]
-flow-fcs            ={ path="../fcs", version= "^0.1.3" }
+flow-fcs            ={ path="../fcs", version="^0.1.3" }
 flow-plots          ={ path="../plots", version="^0.1.1" }
 anyhow.workspace    =true
 thiserror.workspace =true
@@ -32,6 +32,6 @@ test-compliance-list="cargo test --test compliance_tests -- --list"
 test-all            ="cargo test --all-features"
 test-unit           ="cargo test --lib"
 test-integration    ="cargo test --test '*'"
-dry-release         ="cargo smart-release --update-crates-index"
-publish             ="cargo smart-release --update-crates-index --execute"
-changelog           ="cargo changelog --write"
+dry-release         ="cargo smart-release flow-gates --update-crates-index"
+publish             ="cargo smart-release flow-gates --update-crates-index --execute"
+changelog           ="cargo changelog flow-gates --write"

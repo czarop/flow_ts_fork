@@ -52,6 +52,6 @@ harness=false
 
 [package.metadata.scripts]
 test       ="cargo test"
-dry-release="cargo smart-release --update-crates-index"
-publish    ="cargo smart-release --update-crates-index --execute"
-changelog  ="cargo changelog --write"
+dry-release="cargo smart-release peacoqc-rs --update-crates-index"
+publish    ="cargo smart-release peacoqc-rs --update-crates-index --execute"
+changelog  ="cargo changelog peacoqc-rs --write"
