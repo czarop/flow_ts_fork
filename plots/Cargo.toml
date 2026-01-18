@@ -1,6 +1,6 @@
 [package]
 name="flow-plots"
-version="0.1.0"
+version="0.1.1"
 edition.workspace=true
 authors.workspace=true
 repository="https://github.com/jrmoynihan/flow/flow-plots"
@@ -33,7 +33,7 @@ num-traits    ="0.2"
 [package.metadata.scripts]
 test          ="cargo test"
 dry-release   ="cargo smart-release --update-crates-index"
-publish       ="cargo smart-release --execute"
+publish       ="cargo smart-release --update-crates-index --execute"
 changelog     ="cargo changelog --write"
 colormap      ="0.0.2"
 colorgrad     ={ version="0.8", features=["preset"] }

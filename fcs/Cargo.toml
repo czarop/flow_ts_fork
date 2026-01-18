@@ -21,7 +21,7 @@ categories=[
 
 [package.metadata.scripts]
 dry-release="cargo smart-release --update-crates-index"
-publish    ="cargo smart-release --execute"
+publish    ="cargo smart-release --update-crates-index --execute"
 changelog  ="cargo changelog --write"
 
 [dependencies]
