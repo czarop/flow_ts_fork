@@ -1,10 +1,10 @@
 use anyhow::Result;
 use clap::Parser;
 use dialoguer::{Confirm, Input};
-use flow_fcs::Fcs;
+use flow_fcs::{Fcs, write_fcs_file};
 use peacoqc_rs::{
-    DoubletConfig, FcsFilter, MarginConfig, PeacoQCConfig, PeacoQCData, QCMode, peacoqc,
-    remove_doublets, remove_margins, create_qc_plots, QCPlotConfig, PeacoQCResult,
+    DoubletConfig, FcsFilter, MarginConfig, PeacoQCConfig, PeacoQCData, QCMode, QCPlotConfig,
+    create_qc_plots, peacoqc, remove_doublets, remove_margins,
 };
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
@@ -52,13 +52,13 @@ struct Cli {
     #[arg(long)]
     remove_zeros: bool,
 
-    /// Remove margin events before QC
-    #[arg(long, default_value = "true")]
-    remove_margins: bool,
+    /// Keep margin events (default: margins are removed)
+    #[arg(long)]
+    keep_margins: bool,
 
-    /// Remove doublets before QC
-    #[arg(long, default_value = "true")]
-    remove_doublets: bool,
+    /// Keep doublet events (default: doublets are removed)
+    #[arg(long)]
+    keep_doublets: bool,
 
     /// Doublet nmad threshold (default: 4.0)
     #[arg(long, default_value = "4.0")]
@@ -68,6 +68,23 @@ struct Cli {
     #[arg(long, value_name = "REPORT_PATH")]
     report: Option<PathBuf>,
 
+    /// Export QC results as boolean CSV (0/1 values)
+    /// Recommended format for general use (pandas, R, SQL)
+    #[arg(long, value_name = "CSV_PATH")]
+    export_csv: Option<PathBuf>,
+
+    /// Export QC results as numeric CSV (2000/6000 values, R-compatible)
+    #[arg(long, value_name = "CSV_PATH")]
+    export_csv_numeric: Option<PathBuf>,
+
+    /// Export QC metadata as JSON
+    #[arg(long, value_name = "JSON_PATH")]
+    export_json: Option<PathBuf>,
+
+    /// Column name for CSV exports (default: "PeacoQC")
+    #[arg(long, default_value = "PeacoQC")]
+    csv_column_name: String,
+
     /// Generate QC plots after processing (if not specified, will prompt interactively)
     #[arg(long)]
     plots: Option<bool>,
@@ -75,6 +92,24 @@ struct Cli {
     /// Directory to save QC plots (defaults to same directory as input file if not specified)
     #[arg(long, value_name = "PLOT_DIR")]
     plot_dir: Option<PathBuf>,
+
+    /// Hide spline and MAD threshold lines in plots (shown by default)
+    #[arg(long)]
+    hide_spline_mad: bool,
+
+    /// Show bin boundaries (gray vertical lines) in plots (hidden by default)
+    #[arg(long)]
+    show_bin_boundaries: bool,
+
+    /// Cofactor for arcsinh transformation (default: 2000)
+    /// Lower values = more compression, higher values = less compression
+    #[arg(long, default_value = "2000")]
+    cofactor: f32,
+
+    /// Iterate over multiple cofactor values (comma-separated, e.g., "1000,2000,5000")
+    /// When specified, QC will be run for each cofactor value
+    #[arg(long, value_delimiter = ',')]
+    cofactors: Option<Vec<f32>>,
 
     /// Verbose output
     #[arg(short, long)]
@@ -118,9 +153,10 @@ struct FileResult {
     consecutive_percentage: f64,
     processing_time_ms: u128,
     error: Option<String>,
+    cofactor_used: f32,
     // Store data needed for plot generation
     fcs_data: Option<Fcs>,
-    qc_result: Option<PeacoQCResult>,
+    qc_result: Option<peacoqc_rs::PeacoQCResult>,
 }
 
 /// Collect all FCS files from input paths (handles files and directories)
@@ -191,6 +227,7 @@ fn process_single_file(
             consecutive_percentage: result.consecutive_percentage,
             processing_time_ms: start_time.elapsed().as_millis(),
             error: None,
+            cofactor_used: result.cofactor_used,
             fcs_data: Some(result.fcs_data),
             qc_result: Some(result.qc_result),
         },
@@ -206,6 +243,7 @@ fn process_single_file(
             consecutive_percentage: 0.0,
             processing_time_ms: start_time.elapsed().as_millis(),
             error: Some(e.to_string()),
+            cofactor_used: config.cofactor,
             fcs_data: None,
             qc_result: None,
         },
@@ -220,9 +258,10 @@ struct InternalResult {
     it_percentage: Option<f64>,
     mad_percentage: Option<f64>,
     consecutive_percentage: f64,
+    cofactor_used: f32,
     // Store data needed for plot generation
     fcs_data: Fcs,
-    qc_result: PeacoQCResult,
+    qc_result: peacoqc_rs::PeacoQCResult,
 }
 
 /// Processing configuration
@@ -237,6 +276,13 @@ struct ProcessingConfig {
     remove_margins: bool,
     remove_doublets: bool,
     doublet_nmad: f64,
+    export_csv: Option<PathBuf>,
+    export_csv_numeric: Option<PathBuf>,
+    export_json: Option<PathBuf>,
+    csv_column_name: String,
+    cofactor: f32,
+    generate_plots: bool,
+    plot_dir: Option<PathBuf>,
 }
 
 /// Internal function to process a single file (called from process_single_file)
@@ -245,6 +291,7 @@ fn process_file_internal(
     output_path: Option<&Path>,
     config: &ProcessingConfig,
 ) -> Result<InternalResult> {
+    use peacoqc_rs::{export_csv_boolean, export_csv_numeric, export_json_metadata};
     // Load FCS file
     let fcs = Fcs::open(
         input_path
@@ -272,19 +319,27 @@ fn process_file_internal(
 
     // Log compensation status
     let has_compensation = fcs.has_compensation();
-    info!(
-        "Compensation status: {} (SPILLOVER keyword {})",
-        if has_compensation {
-            "available"
-        } else {
-            "not available"
-        },
-        if has_compensation {
-            "present"
-        } else {
-            "missing"
+
+    // Log detailed compensation status
+    match fcs.get_spillover_matrix() {
+        Ok(Some((matrix, names))) => {
+            info!(
+                "Compensation status: available ({}x{} matrix, {} parameters)",
+                matrix.nrows(),
+                matrix.ncols(),
+                names.len()
+            );
         }
-    );
+        Ok(None) => {
+            info!("Compensation status: not available (SPILLOVER/SPILL/COMP keyword missing)");
+        }
+        Err(e) => {
+            warn!(
+                "Compensation status: error reading compensation matrix: {}",
+                e
+            );
+        }
+    }
 
     // Log all available channels
     let all_channels = fcs.channel_names();
@@ -320,56 +375,11 @@ fn process_file_internal(
 
     let mut current_fcs = fcs;
 
-    // Apply compensation and transformation (matching R implementation behavior)
-    // Transformation is CRITICAL for MAD detection - without it, raw fluorescence ranges
-    if has_compensation {
-        info!("Applying compensation and arcsinh transformation (cofactor=2000, matching R PeacoQC preprocessing)");
-        match peacoqc_rs::preprocess_fcs(current_fcs, true, true, 2000.0) {
-            Ok(preprocessed_fcs) => {
-                current_fcs = preprocessed_fcs;
-                let n_events_after = current_fcs.get_event_count_from_dataframe();
-                info!(
-                    "Preprocessing complete: {} events (compensation + arcsinh transform applied, cofactor=2000)",
-                    n_events_after
-                );
-            }
-            Err(e) => {
-                warn!(
-                    "Failed to apply preprocessing: {}, continuing with raw data (MAD results may differ from R)",
-                    e
-                );
-                // Re-open the file if preprocessing failed
-                current_fcs = Fcs::open(
-                    input_path
-                        .to_str()
-                        .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
-                )?;
-            }
-        }
-    } else {
-        // No compensation available - still apply transformation for better MAD results
-        info!("No compensation available, applying arcsinh transformation only (cofactor=2000)");
-        match peacoqc_rs::preprocess_fcs(current_fcs, false, true, 2000.0) {
-            Ok(preprocessed_fcs) => {
-                current_fcs = preprocessed_fcs;
-                info!("Transformation applied (arcsinh with cofactor=2000)");
-            }
-            Err(e) => {
-                warn!(
-                    "Failed to apply transformation: {}, continuing with raw data (MAD results may differ from R)",
-                    e
-                );
-                // Re-open the file if transformation failed
-                current_fcs = Fcs::open(
-                    input_path
-                        .to_str()
-                        .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
-                )?;
-            }
-        }
-    }
+    // R's preprocessing order: RemoveMargins → RemoveDoublets → Compensate → Transform
+    // This order matters because margin/doublet removal should happen on raw data
+    // before transformation affects the values
 
-    // Remove margins (optional)
+    // Step 1: Remove margins (optional) - BEFORE transformation
     if config.remove_margins {
         let n_events_before_margins = current_fcs.get_event_count_from_dataframe();
         info!("Removing margin events (preprocessing step)");
@@ -397,7 +407,7 @@ fn process_file_internal(
         }
     }
 
-    // Remove doublets (optional)
+    // Step 2: Remove doublets (optional) - BEFORE transformation
     if config.remove_doublets {
         let n_events_before_doublets = current_fcs.get_event_count_from_dataframe();
         info!("Removing doublet events (preprocessing step)");
@@ -433,6 +443,65 @@ fn process_file_internal(
         }
     }
 
+    // Step 3: Apply compensation and transformation (matching R implementation behavior)
+    // R logic: if compensation available → biexponential/logicle, else → arcsinh
+    // Transformation is CRITICAL for MAD detection - without it, raw fluorescence ranges
+    let cofactor = config.cofactor;
+    if has_compensation {
+        info!(
+            "Applying compensation and biexponential transformation (matching R PeacoQC: compensate + estimateLogicle)"
+        );
+        match peacoqc_rs::preprocess_fcs(current_fcs, true, true, cofactor) {
+            Ok(preprocessed_fcs) => {
+                current_fcs = preprocessed_fcs;
+                let n_events_after = current_fcs.get_event_count_from_dataframe();
+                info!(
+                    "Preprocessing complete: {} events (compensation + biexponential/logicle transform applied)",
+                    n_events_after
+                );
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to apply preprocessing: {}, continuing with raw data (MAD results may differ from R)",
+                    e
+                );
+                // Re-open the file if preprocessing failed
+                current_fcs = Fcs::open(
+                    input_path
+                        .to_str()
+                        .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
+                )?;
+            }
+        }
+    } else {
+        // No compensation available - still apply transformation for better MAD results
+        info!(
+            "No compensation available, applying arcsinh transformation only (cofactor={})",
+            cofactor
+        );
+        match peacoqc_rs::preprocess_fcs(current_fcs, false, true, cofactor) {
+            Ok(preprocessed_fcs) => {
+                current_fcs = preprocessed_fcs;
+                info!(
+                    "Transformation applied (arcsinh with cofactor={})",
+                    cofactor
+                );
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to apply transformation: {}, continuing with raw data (MAD results may differ from R)",
+                    e
+                );
+                // Re-open the file if transformation failed
+                current_fcs = Fcs::open(
+                    input_path
+                        .to_str()
+                        .ok_or_else(|| anyhow::anyhow!("Invalid path"))?,
+                )?;
+            }
+        }
+    }
+
     // Run PeacoQC
     let peacoqc_config = PeacoQCConfig {
         channels: channels.clone(),
@@ -452,12 +521,54 @@ fn process_file_internal(
 
     // Save output (if path provided)
     if let Some(output_path) = output_path {
-        // TODO: Implement write_to_file on Fcs in flow-fcs crate
-        // This is needed for feature parity with the R PeacoQC package (save_fcs=TRUE)
-        eprintln!(
-            "Note: FCS file writing not yet implemented, would save to: {}",
-            output_path.display()
-        );
+        info!("Writing cleaned FCS file to: {}", output_path.display());
+        write_fcs_file(clean_fcs, output_path)?;
+        info!("Successfully wrote cleaned FCS file");
+    }
+
+    // Export QC results if requested
+    let input_stem = input_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+
+    if let Some(ref csv_path) = config.export_csv {
+        let export_path = if csv_path.is_dir() {
+            csv_path.join(format!("{}.PeacoQC.csv", input_stem))
+        } else {
+            csv_path.clone()
+        };
+        export_csv_boolean(&peacoqc_result, &export_path, Some(&config.csv_column_name))
+            .map_err(|e| anyhow::anyhow!("Failed to export CSV: {}", e))?;
+        info!("Exported boolean CSV to: {}", export_path.display());
+    }
+
+    if let Some(ref csv_numeric_path) = config.export_csv_numeric {
+        let export_path = if csv_numeric_path.is_dir() {
+            csv_numeric_path.join(format!("{}.PeacoQC.csv", input_stem))
+        } else {
+            csv_numeric_path.clone()
+        };
+        export_csv_numeric(
+            &peacoqc_result,
+            &export_path,
+            2000,
+            6000,
+            Some(&config.csv_column_name),
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to export numeric CSV: {}", e))?;
+        info!("Exported numeric CSV to: {}", export_path.display());
+    }
+
+    if let Some(ref json_path) = config.export_json {
+        let export_path = if json_path.is_dir() {
+            json_path.join(format!("{}.PeacoQC.json", input_stem))
+        } else {
+            json_path.clone()
+        };
+        export_json_metadata(&peacoqc_result, &peacoqc_config, &export_path)
+            .map_err(|e| anyhow::anyhow!("Failed to export JSON: {}", e))?;
+        info!("Exported JSON metadata to: {}", export_path.display());
     }
 
     Ok(InternalResult {
@@ -467,6 +578,7 @@ fn process_file_internal(
         it_percentage: peacoqc_result.it_percentage,
         mad_percentage: peacoqc_result.mad_percentage,
         consecutive_percentage: peacoqc_result.consecutive_percentage,
+        cofactor_used: cofactor,
         fcs_data: current_fcs,
         qc_result: peacoqc_result,
     })
@@ -503,39 +615,118 @@ fn main() -> Result<()> {
         std::fs::create_dir_all(output_dir)?;
     }
 
-    // Prepare processing configuration
-    let processing_config = ProcessingConfig {
-        channels: args.channels,
-        qc_mode: args.qc_mode.into(),
-        mad: args.mad,
-        it_limit: args.it_limit,
-        consecutive_bins: args.consecutive_bins,
-        remove_zeros: args.remove_zeros,
-        remove_margins: args.remove_margins,
-        remove_doublets: args.remove_doublets,
-        doublet_nmad: args.doublet_nmad,
+    // Determine cofactors to use
+    let cofactors_to_use = if let Some(ref cofactors) = args.cofactors {
+        cofactors.clone()
+    } else {
+        vec![args.cofactor]
     };
 
-    // Process files in parallel
-    let total_files = input_files.len();
-    let results: Vec<FileResult> = input_files
-        .par_iter()
-        .enumerate()
-        .map(|(idx, input_path)| {
-            if total_files > 1 {
-                info!(
-                    "Processing file {}/{}: {}",
-                    idx + 1,
-                    total_files,
-                    input_path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("unknown")
-                );
-            }
-            process_single_file(input_path, args.output.as_deref(), &processing_config)
-        })
-        .collect();
+    // Determine if plots should be generated
+    let generate_plots = if let Some(plots_flag) = args.plots {
+        plots_flag // Use the flag value directly - this fixes the bug where --plots true didn't work
+    } else {
+        // Prompt user interactively if not specified
+        Confirm::new()
+            .with_prompt("Generate QC plots?")
+            .default(true)
+            .interact()
+            .unwrap_or(false)
+    };
+
+    // Determine plot directory
+    let plot_dir = if generate_plots {
+        if let Some(ref dir) = args.plot_dir {
+            Some(dir.clone())
+        } else {
+            // Prompt for directory with default
+            let default_dir = if input_files.len() == 1 {
+                input_files[0]
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .to_path_buf()
+            } else {
+                Path::new(".").to_path_buf()
+            };
+
+            let default_str = default_dir.to_string_lossy().to_string();
+            let dir_input: String = Input::new()
+                .with_prompt(format!("Plot directory (default: {})", default_str))
+                .default(default_str)
+                .interact()
+                .unwrap_or_default();
+
+            Some(PathBuf::from(dir_input))
+        }
+    } else {
+        None
+    };
+
+    // Create plot directory if needed
+    if let Some(ref dir) = plot_dir {
+        std::fs::create_dir_all(dir)?;
+    }
+
+    // Convert qc_mode once before the loop
+    let qc_mode = args.qc_mode.into();
+
+    // Process files with each cofactor
+    let mut all_results: Vec<FileResult> = Vec::new();
+
+    for cofactor in &cofactors_to_use {
+        if cofactors_to_use.len() > 1 {
+            println!("\n🔄 Processing with cofactor: {}\n", cofactor);
+        }
+
+        // Prepare processing configuration
+        // keep_margins/keep_doublets default to false, so removal happens by default
+        let remove_margins = !args.keep_margins;
+        let remove_doublets = !args.keep_doublets;
+
+        let mut processing_config = ProcessingConfig {
+            channels: args.channels.clone(),
+            qc_mode: qc_mode,
+            mad: args.mad,
+            it_limit: args.it_limit,
+            consecutive_bins: args.consecutive_bins,
+            remove_zeros: args.remove_zeros,
+            remove_margins,
+            remove_doublets,
+            doublet_nmad: args.doublet_nmad,
+            export_csv: args.export_csv.clone(),
+            export_csv_numeric: args.export_csv_numeric.clone(),
+            export_json: args.export_json.clone(),
+            csv_column_name: args.csv_column_name.clone(),
+            cofactor: *cofactor,
+            generate_plots: false, // Will handle plots after all processing
+            plot_dir: plot_dir.clone(),
+        };
+
+        // Process files in parallel
+        let total_files = input_files.len();
+        let results: Vec<FileResult> = input_files
+            .par_iter()
+            .enumerate()
+            .map(|(idx, input_path)| {
+                if total_files > 1 {
+                    info!(
+                        "Processing file {}/{}: {}",
+                        idx + 1,
+                        total_files,
+                        input_path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("unknown")
+                    );
+                }
+                process_single_file(input_path, args.output.as_deref(), &processing_config)
+            })
+            .collect();
+
+        all_results.extend(results);
+    }
+
+    let results = all_results;
 
     // Print results
     let total_time = start_time.elapsed().as_secs_f64();
@@ -695,12 +886,16 @@ fn main() -> Result<()> {
                         .unwrap_or_else(|| "qc_plot.png".to_string());
                     let plot_path = plot_dir.join(&plot_filename);
 
-                    match create_qc_plots(fcs_data, qc_result, &plot_path, QCPlotConfig::default()) {
+                    match create_qc_plots(fcs_data, qc_result, &plot_path, QCPlotConfig::default())
+                    {
                         Ok(()) => {
                             println!("   ✅ Generated plot: {}", plot_path.display());
                         }
                         Err(e) => {
-                            warn!("   ⚠️  Failed to generate plot for {}: {}", result.filename, e);
+                            warn!(
+                                "   ⚠️  Failed to generate plot for {}: {}",
+                                result.filename, e
+                            );
                         }
                     }
                 }

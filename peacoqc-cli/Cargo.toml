@@ -1,18 +1,27 @@
 [package]
-name             ="peacoqc-cli"
-version          = "0.1.1"
+name="peacoqc-cli"
+version="0.1.0"
 edition.workspace=true
 authors.workspace=true
 license.workspace=true
-description      ="Command-line tool for PeacoQC flow cytometry quality control"
+description="Command-line tool for PeacoQC flow cytometry quality control"
+repository="https://github.com/jrmoynihan/flow/peacoqc-cli"
+keywords=[
+    "flow-cytometry",
+    "quality-control",
+    "bioinformatics",
+    "command-line",
+]
+categories=["science", "bioinformatics"]
 
 [[bin]]
-name="peacoqc"
-path="src/main.rs"
+name        ="peacoqc"
+path        ="src/main.rs"
+reproducible=""
 
 [dependencies]
 flow-fcs={ path="../fcs", version="^0.1.2" }
-peacoqc-rs={ path="../peacoqc-rs", version= "^0.1.1", features=[
+peacoqc-rs={ path="../peacoqc-rs", version="^0.1.1", features=[
     "flow-fcs",
 ] }
 anyhow.workspace=true

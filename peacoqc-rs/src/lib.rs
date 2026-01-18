@@ -97,10 +97,9 @@ pub mod fcs;
 
 pub use error::{PeacoQCError, Result};
 pub use qc::{
-    peacoqc, PeacoQCConfig, PeacoQCResult, QCMode,
-    remove_margins, MarginConfig, MarginResult,
-    remove_doublets, DoubletConfig, DoubletResult,
-    create_qc_plots, QCPlotConfig,
+    DoubletConfig, DoubletResult, MarginConfig, MarginResult, PeacoQCConfig, PeacoQCResult,
+    QCExportFormat, QCExportOptions, QCMode, QCPlotConfig, create_qc_plots, export_csv_boolean,
+    export_csv_numeric, export_json_metadata, peacoqc, remove_doublets, remove_margins,
 };
 
 #[cfg(feature = "flow-fcs")]
@@ -365,19 +364,35 @@ mod flow_fcs_impl {
         }
 
         // Step 2: Apply transformation (if requested)
-        // Use arcsinh transformation with cofactor=2000 to match R PeacoQC behavior
-        // This cofactor value produces results closer to R PeacoQC than the default cofactor=200
-        // (R PeacoQC typically works with FlowJo-exported data that has been biexponentially transformed,
-        //  but arcsinh with cofactor=2000 approximates this well for outlier detection purposes)
+        // R PeacoQC logic:
+        //   - If compensation available: use estimateLogicle (biexponential/logicle)
+        //   - If no compensation: use arcsinh with cofactor=2000
+        // This matches R's behavior exactly
         if apply_transformation {
-            let transformed_df = fcs
-                .apply_default_arcsinh_transform()
-                .map_err(|e| anyhow::anyhow!("Failed to apply transformation: {}", e))?;
+            let has_comp = fcs.has_compensation();
+            let transformed_df = if has_comp {
+                // R uses estimateLogicle (biexponential) when compensation is available
+                fcs.apply_default_biexponential_transform().map_err(|e| {
+                    anyhow::anyhow!("Failed to apply biexponential transformation: {}", e)
+                })?
+            } else {
+                // R falls back to arcsinh if no compensation (cofactor=2000)
+                fcs.apply_default_arcsinh_transform()
+                    .map_err(|e| anyhow::anyhow!("Failed to apply arcsinh transformation: {}", e))?
+            };
+
             // EventDataFrame is already Arc<DataFrame>, no need to wrap again
             fcs.data_frame = transformed_df;
-            info!(
-                "Applied arcsinh transformation to fluorescence channels with default cofactor of 2000"
-            );
+
+            if has_comp {
+                info!(
+                    "Applied biexponential (logicle) transformation to fluorescence channels (matching R's estimateLogicle)"
+                );
+            } else {
+                info!(
+                    "Applied arcsinh transformation to fluorescence channels with cofactor=2000 (matching R's fallback)"
+                );
+            }
         }
 
         Ok(fcs)

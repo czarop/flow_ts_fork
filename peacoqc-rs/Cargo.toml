@@ -5,6 +5,7 @@ edition.workspace=true
 authors.workspace=true
 license.workspace=true
 description="PeacoQC quality control algorithms for flow cytometry"
+repository="https://github.com/jrmoynihan/flow/peacoqc-rs"
 keywords=[
     "flow-cytometry",
     "quality-control",
@@ -17,20 +18,25 @@ default =["flow-fcs"]
 flow-fcs=["dep:flow-fcs", "dep:polars"]
 
 [dependencies]
-flow-fcs           ={ path="../fcs", version="^0.1.2", optional=true }
-polars             ={ workspace=true, optional=true }
-anyhow.workspace   =true
-thiserror.workspace=true
-rand.workspace     =true
-rayon.workspace    =true
-plotters           ="0.3.7"
+flow-fcs            ={ path="../fcs", version="^0.1.2", optional=true }
+polars              ={ workspace=true, optional=true }
+anyhow.workspace    =true
+thiserror.workspace =true
+rand.workspace      =true
+rayon.workspace     =true
+plotters            ="0.3.7"
 image              ="0.25.9"
-serde.workspace    =true
-tracing.workspace  =true
+serde.workspace     =true
+serde_json.workspace=true
+tracing.workspace   =true
+realfft             ="3.5.0"                                           # FFT-based KDE for performance
+csaps               ="0.3"                                             # Cubic smoothing splines (matches R's smooth.spline)
+ndarray             ="0.13"                                            # Required by csaps for array types (must match csaps version)
 
 [dev-dependencies]
 approx   ="0.5"
 criterion="0.8.1"
+tempfile ="3.10"
 
 [[bench]]
 name   ="peacoqc_bench"
@@ -38,6 +44,10 @@ harness=false
 
 [[bench]]
 name   ="kde_bench"
+harness=false
+
+[[bench]]
+name   ="qc_throughput"
 harness=false
 
 [package.metadata.scripts]
