@@ -2,12 +2,12 @@ pub mod consecutive;
 pub mod debug;
 pub mod doublets;
 pub mod export;
-pub mod export;
 pub mod isolation_tree;
 pub mod mad;
 pub mod margins;
 pub mod monotonic;
 pub mod peacoqc;
+pub mod peaks;
 pub mod plots;
 
 pub use consecutive::{ConsecutiveConfig, remove_short_regions};

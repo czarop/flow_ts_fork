@@ -138,18 +138,6 @@ pub fn create_breaks(n_events: usize, events_per_bin: usize) -> Vec<(usize, usiz
     breaks
 }
 
-/// Determine peaks for a single channel (public API, gets data from FCS)
-pub(crate) fn determine_channel_peaks<T: PeacoQCData>(
-    fcs: &T,
-    channel: &str,
-    breaks: &[(usize, usize)],
-    config: &PeakDetectionConfig,
-) -> Result<Option<ChannelPeakFrame>> {
-    // Get channel data
-    let data = fcs.get_channel_f64(channel)?;
-    Ok(determine_channel_peaks_from_data(&data, breaks, config))
-}
-
 /// Determine peaks for a single channel from pre-extracted data (internal, used for parallel processing)
 fn determine_channel_peaks_from_data(
     data: &[f64],

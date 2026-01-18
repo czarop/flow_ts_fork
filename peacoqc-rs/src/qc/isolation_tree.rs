@@ -249,7 +249,7 @@ pub fn build_feature_matrix(
     let mut matrix = vec![vec![0.0; n_features]; n_bins];
 
     // Fill matrix column by column (one per cluster)
-    for (feature_idx, (channel, cluster_id, peaks_in_cluster)) in cluster_data.iter().enumerate() {
+    for (feature_idx, (_, _, peaks_in_cluster)) in cluster_data.iter().enumerate() {
         // Calculate cluster median (default value)
         let peak_values: Vec<f64> = peaks_in_cluster.iter().map(|(_, v)| *v).collect();
         let cluster_median = crate::stats::median(&peak_values)?;
@@ -615,13 +615,23 @@ mod tests {
         assert_eq!(matrix.len(), 5); // 5 bins
         // NEW: Should have 2 columns (one per cluster per channel)
         // Since each channel has 1 cluster, we get 2 columns total
-        assert_eq!(matrix[0].len(), 2, "Should have 2 features (2 channels × 1 cluster each)");
+        assert_eq!(
+            matrix[0].len(),
+            2,
+            "Should have 2 features (2 channels × 1 cluster each)"
+        );
         assert_eq!(names.len(), 2);
         assert!(matrix[0][0] > 0.0);
         assert!(matrix[0][1] > 0.0);
-        
+
         // Verify feature names contain cluster information
-        assert!(names[0].contains("_cluster_"), "Feature name should contain '_cluster_'");
-        assert!(names[1].contains("_cluster_"), "Feature name should contain '_cluster_'");
+        assert!(
+            names[0].contains("_cluster_"),
+            "Feature name should contain '_cluster_'"
+        );
+        assert!(
+            names[1].contains("_cluster_"),
+            "Feature name should contain '_cluster_'"
+        );
     }
 }

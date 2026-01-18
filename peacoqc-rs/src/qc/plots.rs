@@ -382,7 +382,7 @@ pub fn create_qc_plots<T: PeacoQCData>(
         let title = if mad_pct > 0.0 {
             format!("{} MAD {:.2}%", channel, mad_pct)
         } else {
-            channel.clone()
+            channel.to_string()
         };
 
         let mut chart = ChartBuilder::on(&subplot_area)

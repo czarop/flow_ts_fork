@@ -25,11 +25,8 @@
 use crate::{
     Fcs,
     byteorder::ByteOrder,
-    datatype::FcsDataType,
-    header::Header,
-    keyword::{IntegerKeyword, Keyword, StringKeyword},
+    keyword::{IntegerKeyword, Keyword},
     metadata::Metadata,
-    parameter::ParameterMap,
     version::Version,
 };
 use anyhow::{Result, anyhow};
@@ -422,7 +419,7 @@ pub fn add_column(
 
 // ==================== Internal Helper Functions ====================
 
-fn estimate_text_segment_size(metadata: &Metadata, n_events: usize, n_params: usize) -> usize {
+fn estimate_text_segment_size(metadata: &Metadata, _n_events: usize, n_params: usize) -> usize {
     // Rough estimate: base size + keywords
     let base_size = 200; // Base keywords
     let keyword_size = metadata.keywords.len() * 50; // Average keyword size
