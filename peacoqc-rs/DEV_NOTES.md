@@ -28,6 +28,7 @@ The preprocessing order is **critical** and must match R's order exactly:
 The Isolation Tree feature matrix must have **one column per cluster per channel** (format: `{channel}_cluster_{cluster_id}`), not one column per channel. This is critical for IT to distinguish different peak trajectories.
 
 **Structure**: `bins × (channels × clusters)` matrix where:
+
 - Each cluster gets its own column
 - Bins are initialized with cluster median (default value)
 - Actual peak values replace defaults where peaks were detected
@@ -41,6 +42,7 @@ Doublet removal uses **scaled MAD** matching R's `stats::mad()` with constant=1.
 ### Margin Removal Threshold
 
 Maximum margin removal uses `>` (not `>=`) to match R's logic:
+
 ```rust
 if v > threshold && mask[i] {  // Uses >, not >=
 ```
@@ -48,16 +50,19 @@ if v > threshold && mask[i] {  // Uses >, not >=
 ## Algorithm Verification
 
 ### Isolation Tree
+
 - ✅ Matches R's `isolationTreeSD` implementation
 - ✅ Uses SD-based reduction (not standard Isolation Forest)
 - ✅ Finds largest homogeneous group (inliers)
 
 ### MAD Outlier Detection
+
 - ✅ Matches R's MAD calculation with scale factor 1.4826
 - ✅ Uses spline-smoothed peak trajectories
 - ✅ Flags bins where trajectory exceeds threshold
 
 ### Peak Detection
+
 - ✅ Uses kernel density estimation (KDE)
 - ✅ Clusters peaks by median values
 - ✅ Handles bins without peaks (uses cluster median)
@@ -65,12 +70,14 @@ if v > threshold && mask[i] {  // Uses >, not >=
 ## Known Differences from R
 
 ### Numerical Precision
+
 - Minor differences (< 1-7%) in QC results due to:
   - Different KDE implementations
   - Floating-point precision differences
   - Different random number generators (if any)
 
 ### Cluster Assignments
+
 - Rust may detect slightly different numbers of clusters than R
 - This is acceptable as long as QC results are similar
 - Differences propagate to IT results but don't significantly affect final QC
@@ -78,6 +85,7 @@ if v > threshold && mask[i] {  // Uses >, not >=
 ## Testing Results
 
 Across 4 test files:
+
 - ✅ **IT Results**: Match perfectly on 3/4 files (0 outlier bins)
 - ✅ **MAD Results**: Very close (0.90-6.85% difference, acceptable)
 - ✅ **Preprocessing**: Event counts match closely (0.09% difference)
@@ -86,6 +94,7 @@ Across 4 test files:
 ## Doublet Removal Behavior
 
 See `DOUBLET_REMOVAL_RECONCILIATION.md` for details on why:
+
 - Default behavior removes doublets (matches R recommendations)
 - Keeping doublets can cause more bins to be flagged (expected behavior)
 - Published figures may use dataset-specific preprocessing
