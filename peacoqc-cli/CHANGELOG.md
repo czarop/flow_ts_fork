@@ -5,7 +5,93 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.2 (2026-01-18)
+
+### Chore
+
+ - <csr-id-2c1548bfe1da6db1af12ecb1a753cdcfca862045/> standardize formatting in Cargo.toml
+   - Remove unnecessary whitespace around key-value pairs in the peacoqc-cli section.
+   - Ensure consistent version formatting for dependencies.
+ - <csr-id-339d07ac60343b172cd5962310abbc7899fdc770/> update categories in Cargo.toml files
+   - Simplify categories in fcs and plots to remove redundant entries.
+   - Change peacoqc-cli category to reflect its command-line utility nature.
+   - Add algorithms category to peacoqc-rs for better classification.
+ - <csr-id-d3aa6cdc5a806703131a3ffac63506142f052da9/> update Cargo.toml scripts and dependency versions
+   - Standardize version formatting for flow-fcs dependencies across multiple Cargo.toml files.
+   - Update dry-release, publish, and changelog scripts to include specific package names for clarity.
+ - <csr-id-29aae1db8364d6a04f55bc62edb0680eeeb58e4e/> update peacoqc-rs dependency version in Cargo.toml
+   - Revert peacoqc-rs version from ^0.1.2 to ^0.1.1 until release is made
+ - <csr-id-8d232b2838f65aa621a81031183d4c954d787543/> update publish command in Cargo.toml files to include --update-crates-index
+ - <csr-id-4649c7af16150d05880ddab4e732e9dee374d01b/> update Cargo.toml files for consistency and improvements
+   - Standardize formatting in Cargo.toml files across multiple crates
+   - Update repository URLs to reflect new structure
+   - Enhance keywords and categories for better discoverability
+   - Ensure consistent dependency declarations and script commands
+
+### Documentation
+
+ - <csr-id-76d800d1b9a5b40c8f4628b46074320bd9e51630/> Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines.
+ - <csr-id-8b64eee4f91acabc724c60ae1f3d380fcac4af92/> Update peacoqc-cli README.md to enhance clarity and provide links to `peacoqc-rs` and `flow-fcs` libraries, and improve attribution formatting for the original authors.
+
+### New Features
+
+ - <csr-id-12c86f21a3f572f3403cb1d187fd43ac673c38e3/> improve flag interface and implement FCS writing
+   - Replace --remove-margins/--no-remove-margins with --keep-margins flag
+   - Replace --remove-doublets/--no-remove-doublets with --keep-doublets flag
+   - Default behavior: margins and doublets are removed (matches R recommendations)
+   - Implement FCS file writing using flow-fcs write_fcs_file
+   - Update documentation with examples for FCS output
+   - Feature parity with R PeacoQC save_fcs=TRUE option
+ - <csr-id-d262a619dbf3ed9a147a9a2e6b2fa0a729991b1f/> add QC plot generation functionality
+   Add comprehensive QC plot generation for visualizing PeacoQC results.
+ - <csr-id-de047ef593ff1b1061b5843e439c3990f142bc2b/> add export flags for QC results
+   Add CLI flags to export QC results in multiple formats:
+   - --export-csv: Export boolean CSV (0/1 values)
+   - --export-csv-numeric: Export numeric CSV (2000/6000 values)
+   - --export-json: Export JSON metadata
+   - --csv-column-name: Custom column name for CSV exports
+   
+   Exports are automatically named when outputting to directories.
+   Updated CLI README with export format documentation and examples.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 17 commits contributed to the release over the course of 3 calendar days.
+ - 4 days passed between releases.
+ - 11 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Release flow-fcs v0.1.4, peacoqc-rs v0.1.2 ([`140a59a`](https://github.com/jrmoynihan/flow/commit/140a59af3c1ca751672e66c9cc69708f45ac8453))
+    - Standardize formatting in Cargo.toml ([`2c1548b`](https://github.com/jrmoynihan/flow/commit/2c1548bfe1da6db1af12ecb1a753cdcfca862045))
+    - Release flow-fcs v0.1.3, peacoqc-rs v0.1.2 ([`f08823c`](https://github.com/jrmoynihan/flow/commit/f08823cabcae5223efe4250471dd75ea7fcaa936))
+    - Update categories in Cargo.toml files ([`339d07a`](https://github.com/jrmoynihan/flow/commit/339d07ac60343b172cd5962310abbc7899fdc770))
+    - Release flow-fcs v0.1.3, peacoqc-rs v0.1.2 ([`607fcae`](https://github.com/jrmoynihan/flow/commit/607fcae78304d51ce8d156e82e5dba48a1b6dbfa))
+    - Update Cargo.toml scripts and dependency versions ([`d3aa6cd`](https://github.com/jrmoynihan/flow/commit/d3aa6cdc5a806703131a3ffac63506142f052da9))
+    - Release flow-fcs v0.1.3 ([`e79b57f`](https://github.com/jrmoynihan/flow/commit/e79b57f8fd7613fbdcc682863fef44178f14bed8))
+    - Update peacoqc-rs dependency version in Cargo.toml ([`29aae1d`](https://github.com/jrmoynihan/flow/commit/29aae1db8364d6a04f55bc62edb0680eeeb58e4e))
+    - Update publish command in Cargo.toml files to include --update-crates-index ([`8d232b2`](https://github.com/jrmoynihan/flow/commit/8d232b2838f65aa621a81031183d4c954d787543))
+    - Merge pull request #8 from jrmoynihan/peacoqc-rs ([`fbeaab2`](https://github.com/jrmoynihan/flow/commit/fbeaab262dc1a72832dba3d6c4708bf95c941929))
+    - Merge branch 'main' into peacoqc-rs ([`c52af3c`](https://github.com/jrmoynihan/flow/commit/c52af3c09ae547a7e1ce2c62e9999590314e8f97))
+    - Improve flag interface and implement FCS writing ([`12c86f2`](https://github.com/jrmoynihan/flow/commit/12c86f21a3f572f3403cb1d187fd43ac673c38e3))
+    - Add QC plot generation functionality ([`d262a61`](https://github.com/jrmoynihan/flow/commit/d262a619dbf3ed9a147a9a2e6b2fa0a729991b1f))
+    - Add export flags for QC results ([`de047ef`](https://github.com/jrmoynihan/flow/commit/de047ef593ff1b1061b5843e439c3990f142bc2b))
+    - Update Cargo.toml files for consistency and improvements ([`4649c7a`](https://github.com/jrmoynihan/flow/commit/4649c7af16150d05880ddab4e732e9dee374d01b))
+    - Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines. ([`76d800d`](https://github.com/jrmoynihan/flow/commit/76d800d1b9a5b40c8f4628b46074320bd9e51630))
+    - Update peacoqc-cli README.md to enhance clarity and provide links to `peacoqc-rs` and `flow-fcs` libraries, and improve attribution formatting for the original authors. ([`8b64eee`](https://github.com/jrmoynihan/flow/commit/8b64eee4f91acabc724c60ae1f3d380fcac4af92))
+</details>
+
 ## 0.1.1 (2026-01-14)
+
+<csr-id-a6a4ff733ae38acaec36d3327f4952d6fded3c0f/>
 
 ### Chore
 
@@ -16,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -27,6 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release peacoqc-cli v0.1.1 ([`07c0db8`](https://github.com/jrmoynihan/flow/commit/07c0db8ea865807f08e0b7c965a065d3e05078d5))
     - Release peacoqc-rs v0.1.1 ([`947c991`](https://github.com/jrmoynihan/flow/commit/947c991bff21beb7b7d60f1f637279bd86b9ab66))
     - :hammer: Add cargo scripts for testing and release management for each crate ([`a6a4ff7`](https://github.com/jrmoynihan/flow/commit/a6a4ff733ae38acaec36d3327f4952d6fded3c0f))
     - Adjusting changelogs prior to release of peacoqc-rs v0.1.1 ([`a84b627`](https://github.com/jrmoynihan/flow/commit/a84b6271257f16432464aff091fb9c34eadf16f0))
@@ -90,7 +177,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Update flow-fcs dependency version in Cargo.toml ([`94407a5`](https://github.com/jrmoynihan/flow/commit/94407a5e6cd66bb753c89c0fbb24c4e026056f35))
     - Add peacoqc-cli for flow cytometry quality control ([`395b447`](https://github.com/jrmoynihan/flow/commit/395b447bc519ac50168a68589732aace860afc8d))
 </details>
-
-<csr-unknown>
-Implement interactive prompts using dialoguer cratePrompt user to confirm plot generation (default: yes)Prompt for plot directory with default to input file directoryGenerate QC plots after successful QC processingStore FCS data and QC results during processing for plot generationAdd new peacoqc-cli crate for command-line interfaceImplement parallel file processing with rayonAdd comprehensive CLI options and flagsSupport single file, multiple files, and directory processingAdd JSON report generationInclude verbose output and progress reportingIntroduced a new command-line tool peacoqc-cli for performing quality control on flow cytometry FCS files.Implemented argument parsing using clap for user input.Added functionality for loading FCS files, removing margins and doublets, and running PeacoQC analysis.Included options for saving cleaned FCS files and generating JSON reports.<csr-unknown/>
 
