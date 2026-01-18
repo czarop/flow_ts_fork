@@ -1,6 +1,6 @@
 [package]
 name="peacoqc-rs"
-version="0.1.0"
+version="0.1.1"
 edition.workspace=true
 authors.workspace=true
 license.workspace=true
@@ -18,7 +18,7 @@ default =["flow-fcs"]
 flow-fcs=["dep:flow-fcs", "dep:polars"]
 
 [dependencies]
-flow-fcs            ={ path="../fcs", version="0.1.1", optional=true }
+flow-fcs            ={ path="../fcs", version="^0.1.2", optional=true }
 polars              ={ workspace=true, optional=true }
 anyhow.workspace    =true
 thiserror.workspace =true
@@ -26,6 +26,8 @@ rand.workspace      =true
 rayon.workspace     =true
 plotters            ="0.3.7"
 image               ="0.25.9"
+plotters           ="0.3.7"
+image              ="0.25.9"
 serde.workspace     =true
 serde_json.workspace=true
 tracing.workspace   =true
@@ -49,3 +51,9 @@ harness=false
 [[bench]]
 name   ="qc_throughput"
 harness=false
+
+[package.metadata.scripts]
+test       ="cargo test"
+dry-release="cargo smart-release --update-crates-index"
+publish    ="cargo smart-release --execute"
+changelog  ="cargo changelog --write"

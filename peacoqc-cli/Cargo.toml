@@ -20,8 +20,8 @@ path        ="src/main.rs"
 reproducible=""
 
 [dependencies]
-flow-fcs={ path="../fcs", version="0.1.1" }
-peacoqc-rs={ path="../peacoqc-rs", version="0.1.0", features=[
+flow-fcs={ path="../fcs", version="^0.1.2" }
+peacoqc-rs={ path="../peacoqc-rs", version="^0.1.1", features=[
     "flow-fcs",
 ] }
 anyhow.workspace=true
@@ -33,3 +33,9 @@ walkdir="2.5"
 tracing.workspace=true
 tracing-subscriber={ workspace=true }
 dialoguer="0.12"
+
+[package.metadata.scripts]
+test       ="cargo test"
+dry-release="cargo smart-release --update-crates-index"
+publish    ="cargo smart-release --execute"
+changelog  ="cargo changelog --write"

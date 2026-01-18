@@ -97,10 +97,9 @@ pub mod fcs;
 
 pub use error::{PeacoQCError, Result};
 pub use qc::{
-    DoubletConfig, DoubletResult, MarginConfig, MarginResult, PeacoQCConfig, PeacoQCResult, QCMode,
-    peacoqc, remove_doublets, remove_margins,
-    export_csv_boolean, export_csv_numeric, export_json_metadata, QCExportFormat, QCExportOptions,
-    create_qc_plots, QCPlotConfig,
+    DoubletConfig, DoubletResult, MarginConfig, MarginResult, PeacoQCConfig, PeacoQCResult,
+    QCExportFormat, QCExportOptions, QCMode, QCPlotConfig, create_qc_plots, export_csv_boolean,
+    export_csv_numeric, export_json_metadata, peacoqc, remove_doublets, remove_margins,
 };
 
 #[cfg(feature = "flow-fcs")]
@@ -373,17 +372,18 @@ mod flow_fcs_impl {
             let has_comp = fcs.has_compensation();
             let transformed_df = if has_comp {
                 // R uses estimateLogicle (biexponential) when compensation is available
-                fcs.apply_default_biexponential_transform()
-                    .map_err(|e| anyhow::anyhow!("Failed to apply biexponential transformation: {}", e))?
+                fcs.apply_default_biexponential_transform().map_err(|e| {
+                    anyhow::anyhow!("Failed to apply biexponential transformation: {}", e)
+                })?
             } else {
                 // R falls back to arcsinh if no compensation (cofactor=2000)
                 fcs.apply_default_arcsinh_transform()
                     .map_err(|e| anyhow::anyhow!("Failed to apply arcsinh transformation: {}", e))?
             };
-            
+
             // EventDataFrame is already Arc<DataFrame>, no need to wrap again
             fcs.data_frame = transformed_df;
-            
+
             if has_comp {
                 info!(
                     "Applied biexponential (logicle) transformation to fluorescence channels (matching R's estimateLogicle)"

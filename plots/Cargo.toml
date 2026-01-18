@@ -19,6 +19,25 @@ categories=["science", "bioinformatics", "visualization"]
 colormap      ="0.0.2"
 colorgrad     ={ version="0.8", features=["preset"] }
 derive_builder={ workspace=true }
+flow-fcs      ={ path="../fcs", version="^0.1.2" }
+image         ="0.25.9"
+plotters      ="0.3.7"
+anyhow        ={ workspace=true }
+rustc-hash    ={ workspace=true }
+serde         ={ workspace=true, features=["derive"] }
+ts-rs         ="11.1.0"
+once_cell     ="1.20"
+rayon         ={ workspace=true }
+num-traits    ="0.2"
+
+[package.metadata.scripts]
+test          ="cargo test"
+dry-release   ="cargo smart-release --update-crates-index"
+publish       ="cargo smart-release --execute"
+changelog     ="cargo changelog --write"
+colormap      ="0.0.2"
+colorgrad     ={ version="0.8", features=["preset"] }
+derive_builder={ workspace=true }
 flow-fcs      ={ path="../fcs", version="0.1.1" }
 image         ="0.25.9"
 plotters      ="0.3.7"

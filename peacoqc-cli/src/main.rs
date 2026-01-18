@@ -824,48 +824,84 @@ fn main() -> Result<()> {
     }
 
     // Handle plot generation
-    if generate_plots && !successful.is_empty() {
-        println!("\n📊 Generating QC plots...");
+    if successful.is_empty() {
+        // No successful files to plot
+    } else {
+        // Determine if plots should be generated
+        let generate_plots = if let Some(plots_flag) = args.plots {
+            plots_flag
+        } else {
+            // Prompt user interactively
+            Confirm::new()
+                .with_prompt("Generate QC plots?")
+                .default(true)
+                .interact()
+                .unwrap_or(false)
+        };
 
-        // Generate plots for each successful file
-        for result in &successful {
-            if let (Some(fcs_data), Some(qc_result)) = (&result.fcs_data, &result.qc_result) {
-                let plot_filename = result
-                    .input_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| {
-                        if cofactors_to_use.len() > 1 {
-                            format!("{}_cofactor{:.0}_qc_plot.png", s, result.cofactor_used)
-                        } else {
-                            format!("{}_qc_plot.png", s)
+        if generate_plots {
+            // Determine plot directory
+            let plot_dir = if let Some(ref dir) = args.plot_dir {
+                dir.clone()
+            } else {
+                // Prompt for directory with default
+                let default_dir = if successful.len() == 1 {
+                    // Single file: use same directory as input file
+                    successful[0]
+                        .input_path
+                        .parent()
+                        .unwrap_or(Path::new("."))
+                        .to_path_buf()
+                } else {
+                    // Multiple files: use current directory or first file's directory
+                    successful[0]
+                        .input_path
+                        .parent()
+                        .unwrap_or(Path::new("."))
+                        .to_path_buf()
+                };
+
+                let default_str = default_dir.to_string_lossy().to_string();
+                let dir_input: String = Input::new()
+                    .with_prompt(format!("Plot directory (default: {})", default_str))
+                    .default(default_str)
+                    .interact()
+                    .unwrap_or_default();
+
+                PathBuf::from(dir_input)
+            };
+
+            // Create plot directory if it doesn't exist
+            std::fs::create_dir_all(&plot_dir)?;
+            println!("\n📊 Generating QC plots...");
+
+            // Generate plots for each successful file
+            for result in &successful {
+                if let (Some(fcs_data), Some(qc_result)) = (&result.fcs_data, &result.qc_result) {
+                    let plot_filename = result
+                        .input_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| format!("{}_qc_plot.png", s))
+                        .unwrap_or_else(|| "qc_plot.png".to_string());
+                    let plot_path = plot_dir.join(&plot_filename);
+
+                    match create_qc_plots(fcs_data, qc_result, &plot_path, QCPlotConfig::default())
+                    {
+                        Ok(()) => {
+                            println!("   ✅ Generated plot: {}", plot_path.display());
                         }
-                    })
-                    .unwrap_or_else(|| "qc_plot.png".to_string());
-
-                let plot_path = plot_dir.as_ref().unwrap().join(&plot_filename);
-
-                // Configure plot settings
-                let mut plot_config = QCPlotConfig::default();
-                // Spline and MAD thresholds are shown by default, can be hidden with flag
-                plot_config.show_spline_and_mad = !args.hide_spline_mad;
-                // Bin boundaries are hidden by default, can be shown with flag
-                plot_config.show_bin_boundaries = args.show_bin_boundaries;
-
-                match create_qc_plots(fcs_data, qc_result, &plot_path, plot_config) {
-                    Ok(()) => {
-                        println!("   ✅ Generated plot: {}", plot_path.display());
-                    }
-                    Err(e) => {
-                        warn!(
-                            "   ⚠️  Failed to generate plot for {}: {}",
-                            result.filename, e
-                        );
+                        Err(e) => {
+                            warn!(
+                                "   ⚠️  Failed to generate plot for {}: {}",
+                                result.filename, e
+                            );
+                        }
                     }
                 }
             }
+            println!();
         }
-        println!();
     }
 
     // Exit with error code if any files failed
