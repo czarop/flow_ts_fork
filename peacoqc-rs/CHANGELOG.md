@@ -5,7 +5,145 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.2 (2026-01-18)
+
+### Chore
+
+ - <csr-id-d3aa6cdc5a806703131a3ffac63506142f052da9/> update Cargo.toml scripts and dependency versions
+   - Standardize version formatting for flow-fcs dependencies across multiple Cargo.toml files.
+   - Update dry-release, publish, and changelog scripts to include specific package names for clarity.
+ - <csr-id-8d232b2838f65aa621a81031183d4c954d787543/> update publish command in Cargo.toml files to include --update-crates-index
+ - <csr-id-ccd3cb1557065cd0c1ba4637c35d937bac39c9f6/> add reference materials and cargo config
+   - Add PeacoQC paper PDF for reference
+   - Add cargo config for build settings
+ - <csr-id-1b41cd165c4cd315e9759b437e6b4e2a2839af99/> remove R reference files and test artifacts
+   - Remove R reference implementation files (moved to separate location)
+   - Remove test plot images
+   - Clean up repository for production use
+ - <csr-id-4649c7af16150d05880ddab4e732e9dee374d01b/> update Cargo.toml files for consistency and improvements
+   - Standardize formatting in Cargo.toml files across multiple crates
+   - Update repository URLs to reflect new structure
+   - Enhance keywords and categories for better discoverability
+   - Ensure consistent dependency declarations and script commands
+
+### Documentation
+
+ - <csr-id-c6e843a730bc3352229c02a60be3b167e9f2d14d/> md formatting on dev notes
+ - <csr-id-06a15cc61b34171896102c8de48c275fb811e78d/> consolidate and clean up documentation
+   - Create DEV_NOTES.md consolidating technical implementation details
+   - Update QUICK_START.md with cleaner examples
+   - Update README.md with improved documentation
+   - Add .gitignore entry for test artifacts
+ - <csr-id-2721f1f10fe2edd01034e4bd5340dd9cc6fe6b2e/> add export formats documentation
+   Add comprehensive documentation for export formats:
+   - Boolean CSV format description and use cases
+   - Numeric CSV format (R-compatible) description
+   - JSON metadata format with example structure
+   - Custom column name examples
+   - Integration notes for downstream tools (pandas, R, SQL)
+   
+   Includes code examples for each export format.
+ - <csr-id-76d800d1b9a5b40c8f4628b46074320bd9e51630/> Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines.
+
+### New Features
+
+ - <csr-id-d262a619dbf3ed9a147a9a2e6b2fa0a729991b1f/> add QC plot generation functionality
+   Add comprehensive QC plot generation for visualizing PeacoQC results.
+ - <csr-id-b5ef7a7b3515f707310cd932617bbf32125b0690/> implement FFT-based kernel density estimation
+   Replace naive O(n×m) KDE implementation with FFT-based O(n log n) version
+   for significant performance improvements.
+   
+   - Add realfft dependency for efficient FFT operations
+   - Implement FFT-based convolution for KDE computation
+   - Update benchmarks to reflect FFT implementation
+   - Update performance analysis documentation
+   
+   Performance improvements:
+   - 30-87x faster for typical use cases (1k-50k events)
+   - Better scaling for larger datasets
+   - No accuracy loss - all tests pass
+   
+   Benchmarks show ~48x speedup for default bin size (1k events),
+   reducing KDE time from ~1.4ms to ~29µs per bin.
+ - <csr-id-1164c5de5cd34a0806cf2b89bd87f51e905b8aed/> add convenience export methods to PeacoQCResult
+   Add methods to PeacoQCResult for easier export:
+   - export_csv_boolean() and export_csv_boolean_with_name()
+   - export_csv_numeric() and export_csv_numeric_with_name()
+   - export_json_metadata()
+   
+   These methods wrap the export functions and provide a more
+   ergonomic API for users.
+ - <csr-id-9bfc1e2f00f85a894ae962a8a1b7bbe0bb019b10/> add export module for QC results
+   Add export functionality to support multiple output formats:
+   - Boolean CSV (0/1 values) for general use
+   - Numeric CSV (2000/6000 values) for R compatibility
+   - JSON metadata with comprehensive QC metrics
+
+### Other
+
+ - <csr-id-be95b5180e4ffe4826bcb9a3833295d35a9b7ced/> :pushpin: merging cargo.toml
+
+### Refactor
+
+ - <csr-id-5bd48e4049f6afc1539dc0a23d41d0d0f98ee6f7/> improve code quality and add features
+   - Improve QC algorithm implementations
+   - Add plot generation functionality
+   - Enhance error handling
+   - Update dependencies
+   - Improve code organization
+
+### Test
+
+ - <csr-id-005a1cc9bd0bef0c9354d1f16b1fa077828359a3/> add comprehensive test suite
+   - Add regression tests for critical fixes
+   - Add algorithm correctness tests
+   - Add integration tests with known outputs
+   - Add R compatibility tests
+   - Add spline comparison tests
+   - Add peak detection tests
+   - Add test documentation in tests/README.md
+   - Add debug utilities for QC development
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 19 commits contributed to the release over the course of 3 calendar days.
+ - 3 days passed between releases.
+ - 16 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update Cargo.toml scripts and dependency versions ([`d3aa6cd`](https://github.com/jrmoynihan/flow/commit/d3aa6cdc5a806703131a3ffac63506142f052da9))
+    - Release flow-fcs v0.1.3 ([`e79b57f`](https://github.com/jrmoynihan/flow/commit/e79b57f8fd7613fbdcc682863fef44178f14bed8))
+    - Update publish command in Cargo.toml files to include --update-crates-index ([`8d232b2`](https://github.com/jrmoynihan/flow/commit/8d232b2838f65aa621a81031183d4c954d787543))
+    - Merge pull request #8 from jrmoynihan/peacoqc-rs ([`fbeaab2`](https://github.com/jrmoynihan/flow/commit/fbeaab262dc1a72832dba3d6c4708bf95c941929))
+    - :pushpin: merging cargo.toml ([`be95b51`](https://github.com/jrmoynihan/flow/commit/be95b5180e4ffe4826bcb9a3833295d35a9b7ced))
+    - Merge branch 'main' into peacoqc-rs ([`c52af3c`](https://github.com/jrmoynihan/flow/commit/c52af3c09ae547a7e1ce2c62e9999590314e8f97))
+    - Md formatting on dev notes ([`c6e843a`](https://github.com/jrmoynihan/flow/commit/c6e843a730bc3352229c02a60be3b167e9f2d14d))
+    - Add reference materials and cargo config ([`ccd3cb1`](https://github.com/jrmoynihan/flow/commit/ccd3cb1557065cd0c1ba4637c35d937bac39c9f6))
+    - Improve code quality and add features ([`5bd48e4`](https://github.com/jrmoynihan/flow/commit/5bd48e4049f6afc1539dc0a23d41d0d0f98ee6f7))
+    - Add comprehensive test suite ([`005a1cc`](https://github.com/jrmoynihan/flow/commit/005a1cc9bd0bef0c9354d1f16b1fa077828359a3))
+    - Remove R reference files and test artifacts ([`1b41cd1`](https://github.com/jrmoynihan/flow/commit/1b41cd165c4cd315e9759b437e6b4e2a2839af99))
+    - Consolidate and clean up documentation ([`06a15cc`](https://github.com/jrmoynihan/flow/commit/06a15cc61b34171896102c8de48c275fb811e78d))
+    - Add QC plot generation functionality ([`d262a61`](https://github.com/jrmoynihan/flow/commit/d262a619dbf3ed9a147a9a2e6b2fa0a729991b1f))
+    - Implement FFT-based kernel density estimation ([`b5ef7a7`](https://github.com/jrmoynihan/flow/commit/b5ef7a7b3515f707310cd932617bbf32125b0690))
+    - Add export formats documentation ([`2721f1f`](https://github.com/jrmoynihan/flow/commit/2721f1f10fe2edd01034e4bd5340dd9cc6fe6b2e))
+    - Add convenience export methods to PeacoQCResult ([`1164c5d`](https://github.com/jrmoynihan/flow/commit/1164c5de5cd34a0806cf2b89bd87f51e905b8aed))
+    - Add export module for QC results ([`9bfc1e2`](https://github.com/jrmoynihan/flow/commit/9bfc1e2f00f85a894ae962a8a1b7bbe0bb019b10))
+    - Update Cargo.toml files for consistency and improvements ([`4649c7a`](https://github.com/jrmoynihan/flow/commit/4649c7af16150d05880ddab4e732e9dee374d01b))
+    - Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines. ([`76d800d`](https://github.com/jrmoynihan/flow/commit/76d800d1b9a5b40c8f4628b46074320bd9e51630))
+</details>
+
 ## 0.1.1 (2026-01-14)
+
+<csr-id-a6a4ff733ae38acaec36d3327f4952d6fded3c0f/>
 
 ### Chore
 
@@ -16,7 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -27,6 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release peacoqc-rs v0.1.1 ([`947c991`](https://github.com/jrmoynihan/flow/commit/947c991bff21beb7b7d60f1f637279bd86b9ab66))
     - :hammer: Add cargo scripts for testing and release management for each crate ([`a6a4ff7`](https://github.com/jrmoynihan/flow/commit/a6a4ff733ae38acaec36d3327f4952d6fded3c0f))
     - Adjusting changelogs prior to release of peacoqc-rs v0.1.1 ([`a84b627`](https://github.com/jrmoynihan/flow/commit/a84b6271257f16432464aff091fb9c34eadf16f0))
     - Release peacoqc-cli v0.1.0 ([`ee76027`](https://github.com/jrmoynihan/flow/commit/ee760271b139b2a192d7065d08063fe5ecf0ffbf))
