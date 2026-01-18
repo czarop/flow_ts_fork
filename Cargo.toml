@@ -24,19 +24,19 @@ fmt = "cargo fmt --workspace"
 [workspace.dependencies]
 # Polars for columnar data storage
 # Note: Using default-features = false to reduce bloat, but keeping dtype-full as it's needed
-polars = { version = "0.51", default-features = false, features = [
+polars = { version = "0.52.0", default-features = false, features = [
     "lazy",
     "ndarray",
     "dtype-full"
 ] }
 # Matrix manipulation
-ndarray = { version = "0.17.1", features = [
+ndarray = { version = "0.17.2", features = [
     "blas",
     "matrixmultiply-threading",
     "rayon",
     "serde",
 ] }
-ndarray-linalg = { version = "0.18", default-features = false, features = ["openblas-system"] }
+ndarray-linalg = { version = "0.18.1", default-features = false, features = ["openblas-system"] }
 
 # Parallelization
 rayon = "1.11"
@@ -47,7 +47,7 @@ anyhow = "1.0.100"
 
 # Serialization
 serde = { version = "1.0.228", features = ["derive", "rc"] }
-serde_json = "1.0.148"
+serde_json = "1.0.149"
 
 # Performance
 uuid = { version = "1.18.1", features = ["v4"] } # For generating UUIDs/GUIDs
