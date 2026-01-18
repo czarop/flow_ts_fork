@@ -24,7 +24,7 @@ fmt = "cargo fmt --workspace"
 [workspace.dependencies]
 # Polars for columnar data storage
 # Note: Using default-features = false to reduce bloat, but keeping dtype-full as it's needed
-polars = { version = "0.52.0", default-features = false, features = [
+polars = { version = "0.51.0", default-features = false, features = [
     "lazy",
     "ndarray",
     "dtype-full"
