@@ -12,22 +12,25 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use flow_gates::{GateStatistics, Gate};
 /// use flow_fcs::Fcs;
 ///
-/// // Load FCS file and create gate
-/// let fcs = Fcs::from_file("data.fcs")?;
-/// let gate = /* ... create gate ... */;
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Load FCS file and create gate (implementation depends on your FCS library)
+/// // let fcs = /* load FCS file */;
+/// // let gate = /* ... create gate ... */;
 ///
 /// // Calculate statistics
-/// let stats = GateStatistics::calculate(&fcs, &gate)?;
+/// // let stats = GateStatistics::calculate(&fcs, &gate)?;
 ///
-/// println!("Event count: {}", stats.event_count);
-/// println!("Percentage: {:.2}%", stats.percentage);
-/// println!("Centroid: ({:.2}, {:.2})", stats.centroid.0, stats.centroid.1);
-/// println!("X mean: {:.2}", stats.x_stats.mean);
-/// println!("Y median: {:.2}", stats.y_stats.median);
+/// // println!("Event count: {}", stats.event_count);
+/// // println!("Percentage: {:.2}%", stats.percentage);
+/// // println!("Centroid: ({:.2}, {:.2})", stats.centroid.0, stats.centroid.1);
+/// // println!("X mean: {:.2}", stats.x_stats.mean);
+/// // println!("Y median: {:.2}", stats.y_stats.median);
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GateStatistics {

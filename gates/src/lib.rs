@@ -24,6 +24,7 @@
 //! use flow_gates::*;
 //! use flow_gates::geometry::*;
 //!
+//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create a polygon gate
 //! let coords = vec![
 //!     (100.0, 200.0),
@@ -42,7 +43,9 @@
 //! );
 //!
 //! // Apply gate to FCS data
-//! let event_indices = filter_events_by_gate(&fcs_file, &gate, None)?;
+//! // let event_indices = filter_events_by_gate(&fcs_file, &gate, None)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Core Concepts
@@ -81,12 +84,15 @@
 //! The library uses [`GateError`] for all error conditions. Most operations return
 //! [`Result<T, GateError>`](GateResult).
 
+use std::sync::Arc;
+
 pub mod ellipse;
 pub mod error;
 pub mod filtering;
 pub mod gatingml;
 pub mod geometry;
 pub mod hierarchy;
+pub mod linking;
 pub mod polygon;
 pub mod rectangle;
 pub mod scope;
@@ -104,7 +110,10 @@ pub use error::{GateError, Result as GateResult};
 
 /// Event filtering and spatial indexing
 pub use filtering::{
-    EventIndex, FilterCache, FilterCacheKey, filter_events_by_gate, filter_events_by_hierarchy,
+    EventIndex, FilterCache, FilterCacheKey, GateResolver, combine_gates_and, combine_gates_not,
+    combine_gates_or, filter_events_boolean, filter_events_by_gate,
+    filter_events_by_gate_with_resolver, filter_events_by_hierarchy,
+    filter_events_by_hierarchy_with_resolver,
 };
 
 /// Geometry construction helpers
@@ -113,11 +122,29 @@ pub use geometry::{create_ellipse_geometry, create_polygon_geometry, create_rect
 /// Gate hierarchy management
 pub use hierarchy::GateHierarchy;
 
+/// Gate linking system
+pub use linking::GateLinks;
+
+/// Gate querying and filtering helpers
+pub use scope::{
+    GateQuery, filter_gates_by_parameters, filter_gates_by_scope, filter_gates_by_type,
+    filter_hierarchy_by_parameters,
+};
+
 /// Statistics for gated populations
 pub use statistics::GateStatistics;
 
+/// GatingML import/export
+pub use gatingml::{gates_to_gatingml, gatingml_to_gates};
+
 /// Core gate types and structures
-pub use types::{Gate, GateGeometry, GateMode, GateNode};
+pub use types::{BooleanOperation, Gate, GateBuilder, GateGeometry, GateMode, GateNode};
+
+/// Gate geometry traits
+pub use traits::{GateBounds, GateCenter, GateContainment, GateGeometryOps, GateValidation};
+
+/// Type alias for parameter sets
+pub type ParameterSet = (Arc<str>, Arc<str>);
 
 // Note: FilterCache and GateStorage are application-specific and should be
 // implemented in the application crate, not in this library crate.

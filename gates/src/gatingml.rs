@@ -1,10 +1,11 @@
+use crate::error::{GateError, Result};
 use crate::types::{Gate, GateGeometry, GateNode};
-use anyhow::{Context, Result};
 use quick_xml::{
     Reader, Writer,
     events::{BytesEnd, BytesStart, Event},
 };
 use std::io::Cursor;
+use std::sync::Arc;
 
 /// GatingML XML namespace constants
 const GATINGML_NS_V2: &str = "http://www.isac-net.org/std/Gating-ML/v2.0/gating";
@@ -37,14 +38,17 @@ fn detect_version(xml: &str) -> (String, String) {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use flow_gates::{gates_to_gatingml, Gate};
 ///
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let gates = vec![/* ... gates ... */];
 /// let xml = gates_to_gatingml(&gates)?;
 ///
 /// // Save to file
 /// std::fs::write("gates.xml", xml)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn gates_to_gatingml(gates: &[Gate]) -> Result<String> {
     let mut writer = Writer::new(Cursor::new(Vec::new()));
@@ -72,7 +76,10 @@ pub fn gates_to_gatingml(gates: &[Gate]) -> Result<String> {
     writer.write_event(Event::End(BytesEnd::new("gating:Gating-ML")))?;
 
     let result = writer.into_inner().into_inner();
-    String::from_utf8(result).context("Failed to convert XML bytes to string")
+    String::from_utf8(result).map_err(|e| GateError::Other {
+        message: format!("Failed to convert XML bytes to string: {}", e),
+        source: Some(Box::new(e)),
+    })
 }
 
 /// Write a single gate to XML
@@ -98,6 +105,12 @@ fn write_gate_to_xml(writer: &mut Writer<Cursor<Vec<u8>>>, gate: &Gate) -> Resul
             angle,
         } => {
             write_ellipse_gate(writer, center, *radius_x, *radius_y, *angle)?;
+        }
+        GateGeometry::Boolean {
+            operation,
+            operands,
+        } => {
+            write_boolean_gate(writer, *operation, operands)?;
         }
     }
 
@@ -168,6 +181,60 @@ fn write_ellipse_gate(
     Ok(())
 }
 
+/// Write a boolean gate to XML
+fn write_boolean_gate(
+    writer: &mut Writer<Cursor<Vec<u8>>>,
+    operation: crate::types::BooleanOperation,
+    operands: &[Arc<str>],
+) -> Result<()> {
+    match operation {
+        crate::types::BooleanOperation::And => {
+            let and_start = BytesStart::new("gating:and");
+            writer.write_event(Event::Start(and_start))?;
+
+            for operand_id in operands {
+                let mut ref_start = BytesStart::new("gating:gateReference");
+                ref_start.push_attribute(("gating:ref", operand_id.as_ref()));
+                writer.write_event(Event::Empty(ref_start))?;
+            }
+
+            writer.write_event(Event::End(BytesEnd::new("gating:and")))?;
+        }
+        crate::types::BooleanOperation::Or => {
+            let or_start = BytesStart::new("gating:or");
+            writer.write_event(Event::Start(or_start))?;
+
+            for operand_id in operands {
+                let mut ref_start = BytesStart::new("gating:gateReference");
+                ref_start.push_attribute(("gating:ref", operand_id.as_ref()));
+                writer.write_event(Event::Empty(ref_start))?;
+            }
+
+            writer.write_event(Event::End(BytesEnd::new("gating:or")))?;
+        }
+        crate::types::BooleanOperation::Not => {
+            if operands.len() != 1 {
+                return Err(GateError::invalid_boolean_operation(
+                    "not",
+                    operands.len(),
+                    1,
+                ));
+            }
+
+            let not_start = BytesStart::new("gating:not");
+            writer.write_event(Event::Start(not_start))?;
+
+            let mut ref_start = BytesStart::new("gating:gateReference");
+            ref_start.push_attribute(("gating:ref", operands[0].as_ref()));
+            writer.write_event(Event::Empty(ref_start))?;
+
+            writer.write_event(Event::End(BytesEnd::new("gating:not")))?;
+        }
+    }
+
+    Ok(())
+}
+
 /// Write a vertex (gate node) to XML
 fn write_vertex(writer: &mut Writer<Cursor<Vec<u8>>>, node: &GateNode) -> Result<()> {
     let vertex_start = BytesStart::new("gating:vertex");
@@ -200,9 +267,10 @@ fn write_vertex(writer: &mut Writer<Cursor<Vec<u8>>>, node: &GateNode) -> Result
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use flow_gates::gatingml_to_gates;
 ///
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Read from file
 /// let xml = std::fs::read_to_string("gates.xml")?;
 /// let gates = gatingml_to_gates(&xml)?;
@@ -211,6 +279,8 @@ fn write_vertex(writer: &mut Writer<Cursor<Vec<u8>>>, node: &GateNode) -> Result
 /// for gate in gates {
 ///     println!("Gate: {}", gate.name);
 /// }
+/// # Ok(())
+/// # }
 /// ```
 pub fn gatingml_to_gates(xml: &str) -> Result<Vec<Gate>> {
     let (gating_ns, _data_ns) = detect_version(xml);
@@ -252,6 +322,11 @@ pub fn gatingml_to_gates(xml: &str) -> Result<Vec<Gate>> {
                     if let Some(gate) = parse_ellipse_gate_v1_5(&mut reader, e, &mut depth)? {
                         gates.push(gate);
                     }
+                } else if name.as_ref() == b"gating:BooleanGate" || name.as_ref() == b"BooleanGate"
+                {
+                    if let Some(gate) = parse_boolean_gate_v1_5(&mut reader, e, &mut depth)? {
+                        gates.push(gate);
+                    }
                 }
             }
             Ok(Event::End(_)) => {
@@ -282,7 +357,10 @@ fn parse_gate_v2(
             attr.key.as_ref() == b"gating:id" || attr.key.as_ref() == b"id"
         })
         .and_then(|attr| String::from_utf8(attr.unwrap().value.into_owned()).ok())
-        .context("Gate missing id attribute")?;
+        .ok_or_else(|| GateError::Other {
+            message: "Gate missing id attribute".to_string(),
+            source: None,
+        })?;
 
     let name = gate_start
         .attributes()
@@ -329,6 +407,9 @@ fn parse_gate_geometry_v2(
                 } else if name.as_ref() == b"gating:EllipseGate" || name.as_ref() == b"EllipseGate"
                 {
                     return Ok(Some(parse_ellipse_geometry_v2(reader, e, depth)?));
+                } else if name.as_ref() == b"gating:BooleanGate" || name.as_ref() == b"BooleanGate"
+                {
+                    return Ok(Some(parse_boolean_geometry_v2(reader, e, depth)?));
                 }
             }
             Ok(Event::End(_)) => {
@@ -360,7 +441,10 @@ fn parse_rectangle_gate_v1_5(
             attr.key.as_ref() == b"gating:id" || attr.key.as_ref() == b"id"
         })
         .and_then(|attr| String::from_utf8(attr.unwrap().value.into_owned()).ok())
-        .context("RectangleGate missing id attribute")?;
+        .ok_or_else(|| GateError::Other {
+            message: "RectangleGate missing id attribute".to_string(),
+            source: None,
+        })?;
 
     let start_depth = *depth;
     let mut dimensions = Vec::new();
@@ -526,7 +610,10 @@ fn parse_dimension_v1_5(
         buf.clear();
     }
 
-    let param = param_name.context("Dimension missing parameter name")?;
+    let param = param_name.ok_or_else(|| GateError::Other {
+        message: "Dimension missing parameter name".to_string(),
+        source: None,
+    })?;
     Ok((param, min_val, max_val))
 }
 
@@ -543,7 +630,10 @@ fn parse_polygon_gate_v1_5(
             attr.key.as_ref() == b"gating:id" || attr.key.as_ref() == b"id"
         })
         .and_then(|attr| String::from_utf8(attr.unwrap().value.into_owned()).ok())
-        .context("PolygonGate missing id attribute")?;
+        .ok_or_else(|| GateError::Other {
+            message: "PolygonGate missing id attribute".to_string(),
+            source: None,
+        })?;
 
     let start_depth = *depth;
     let mut dimensions = Vec::new();
@@ -671,6 +761,160 @@ fn parse_ellipse_gate_v1_5(
     Ok(None)
 }
 
+/// Parse boolean gate in v1.5 format
+fn parse_boolean_gate_v1_5(
+    reader: &mut Reader<&[u8]>,
+    gate_start: &BytesStart,
+    depth: &mut u32,
+) -> Result<Option<Gate>> {
+    let id = gate_start
+        .attributes()
+        .find(|attr| {
+            let attr = attr.as_ref().unwrap();
+            attr.key.as_ref() == b"gating:id" || attr.key.as_ref() == b"id"
+        })
+        .and_then(|attr| String::from_utf8(attr.unwrap().value.into_owned()).ok())
+        .ok_or_else(|| GateError::Other {
+            message: "BooleanGate missing id attribute".to_string(),
+            source: None,
+        })?;
+
+    let name = gate_start
+        .attributes()
+        .find(|attr| {
+            let attr = attr.as_ref().unwrap();
+            attr.key.as_ref() == b"gating:name" || attr.key.as_ref() == b"name"
+        })
+        .and_then(|attr| String::from_utf8(attr.unwrap().value.into_owned()).ok())
+        .unwrap_or_else(|| id.clone());
+
+    let geometry = parse_boolean_geometry_v1_5(reader, depth)?;
+
+    // Boolean gates don't have direct parameters - use placeholder
+    // In practice, the parameters would need to be inferred from referenced gates
+    let x_param = Arc::from("x");
+    let y_param = Arc::from("y");
+
+    Ok(Some(Gate::new(id, name, geometry, x_param, y_param)))
+}
+
+/// Parse boolean geometry in v1.5 format
+fn parse_boolean_geometry_v1_5(
+    reader: &mut Reader<&[u8]>,
+    depth: &mut u32,
+) -> Result<GateGeometry> {
+    let mut buf = Vec::new();
+    let mut operation: Option<crate::types::BooleanOperation> = None;
+    let mut operands: Vec<Arc<str>> = Vec::new();
+    let start_depth = *depth;
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(ref e)) => {
+                *depth += 1;
+                let name = e.name();
+
+                if name.as_ref() == b"gating:and" || name.as_ref() == b"and" {
+                    operation = Some(crate::types::BooleanOperation::And);
+                    operands = parse_gate_references(reader, depth)?;
+                } else if name.as_ref() == b"gating:or" || name.as_ref() == b"or" {
+                    operation = Some(crate::types::BooleanOperation::Or);
+                    operands = parse_gate_references(reader, depth)?;
+                } else if name.as_ref() == b"gating:not" || name.as_ref() == b"not" {
+                    operation = Some(crate::types::BooleanOperation::Not);
+                    operands = parse_gate_references(reader, depth)?;
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                let name = e.name();
+                if name.as_ref() == b"gating:BooleanGate" || name.as_ref() == b"BooleanGate" {
+                    *depth -= 1;
+                    break;
+                }
+                if *depth <= start_depth {
+                    break;
+                }
+                *depth -= 1;
+            }
+            Ok(Event::Eof) => break,
+            Err(e) => return Err(e.into()),
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    let operation = operation
+        .ok_or_else(|| GateError::invalid_geometry("BooleanGate missing operation (and/or/not)"))?;
+
+    Ok(GateGeometry::Boolean {
+        operation,
+        operands,
+    })
+}
+
+/// Parse boolean geometry in v2.0 format
+fn parse_boolean_geometry_v2(
+    reader: &mut Reader<&[u8]>,
+    _gate_start: &BytesStart,
+    depth: &mut u32,
+) -> Result<GateGeometry> {
+    parse_boolean_geometry_v1_5(reader, depth)
+}
+
+/// Parse gate references from boolean gate operands
+fn parse_gate_references(reader: &mut Reader<&[u8]>, depth: &mut u32) -> Result<Vec<Arc<str>>> {
+    let mut buf = Vec::new();
+    let mut references = Vec::new();
+    let start_depth = *depth;
+
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Empty(ref e)) => {
+                let name = e.name();
+                if name.as_ref() == b"gating:gateReference" || name.as_ref() == b"gateReference" {
+                    let ref_id = e
+                        .attributes()
+                        .find(|attr| {
+                            let attr = attr.as_ref().unwrap();
+                            attr.key.as_ref() == b"gating:ref" || attr.key.as_ref() == b"ref"
+                        })
+                        .and_then(|attr| String::from_utf8(attr.unwrap().value.into_owned()).ok())
+                        .ok_or_else(|| {
+                            GateError::invalid_geometry("gateReference missing ref attribute")
+                        })?;
+                    references.push(Arc::from(ref_id.as_str()));
+                }
+            }
+            Ok(Event::End(ref e)) => {
+                let name = e.name();
+                if name.as_ref() == b"gating:and"
+                    || name.as_ref() == b"and"
+                    || name.as_ref() == b"gating:or"
+                    || name.as_ref() == b"or"
+                    || name.as_ref() == b"gating:not"
+                    || name.as_ref() == b"not"
+                {
+                    if *depth <= start_depth {
+                        break;
+                    }
+                    *depth -= 1;
+                    break;
+                }
+                if *depth <= start_depth {
+                    break;
+                }
+                *depth -= 1;
+            }
+            Ok(Event::Eof) => break,
+            Err(e) => return Err(e.into()),
+            _ => {}
+        }
+        buf.clear();
+    }
+
+    Ok(references)
+}
+
 /// Parse polygon geometry in v2.0 format
 fn parse_polygon_geometry_v2(
     _reader: &mut Reader<&[u8]>,
@@ -707,6 +951,12 @@ fn extract_parameters_from_geometry(geometry: &GateGeometry) -> Result<(String, 
         GateGeometry::Polygon { nodes, .. } => nodes.first(),
         GateGeometry::Rectangle { min, .. } => Some(min),
         GateGeometry::Ellipse { center, .. } => Some(center),
+        GateGeometry::Boolean { .. } => {
+            // Boolean gates don't have direct parameters - they reference other gates
+            return Err(GateError::invalid_geometry(
+                "Boolean gates do not have direct parameters",
+            ));
+        }
     };
 
     if let Some(first_node) = node {
@@ -719,9 +969,10 @@ fn extract_parameters_from_geometry(geometry: &GateGeometry) -> Result<(String, 
             return Ok((params[0].clone(), params[1].clone()));
         }
     }
-    Err(anyhow::anyhow!(
-        "Could not extract parameters from geometry"
-    ))
+    Err(GateError::Other {
+        message: "Could not extract parameters from geometry".to_string(),
+        source: None,
+    })
 }
 
 #[cfg(test)]

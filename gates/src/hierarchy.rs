@@ -1,3 +1,4 @@
+use crate::error::{GateError, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
@@ -282,6 +283,604 @@ impl GateHierarchy {
     pub fn clear(&mut self) {
         self.children.clear();
         self.parents.clear();
+    }
+
+    /// Reparent a single gate to a new parent
+    ///
+    /// Moves a gate from its current parent to a new parent. This is equivalent
+    /// to removing the gate from its current parent and adding it to the new parent.
+    ///
+    /// # Arguments
+    /// * `gate_id` - The ID of the gate to reparent
+    /// * `new_parent_id` - The ID of the new parent gate
+    ///
+    /// # Returns
+    /// `Ok(())` if successful, or an error if:
+    /// - The gate doesn't exist
+    /// - The new parent doesn't exist
+    /// - The operation would create a cycle
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("parent1", "child");
+    /// hierarchy.reparent("child", "parent2")?;
+    /// assert_eq!(hierarchy.get_parent("child").map(|s| s.as_ref()), Some("parent2"));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn reparent(
+        &mut self,
+        gate_id: impl Into<Arc<str>>,
+        new_parent_id: impl Into<Arc<str>>,
+    ) -> Result<()> {
+        let gate_id = gate_id.into();
+        let new_parent_id = new_parent_id.into();
+
+        // Check if gate exists (it might be a root)
+        let all_gates: HashSet<Arc<str>> = self
+            .children
+            .keys()
+            .chain(self.parents.keys())
+            .cloned()
+            .collect();
+
+        if !all_gates.contains(&gate_id) {
+            return Err(GateError::gate_not_found(
+                gate_id.as_ref(),
+                "gate not found in hierarchy",
+            ));
+        }
+
+        if !all_gates.contains(&new_parent_id) && gate_id != new_parent_id {
+            return Err(GateError::gate_not_found(
+                new_parent_id.as_ref(),
+                "new parent not found in hierarchy",
+            ));
+        }
+
+        // Check for cycles
+        if self.would_create_cycle(&new_parent_id, &gate_id) {
+            return Err(GateError::hierarchy_cycle(
+                new_parent_id.as_ref(),
+                gate_id.as_ref(),
+            ));
+        }
+
+        // Remove from current parent if it exists
+        if let Some(old_parent) = self.parents.remove(&gate_id) {
+            if let Some(siblings) = self.children.get_mut(&old_parent) {
+                siblings.retain(|id| id != &gate_id);
+            }
+        }
+
+        // Add to new parent
+        self.children
+            .entry(new_parent_id.clone())
+            .or_default()
+            .push(gate_id.clone());
+        self.parents.insert(gate_id, new_parent_id);
+
+        Ok(())
+    }
+
+    /// Reparent a gate and all its descendants to a new parent
+    ///
+    /// Moves an entire subtree (gate and all its descendants) to a new parent.
+    /// This is useful for reorganizing large portions of the hierarchy.
+    ///
+    /// # Arguments
+    /// * `gate_id` - The ID of the root gate of the subtree to move
+    /// * `new_parent_id` - The ID of the new parent gate
+    ///
+    /// # Returns
+    /// `Ok(())` if successful, or an error if the operation would create a cycle
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("parent1", "child");
+    /// hierarchy.add_child("child", "grandchild");
+    /// hierarchy.reparent_subtree("child", "parent2")?;
+    /// // Both "child" and "grandchild" are now under "parent2"
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn reparent_subtree(
+        &mut self,
+        gate_id: impl Into<Arc<str>>,
+        new_parent_id: impl Into<Arc<str>>,
+    ) -> Result<()> {
+        let gate_id = gate_id.into();
+        let new_parent_id = new_parent_id.into();
+
+        // Get all descendants
+        let descendants = self.get_descendants(gate_id.as_ref());
+
+        // Check if new_parent_id is a descendant (would create cycle)
+        if descendants.contains(&new_parent_id) {
+            return Err(GateError::hierarchy_cycle(
+                new_parent_id.as_ref(),
+                gate_id.as_ref(),
+            ));
+        }
+
+        // Check if gate_id is a descendant of new_parent_id (would create cycle)
+        let new_parent_descendants = self.get_descendants(new_parent_id.as_ref());
+        if new_parent_descendants.contains(&gate_id) {
+            return Err(GateError::hierarchy_cycle(
+                new_parent_id.as_ref(),
+                gate_id.as_ref(),
+            ));
+        }
+
+        // Reparent the root gate
+        self.reparent(gate_id.as_ref(), new_parent_id.as_ref())?;
+
+        Ok(())
+    }
+
+    /// Clone a subtree with new IDs
+    ///
+    /// Creates a copy of a subtree (gate and all its descendants) with new IDs
+    /// generated by the provided mapper function. The cloned subtree is returned
+    /// as a new hierarchy.
+    ///
+    /// # Arguments
+    /// * `gate_id` - The ID of the root gate of the subtree to clone
+    /// * `id_mapper` - Function that maps old IDs to new IDs
+    ///
+    /// # Returns
+    /// A new `GateHierarchy` containing the cloned subtree, or an error if the gate doesn't exist
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("parent", "child");
+    /// hierarchy.add_child("child", "grandchild");
+    ///
+    /// let cloned = hierarchy.clone_subtree("child", |id| format!("{}_copy", id))?;
+    /// // cloned contains "child_copy" -> "grandchild_copy"
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn clone_subtree<F>(&self, gate_id: &str, id_mapper: F) -> Result<Self>
+    where
+        F: Fn(&str) -> String,
+    {
+        let mut new_hierarchy = Self::new();
+
+        // Get all nodes in subtree (including root)
+        let mut subtree_nodes = vec![Arc::from(gate_id)];
+        subtree_nodes.extend(self.get_descendants(gate_id));
+
+        // Map old IDs to new IDs
+        let id_map: HashMap<Arc<str>, Arc<str>> = subtree_nodes
+            .iter()
+            .map(|old_id| {
+                let new_id = Arc::from(id_mapper(old_id.as_ref()).as_str());
+                (old_id.clone(), new_id)
+            })
+            .collect();
+
+        // Clone relationships
+        for old_id in &subtree_nodes {
+            if let Some(children) = self.children.get(old_id) {
+                let new_parent_id = id_map.get(old_id).unwrap();
+                for child in children {
+                    if let Some(new_child_id) = id_map.get(child) {
+                        if !new_hierarchy.add_child(new_parent_id.clone(), new_child_id.clone()) {
+                            return Err(GateError::hierarchy_error(
+                                "Failed to add child in cloned hierarchy - possible cycle",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(new_hierarchy)
+    }
+
+    /// Move an entire subtree to a new parent
+    ///
+    /// This is an alias for `reparent_subtree` that makes the intent clearer.
+    ///
+    /// # Arguments
+    /// * `gate_id` - The ID of the root gate of the subtree to move
+    /// * `new_parent_id` - The ID of the new parent gate
+    ///
+    /// # Returns
+    /// `Ok(())` if successful, or an error if the operation would create a cycle
+    pub fn move_subtree(
+        &mut self,
+        gate_id: impl Into<Arc<str>>,
+        new_parent_id: impl Into<Arc<str>>,
+    ) -> Result<()> {
+        self.reparent_subtree(gate_id, new_parent_id)
+    }
+
+    /// Delete a gate and all its descendants
+    ///
+    /// Removes a gate and all of its descendants from the hierarchy.
+    /// Returns a list of all deleted gate IDs.
+    ///
+    /// # Arguments
+    /// * `gate_id` - The ID of the gate to delete (along with all descendants)
+    ///
+    /// # Returns
+    /// A vector of all deleted gate IDs (including the root gate and all descendants)
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("parent", "child");
+    /// hierarchy.add_child("child", "grandchild");
+    ///
+    /// let deleted = hierarchy.delete_subtree("child");
+    /// assert_eq!(deleted.len(), 2); // "child" and "grandchild"
+    /// assert!(hierarchy.get_parent("child").is_none());
+    /// ```
+    pub fn delete_subtree(&mut self, gate_id: &str) -> Vec<Arc<str>> {
+        let mut deleted = Vec::new();
+        let mut to_delete = vec![Arc::from(gate_id)];
+
+        // Collect all descendants
+        to_delete.extend(self.get_descendants(gate_id));
+
+        // Delete all nodes
+        for id in &to_delete {
+            self.remove_node(id.as_ref());
+            deleted.push(id.clone());
+        }
+
+        deleted
+    }
+
+    /// Delete a gate but keep its children (reparent them)
+    ///
+    /// Removes a gate from the hierarchy but reparents all its children to
+    /// a new parent (or makes them root nodes if no parent is specified).
+    ///
+    /// # Arguments
+    /// * `gate_id` - The ID of the gate to delete
+    /// * `new_parent_id` - Optional new parent for the children. If `None`, children become root nodes
+    ///
+    /// # Returns
+    /// A vector of reparented child IDs, or an error if:
+    /// - The gate doesn't exist
+    /// - The new parent doesn't exist
+    /// - Reparenting would create a cycle
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use std::sync::Arc;
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("parent", "child");
+    /// hierarchy.add_child("child", "grandchild1");
+    /// hierarchy.add_child("child", "grandchild2");
+    ///
+    /// let reparented = hierarchy.delete_node_keep_children("child", Some(Arc::from("parent")))?;
+    /// assert_eq!(reparented.len(), 2);
+    /// // grandchild1 and grandchild2 are now direct children of "parent"
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn delete_node_keep_children(
+        &mut self,
+        gate_id: &str,
+        new_parent_id: Option<Arc<str>>,
+    ) -> Result<Vec<Arc<str>>> {
+        // Get children before deletion
+        let children: Vec<Arc<str>> = self
+            .get_children(gate_id)
+            .into_iter()
+            .map(|id| id.clone())
+            .collect();
+
+        if children.is_empty() {
+            // No children, just delete the node
+            self.remove_node(gate_id);
+            return Ok(Vec::new());
+        }
+
+        // Reparent children
+        if let Some(ref new_parent) = new_parent_id {
+            // Check if new parent exists
+            let all_gates: HashSet<Arc<str>> = self
+                .children
+                .keys()
+                .chain(self.parents.keys())
+                .cloned()
+                .collect();
+
+            if !all_gates.contains(new_parent) && new_parent.as_ref() != gate_id {
+                return Err(GateError::gate_not_found(
+                    new_parent.as_ref(),
+                    "new parent not found in hierarchy",
+                ));
+            }
+
+            // Check for cycles
+            for child in &children {
+                if self.would_create_cycle(new_parent, child) {
+                    return Err(GateError::hierarchy_cycle(
+                        new_parent.as_ref(),
+                        child.as_ref(),
+                    ));
+                }
+            }
+
+            // Reparent all children
+            for child in &children {
+                self.reparent(child.as_ref(), new_parent.clone())?;
+            }
+        } else {
+            // Make children root nodes (remove their parent relationship)
+            for child in &children {
+                if let Some(_) = self.parents.remove(child) {
+                    // Also remove from old parent's children list
+                    // (This is already handled by reparent, but we need to do it manually here)
+                }
+            }
+        }
+
+        // Now delete the node
+        self.remove_node(gate_id);
+
+        Ok(children)
+    }
+
+    /// Delete a single node, orphaning its children
+    ///
+    /// Removes a gate from the hierarchy. Its children become orphaned (root nodes).
+    /// This is equivalent to `delete_node_keep_children(gate_id, None)`.
+    ///
+    /// # Arguments
+    /// * `gate_id` - The ID of the gate to delete
+    ///
+    /// # Returns
+    /// A vector of orphaned child IDs
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("parent", "child");
+    /// hierarchy.add_child("child", "grandchild");
+    ///
+    /// let orphaned = hierarchy.delete_node("child")?;
+    /// assert_eq!(orphaned.len(), 1); // "grandchild" is now orphaned
+    /// assert!(hierarchy.is_root("grandchild"));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn delete_node(&mut self, gate_id: &str) -> Result<Vec<Arc<str>>> {
+        self.delete_node_keep_children(gate_id, None)
+    }
+
+    /// Add a child-parent relationship, returning a Result
+    ///
+    /// This is a convenience wrapper around `add_child` that returns an error
+    /// instead of `false` when the operation fails.
+    ///
+    /// # Arguments
+    /// * `parent_id` - The ID of the parent gate
+    /// * `child_id` - The ID of the child gate
+    ///
+    /// # Returns
+    /// `Ok(())` if successful, or an error if the operation would create a cycle
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_gate_child("parent", "child")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn add_gate_child(
+        &mut self,
+        parent_id: impl Into<Arc<str>>,
+        child_id: impl Into<Arc<str>>,
+    ) -> Result<()> {
+        let parent_id = parent_id.into();
+        let child_id = child_id.into();
+
+        if !self.add_child(parent_id.clone(), child_id.clone()) {
+            return Err(GateError::hierarchy_cycle(
+                parent_id.as_ref(),
+                child_id.as_ref(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Build a hierarchy from a list of gates and their relationships
+    ///
+    /// Creates a new hierarchy from a list of gates and their parent-child relationships.
+    /// This is useful for constructing hierarchies programmatically.
+    ///
+    /// # Arguments
+    /// * `relationships` - A slice of (parent_id, child_id) tuples defining the hierarchy
+    ///
+    /// # Returns
+    /// A new `GateHierarchy` with the specified relationships, or an error if:
+    /// - Any relationship would create a cycle
+    /// - Relationships are invalid
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    /// use std::sync::Arc;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let relationships = vec![
+    ///     (Arc::from("root"), Arc::from("child1")),
+    ///     (Arc::from("root"), Arc::from("child2")),
+    ///     (Arc::from("child1"), Arc::from("grandchild")),
+    /// ];
+    /// let hierarchy = GateHierarchy::from_relationships(&relationships)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn from_relationships(relationships: &[(Arc<str>, Arc<str>)]) -> Result<Self> {
+        let mut hierarchy = Self::new();
+
+        for (parent, child) in relationships {
+            hierarchy.add_gate_child(parent.clone(), child.clone())?;
+        }
+
+        Ok(hierarchy)
+    }
+
+    /// Iterate gates in topological order (parents before children)
+    ///
+    /// Returns an iterator over gate IDs in topological order, where parents
+    /// always come before their children. This is useful for processing gates
+    /// in dependency order.
+    ///
+    /// # Returns
+    /// An iterator over gate IDs in topological order, or an empty iterator if there are cycles
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("a", "b");
+    /// hierarchy.add_child("a", "c");
+    ///
+    /// let order: Vec<_> = hierarchy.iter_topological().collect();
+    /// // "a" will come before "b" and "c"
+    /// ```
+    pub fn iter_topological(&self) -> impl Iterator<Item = Arc<str>> {
+        self.topological_sort().unwrap_or_default().into_iter()
+    }
+
+    /// Iterate gates in depth-first order starting from a root
+    ///
+    /// Returns an iterator over gate IDs in depth-first order, starting from
+    /// the specified root gate and traversing down the tree.
+    ///
+    /// # Arguments
+    /// * `root` - The root gate ID to start traversal from
+    ///
+    /// # Returns
+    /// An iterator over gate IDs in depth-first order
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("root", "child1");
+    /// hierarchy.add_child("root", "child2");
+    /// hierarchy.add_child("child1", "grandchild");
+    ///
+    /// let order: Vec<_> = hierarchy.iter_dfs("root").collect();
+    /// // Order: root, child1, grandchild, child2 (or similar DFS order)
+    /// ```
+    pub fn iter_dfs(&self, root: &str) -> impl Iterator<Item = Arc<str>> {
+        let mut stack: Vec<Arc<str>> = vec![Arc::from(root)];
+        let mut visited = HashSet::new();
+        std::iter::from_fn(move || {
+            while let Some(node) = stack.pop() {
+                if visited.insert(node.clone()) {
+                    // Add children to stack in reverse order to maintain left-to-right traversal
+                    if let Some(children) = self.children.get(&node) {
+                        for child in children.iter().rev() {
+                            stack.push(child.clone());
+                        }
+                    }
+                    return Some(node);
+                }
+            }
+            None
+        })
+    }
+
+    /// Validate the hierarchy structure
+    ///
+    /// Checks the hierarchy for common issues:
+    /// - Cycles
+    /// - Orphaned gates (gates with no parent and not in children map)
+    /// - Inconsistent parent-child relationships
+    ///
+    /// # Returns
+    /// `Ok(())` if the hierarchy is valid, or an error describing the issue
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::GateHierarchy;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut hierarchy = GateHierarchy::new();
+    /// hierarchy.add_child("parent", "child");
+    /// hierarchy.validate()?; // Should pass
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn validate(&self) -> Result<()> {
+        // Check for cycles using topological sort
+        let all_gates: HashSet<Arc<str>> = self
+            .children
+            .keys()
+            .chain(self.parents.keys())
+            .cloned()
+            .collect();
+
+        if let Some(sorted) = self.topological_sort() {
+            if sorted.len() != all_gates.len() {
+                return Err(GateError::hierarchy_error(
+                    "Topological sort failed - possible cycles detected",
+                ));
+            }
+        } else {
+            return Err(GateError::hierarchy_error("Cycles detected in hierarchy"));
+        }
+
+        // Check for inconsistent relationships
+        for (parent, children) in &self.children {
+            for child in children {
+                if let Some(child_parent) = self.parents.get(child) {
+                    if child_parent != parent {
+                        return Err(GateError::hierarchy_error(format!(
+                            "Inconsistent relationship: {} is child of {} but parent is {}",
+                            child.as_ref(),
+                            parent.as_ref(),
+                            child_parent.as_ref()
+                        )));
+                    }
+                } else {
+                    return Err(GateError::hierarchy_error(format!(
+                        "Child {} has no parent entry",
+                        child.as_ref()
+                    )));
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

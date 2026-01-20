@@ -48,6 +48,71 @@ pub enum GateError {
         #[source]
         source: Option<Box<dyn StdError + Send + Sync>>,
     },
+
+    /// Hierarchy cycle detection
+    #[error("Hierarchy cycle detected: adding '{gate_id}' as parent of '{would_create_cycle_to}' would create a cycle")]
+    HierarchyCycle {
+        gate_id: String,
+        would_create_cycle_to: String,
+    },
+
+    /// Invalid boolean operation configuration
+    #[error("Invalid boolean operation '{operation}': expected {expected_count} operand(s), got {operand_count}")]
+    InvalidBooleanOperation {
+        operation: String,
+        operand_count: usize,
+        expected_count: usize,
+    },
+
+    /// Referenced gate not found
+    #[error("Gate '{gate_id}' not found: {context}")]
+    GateNotFound {
+        gate_id: String,
+        context: String,
+    },
+
+    /// Invalid gate link operation
+    #[error("Invalid link from '{linking_gate_id}' to '{target_gate_id}': {reason}")]
+    InvalidLink {
+        target_gate_id: String,
+        linking_gate_id: String,
+        reason: String,
+    },
+
+    /// Cannot reparent gate
+    #[error("Cannot reparent gate '{gate_id}' to '{new_parent_id}': {reason}")]
+    CannotReparent {
+        gate_id: String,
+        new_parent_id: String,
+        reason: String,
+    },
+
+    /// Invalid subtree operation
+    #[error("Invalid subtree operation '{operation}' on gate '{gate_id}': {reason}")]
+    InvalidSubtreeOperation {
+        gate_id: String,
+        operation: String,
+        reason: String,
+    },
+
+    /// Boolean operation with no operands
+    #[error("Boolean operation '{operation}' requires at least one operand")]
+    EmptyOperands {
+        operation: String,
+    },
+
+    /// Builder in invalid state
+    #[error("Builder field '{field}' is invalid: {reason}")]
+    InvalidBuilderState {
+        field: String,
+        reason: String,
+    },
+
+    /// Duplicate gate ID
+    #[error("Gate ID '{gate_id}' already exists")]
+    DuplicateGateId {
+        gate_id: String,
+    },
 }
 
 impl GateError {
@@ -95,6 +160,96 @@ impl GateError {
         }
     }
 
+    /// Create a HierarchyCycle error
+    pub fn hierarchy_cycle(gate_id: impl Into<String>, would_create_cycle_to: impl Into<String>) -> Self {
+        Self::HierarchyCycle {
+            gate_id: gate_id.into(),
+            would_create_cycle_to: would_create_cycle_to.into(),
+        }
+    }
+
+    /// Create an InvalidBooleanOperation error
+    pub fn invalid_boolean_operation(
+        operation: impl Into<String>,
+        operand_count: usize,
+        expected_count: usize,
+    ) -> Self {
+        Self::InvalidBooleanOperation {
+            operation: operation.into(),
+            operand_count,
+            expected_count,
+        }
+    }
+
+    /// Create a GateNotFound error
+    pub fn gate_not_found(gate_id: impl Into<String>, context: impl Into<String>) -> Self {
+        Self::GateNotFound {
+            gate_id: gate_id.into(),
+            context: context.into(),
+        }
+    }
+
+    /// Create an InvalidLink error
+    pub fn invalid_link(
+        target_gate_id: impl Into<String>,
+        linking_gate_id: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self::InvalidLink {
+            target_gate_id: target_gate_id.into(),
+            linking_gate_id: linking_gate_id.into(),
+            reason: reason.into(),
+        }
+    }
+
+    /// Create a CannotReparent error
+    pub fn cannot_reparent(
+        gate_id: impl Into<String>,
+        new_parent_id: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self::CannotReparent {
+            gate_id: gate_id.into(),
+            new_parent_id: new_parent_id.into(),
+            reason: reason.into(),
+        }
+    }
+
+    /// Create an InvalidSubtreeOperation error
+    pub fn invalid_subtree_operation(
+        gate_id: impl Into<String>,
+        operation: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> Self {
+        Self::InvalidSubtreeOperation {
+            gate_id: gate_id.into(),
+            operation: operation.into(),
+            reason: reason.into(),
+        }
+    }
+
+    /// Create an EmptyOperands error
+    pub fn empty_operands(operation: impl Into<String>) -> Self {
+        Self::EmptyOperands {
+            operation: operation.into(),
+        }
+    }
+
+    /// Create an InvalidBuilderState error
+    pub fn invalid_builder_state(field: impl Into<String>, reason: impl Into<String>) -> Self {
+        Self::InvalidBuilderState {
+            field: field.into(),
+            reason: reason.into(),
+        }
+    }
+
+    /// Create a DuplicateGateId error
+    pub fn duplicate_gate_id(gate_id: impl Into<String>) -> Self {
+        Self::DuplicateGateId {
+            gate_id: gate_id.into(),
+        }
+    }
+
     /// Add context to an error
     pub fn with_context(self, context: impl Into<String>) -> Self {
         match self {
@@ -124,6 +279,44 @@ impl GateError {
             Self::IndexError { message } => Self::IndexError {
                 message: format!("{}: {}", context.into(), message),
             },
+            Self::HierarchyCycle { gate_id, would_create_cycle_to } => Self::HierarchyCycle {
+                gate_id,
+                would_create_cycle_to,
+            },
+            Self::InvalidBooleanOperation { operation, operand_count, expected_count } => {
+                Self::InvalidBooleanOperation {
+                    operation,
+                    operand_count,
+                    expected_count,
+                }
+            }
+            Self::GateNotFound { gate_id, context: ctx } => Self::GateNotFound {
+                gate_id,
+                context: format!("{}: {}", context.into(), ctx),
+            },
+            Self::InvalidLink { target_gate_id, linking_gate_id, reason } => Self::InvalidLink {
+                target_gate_id,
+                linking_gate_id,
+                reason: format!("{}: {}", context.into(), reason),
+            },
+            Self::CannotReparent { gate_id, new_parent_id, reason } => Self::CannotReparent {
+                gate_id,
+                new_parent_id,
+                reason: format!("{}: {}", context.into(), reason),
+            },
+            Self::InvalidSubtreeOperation { gate_id, operation, reason } => {
+                Self::InvalidSubtreeOperation {
+                    gate_id,
+                    operation,
+                    reason: format!("{}: {}", context.into(), reason),
+                }
+            }
+            Self::EmptyOperands { operation } => Self::EmptyOperands { operation },
+            Self::InvalidBuilderState { field, reason } => Self::InvalidBuilderState {
+                field,
+                reason: format!("{}: {}", context.into(), reason),
+            },
+            Self::DuplicateGateId { gate_id } => Self::DuplicateGateId { gate_id },
             Self::Other { message, source } => Self::Other {
                 message: format!("{}: {}", context.into(), message),
                 source,
@@ -138,6 +331,26 @@ impl From<anyhow::Error> for GateError {
         Self::Other {
             message: err.to_string(),
             source: None, // anyhow::Error already contains the full context
+        }
+    }
+}
+
+// Conversion from quick_xml errors for GatingML parsing
+impl From<quick_xml::Error> for GateError {
+    fn from(err: quick_xml::Error) -> Self {
+        Self::Other {
+            message: format!("XML parsing error: {}", err),
+            source: Some(Box::new(err)),
+        }
+    }
+}
+
+// Conversion from std::io::Error for GatingML writing
+impl From<std::io::Error> for GateError {
+    fn from(err: std::io::Error) -> Self {
+        Self::Other {
+            message: format!("IO error: {}", err),
+            source: Some(Box::new(err)),
         }
     }
 }
