@@ -63,12 +63,64 @@ impl GateNode {
     }
 }
 
+/// Boolean operation for combining gates
+///
+/// Boolean gates combine multiple gates using logical operations:
+/// - **And**: Events must pass all operand gates
+/// - **Or**: Events must pass at least one operand gate
+/// - **Not**: Events must NOT pass the operand gate (complement)
+///
+/// # Example
+///
+/// ```rust
+/// use flow_gates::BooleanOperation;
+///
+/// let and_op = BooleanOperation::And;
+/// let or_op = BooleanOperation::Or;
+/// let not_op = BooleanOperation::Not;
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BooleanOperation {
+    /// AND operation - events must pass all operand gates
+    And,
+    /// OR operation - events must pass at least one operand gate
+    Or,
+    /// NOT operation - events must NOT pass the operand gate (single operand)
+    Not,
+}
+
+impl BooleanOperation {
+    /// Get the expected number of operands for this operation
+    ///
+    /// # Returns
+    /// - `And`: `None` (any number >= 2)
+    /// - `Or`: `None` (any number >= 2)
+    /// - `Not`: `Some(1)` (exactly one operand)
+    pub fn expected_operand_count(&self) -> Option<usize> {
+        match self {
+            BooleanOperation::And | BooleanOperation::Or => None, // At least 2
+            BooleanOperation::Not => Some(1),
+        }
+    }
+
+    /// Get a string representation of the operation
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            BooleanOperation::And => "and",
+            BooleanOperation::Or => "or",
+            BooleanOperation::Not => "not",
+        }
+    }
+}
+
 /// The geometry of a gate, defining its shape in 2D parameter space.
 ///
-/// Gates can be one of three geometric types:
+/// Gates can be one of four geometric types:
 /// - **Polygon**: A closed or open polygonal region defined by vertices
 /// - **Rectangle**: An axis-aligned rectangular region
 /// - **Ellipse**: An elliptical region with optional rotation
+/// - **Boolean**: A combination of other gates using boolean operations (AND, OR, NOT)
 ///
 /// All geometries operate in raw data coordinate space and are parameterized
 /// by two channel names (x and y parameters).
@@ -78,6 +130,7 @@ impl GateNode {
 /// ```rust
 /// use flow_gates::{GateGeometry, GateNode};
 ///
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Create a rectangle gate
 /// let min = GateNode::new("min")
 ///     .with_coordinate("FSC-A", 100.0)
@@ -90,6 +143,8 @@ impl GateNode {
 ///
 /// // Check if a point is inside
 /// let inside = geometry.contains_point(300.0, 400.0, "FSC-A", "SSC-A")?;
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -107,6 +162,17 @@ pub enum GateGeometry {
         radius_x: f32,
         radius_y: f32,
         angle: f32, // rotation angle in radians
+    },
+    /// Boolean gate combining other gates with logical operations
+    ///
+    /// Boolean gates reference other gates by ID and combine their results
+    /// using AND, OR, or NOT operations. The referenced gates must be resolved
+    /// externally when filtering events.
+    Boolean {
+        /// The boolean operation to apply
+        operation: BooleanOperation,
+        /// IDs of the gates to combine (gate IDs, not the gates themselves)
+        operands: Vec<Arc<str>>,
     },
 }
 
@@ -171,6 +237,11 @@ impl GateGeometry {
                     None
                 }
             }
+            GateGeometry::Boolean { .. } => {
+                // Boolean gates don't have a direct bounding box - would need to resolve operands
+                // For now, return None to indicate it can't be calculated directly
+                None
+            }
         }
     }
 
@@ -220,6 +291,12 @@ impl GateGeometry {
                     .ok_or_else(|| GateError::missing_parameter(y_param, "ellipse center"))?;
 
                 Ok((cx, cy))
+            }
+            GateGeometry::Boolean { .. } => {
+                // Boolean gates don't have a direct center - would need to resolve operands
+                Err(GateError::invalid_geometry(
+                    "Boolean gates do not have a direct center point",
+                ))
             }
         }
     }
@@ -288,6 +365,13 @@ impl GateGeometry {
                 let normalized = (rotated_x / radius_x).powi(2) + (rotated_y / radius_y).powi(2);
                 Ok(normalized <= 1.0)
             }
+            GateGeometry::Boolean { .. } => {
+                // Boolean gates require resolving referenced gates - can't check containment directly
+                // This should be handled by the filtering functions that resolve gate references
+                Err(GateError::invalid_geometry(
+                    "Boolean gates require gate resolution to check containment",
+                ))
+            }
         }
     }
 
@@ -341,6 +425,25 @@ impl GateGeometry {
                 // Radii must be positive
                 Ok(radius_x > &0.0 && radius_y > &0.0)
             }
+            GateGeometry::Boolean {
+                operation,
+                operands,
+            } => {
+                // Validate operand count
+                match operation {
+                    BooleanOperation::And | BooleanOperation::Or => {
+                        if operands.len() < 2 {
+                            return Ok(false);
+                        }
+                    }
+                    BooleanOperation::Not => {
+                        if operands.len() != 1 {
+                            return Ok(false);
+                        }
+                    }
+                }
+                Ok(true)
+            }
         }
     }
 
@@ -350,6 +453,7 @@ impl GateGeometry {
             GateGeometry::Polygon { .. } => "Polygon",
             GateGeometry::Rectangle { .. } => "Rectangle",
             GateGeometry::Ellipse { .. } => "Ellipse",
+            GateGeometry::Boolean { .. } => "Boolean",
         }
     }
 }
@@ -388,6 +492,9 @@ impl GateCenter for GateGeometry {
                 };
                 ellipse.calculate_center(x_param, y_param)
             }
+            GateGeometry::Boolean { .. } => Err(GateError::invalid_geometry(
+                "Boolean gates do not have a direct center point",
+            )),
         }
     }
 }
@@ -423,6 +530,9 @@ impl GateContainment for GateGeometry {
                 };
                 ellipse.contains_point(x, y, x_param, y_param)
             }
+            GateGeometry::Boolean { .. } => Err(GateError::invalid_geometry(
+                "Boolean gates require gate resolution to check containment",
+            )),
         }
     }
 }
@@ -458,6 +568,9 @@ impl GateBounds for GateGeometry {
                 };
                 ellipse.bounding_box(x_param, y_param)
             }
+            GateGeometry::Boolean { .. } => Err(GateError::invalid_geometry(
+                "Boolean gates do not have a direct bounding box",
+            )),
         }
     }
 }
@@ -493,6 +606,32 @@ impl GateValidation for GateGeometry {
                 };
                 ellipse.is_valid(x_param, y_param)
             }
+            GateGeometry::Boolean {
+                operation,
+                operands,
+            } => {
+                match operation {
+                    BooleanOperation::And | BooleanOperation::Or => {
+                        if operands.len() < 2 {
+                            return Err(GateError::invalid_boolean_operation(
+                                operation.as_str(),
+                                operands.len(),
+                                2,
+                            ));
+                        }
+                    }
+                    BooleanOperation::Not => {
+                        if operands.len() != 1 {
+                            return Err(GateError::invalid_boolean_operation(
+                                operation.as_str(),
+                                operands.len(),
+                                1,
+                            ));
+                        }
+                    }
+                }
+                Ok(true)
+            }
         }
     }
 }
@@ -503,6 +642,7 @@ impl GateGeometryOps for GateGeometry {
             GateGeometry::Polygon { .. } => "Polygon",
             GateGeometry::Rectangle { .. } => "Rectangle",
             GateGeometry::Ellipse { .. } => "Ellipse",
+            GateGeometry::Boolean { .. } => "Boolean",
         }
     }
 }
@@ -611,6 +751,7 @@ pub struct LabelPosition {
 /// ```rust
 /// use flow_gates::{Gate, GateGeometry, GateNode, geometry::*};
 ///
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Create a polygon gate
 /// let coords = vec![
 ///     (100.0, 200.0),
@@ -631,6 +772,8 @@ pub struct LabelPosition {
 /// // Get parameter names
 /// assert_eq!(gate.x_parameter_channel_name(), "FSC-A");
 /// assert_eq!(gate.y_parameter_channel_name(), "SSC-A");
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Gate {
@@ -687,6 +830,482 @@ impl Gate {
     /// Get the y parameter (channel name)
     pub fn y_parameter_channel_name(&self) -> &str {
         self.parameters.1.as_ref()
+    }
+
+    /// Check if a point (in gate's parameter space) is inside the gate
+    ///
+    /// This is a convenience method that uses the gate's own parameters,
+    /// so you don't need to specify them explicitly.
+    ///
+    /// # Arguments
+    /// * `x` - X coordinate in raw data space
+    /// * `y` - Y coordinate in raw data space
+    ///
+    /// # Returns
+    /// `true` if the point is inside the gate, `false` otherwise
+    ///
+    /// # Errors
+    /// Returns an error if the gate geometry is invalid or parameters are missing
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::Gate;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let gate = Gate::rectangle("rect", "Rectangle", (100.0, 200.0), (500.0, 600.0), "FSC-A", "SSC-A")?;
+    /// assert!(gate.contains_point(300.0, 400.0)?);
+    /// assert!(!gate.contains_point(50.0, 50.0)?);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn contains_point(&self, x: f32, y: f32) -> Result<bool> {
+        self.geometry.contains_point(
+            x,
+            y,
+            self.x_parameter_channel_name(),
+            self.y_parameter_channel_name(),
+        )
+    }
+
+    /// Get the bounding box in gate's parameter space
+    ///
+    /// This is a convenience method that uses the gate's own parameters.
+    ///
+    /// # Returns
+    /// `Some((min_x, min_y, max_x, max_y))` if the bounding box can be calculated,
+    /// `None` otherwise
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::Gate;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let gate = Gate::rectangle("rect", "Rectangle", (100.0, 200.0), (500.0, 600.0), "FSC-A", "SSC-A")?;
+    /// let bbox = gate.bounding_box();
+    /// assert_eq!(bbox, Some((100.0, 200.0, 500.0, 600.0)));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn bounding_box(&self) -> Option<(f32, f32, f32, f32)> {
+        self.geometry.bounding_box(
+            self.x_parameter_channel_name(),
+            self.y_parameter_channel_name(),
+        )
+    }
+
+    /// Get x and y coordinates from a node for this gate's parameters
+    ///
+    /// This is a convenience method that extracts coordinates for the gate's
+    /// x and y parameters from a node.
+    ///
+    /// # Arguments
+    /// * `node` - The gate node to extract coordinates from
+    ///
+    /// # Returns
+    /// `Some((x, y))` if both coordinates are present, `None` otherwise
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::{Gate, GateNode};
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let gate = Gate::rectangle("rect", "Rectangle", (100.0, 200.0), (500.0, 600.0), "FSC-A", "SSC-A")?;
+    /// let node = GateNode::new("node1")
+    ///     .with_coordinate("FSC-A", 300.0)
+    ///     .with_coordinate("SSC-A", 400.0);
+    /// let coords = gate.get_node_coords(&node);
+    /// assert_eq!(coords, Some((300.0, 400.0)));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn get_node_coords(&self, node: &GateNode) -> Option<(f32, f32)> {
+        Some((
+            node.get_coordinate(self.x_parameter_channel_name())?,
+            node.get_coordinate(self.y_parameter_channel_name())?,
+        ))
+    }
+
+    /// Clone this gate with a new ID
+    ///
+    /// Creates a new gate with the same properties but a different ID.
+    /// Useful for duplicating gates or creating variations.
+    ///
+    /// # Arguments
+    /// * `new_id` - The new ID for the cloned gate
+    ///
+    /// # Returns
+    /// A new `Gate` instance with the specified ID
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::Gate;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let gate1 = Gate::rectangle("gate1", "Rectangle", (100.0, 200.0), (500.0, 600.0), "FSC-A", "SSC-A")?;
+    /// let gate2 = gate1.clone_with_id("gate2");
+    /// assert_eq!(gate2.id.as_ref(), "gate2");
+    /// assert_eq!(gate1.name, gate2.name);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn clone_with_id(&self, new_id: impl Into<Arc<str>>) -> Self {
+        Self {
+            id: new_id.into(),
+            name: self.name.clone(),
+            geometry: self.geometry.clone(),
+            mode: self.mode.clone(),
+            parameters: self.parameters.clone(),
+            label_position: self.label_position.clone(),
+        }
+    }
+
+    /// Create a polygon gate from coordinates
+    ///
+    /// Convenience constructor for creating polygon gates directly.
+    ///
+    /// # Arguments
+    /// * `id` - Unique identifier for the gate
+    /// * `name` - Human-readable name for the gate
+    /// * `coords` - Vector of (x, y) coordinate tuples
+    /// * `x_param` - Channel name for the x-axis parameter
+    /// * `y_param` - Channel name for the y-axis parameter
+    ///
+    /// # Returns
+    /// A new `Gate` with polygon geometry
+    ///
+    /// # Errors
+    /// Returns an error if the coordinates are invalid (less than 3 points, non-finite values)
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::Gate;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let coords = vec![
+    ///     (100.0, 200.0),
+    ///     (300.0, 200.0),
+    ///     (300.0, 400.0),
+    ///     (100.0, 400.0),
+    /// ];
+    /// let gate = Gate::polygon("poly", "Polygon", coords, "FSC-A", "SSC-A")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn polygon(
+        id: impl Into<Arc<str>>,
+        name: impl Into<String>,
+        coords: Vec<(f32, f32)>,
+        x_param: impl Into<Arc<str>>,
+        y_param: impl Into<Arc<str>>,
+    ) -> Result<Self> {
+        use crate::geometry::create_polygon_geometry;
+        let x_param_arc = x_param.into();
+        let y_param_arc = y_param.into();
+        let geometry = create_polygon_geometry(coords, x_param_arc.as_ref(), y_param_arc.as_ref())?;
+        Ok(Self::new(id, name, geometry, x_param_arc, y_param_arc))
+    }
+
+    /// Create a rectangle gate from min and max coordinates
+    ///
+    /// Convenience constructor for creating rectangle gates directly.
+    ///
+    /// # Arguments
+    /// * `id` - Unique identifier for the gate
+    /// * `name` - Human-readable name for the gate
+    /// * `min` - (x, y) coordinates for the minimum corner
+    /// * `max` - (x, y) coordinates for the maximum corner
+    /// * `x_param` - Channel name for the x-axis parameter
+    /// * `y_param` - Channel name for the y-axis parameter
+    ///
+    /// # Returns
+    /// A new `Gate` with rectangle geometry
+    ///
+    /// # Errors
+    /// Returns an error if the coordinates are invalid (min > max, non-finite values)
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::Gate;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let gate = Gate::rectangle("rect", "Rectangle", (100.0, 200.0), (500.0, 600.0), "FSC-A", "SSC-A")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn rectangle(
+        id: impl Into<Arc<str>>,
+        name: impl Into<String>,
+        min: (f32, f32),
+        max: (f32, f32),
+        x_param: impl Into<Arc<str>>,
+        y_param: impl Into<Arc<str>>,
+    ) -> Result<Self> {
+        use crate::geometry::create_rectangle_geometry;
+        let x_param_arc = x_param.into();
+        let y_param_arc = y_param.into();
+        let coords = vec![min, max];
+        let geometry =
+            create_rectangle_geometry(coords, x_param_arc.as_ref(), y_param_arc.as_ref())?;
+        Ok(Self::new(id, name, geometry, x_param_arc, y_param_arc))
+    }
+
+    /// Create an ellipse gate from center, radii, and angle
+    ///
+    /// Convenience constructor for creating ellipse gates directly.
+    ///
+    /// # Arguments
+    /// * `id` - Unique identifier for the gate
+    /// * `name` - Human-readable name for the gate
+    /// * `center` - (x, y) coordinates for the center point
+    /// * `radius_x` - Radius along the x-axis
+    /// * `radius_y` - Radius along the y-axis
+    /// * `angle` - Rotation angle in radians
+    /// * `x_param` - Channel name for the x-axis parameter
+    /// * `y_param` - Channel name for the y-axis parameter
+    ///
+    /// # Returns
+    /// A new `Gate` with ellipse geometry
+    ///
+    /// # Errors
+    /// Returns an error if the coordinates or radii are invalid (non-finite, negative radii)
+    ///
+    /// # Example
+    /// ```rust
+    /// use flow_gates::Gate;
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let gate = Gate::ellipse("ellipse", "Ellipse", (300.0, 400.0), 100.0, 50.0, 0.0, "FSC-A", "SSC-A")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn ellipse(
+        id: impl Into<Arc<str>>,
+        name: impl Into<String>,
+        center: (f32, f32),
+        radius_x: f32,
+        radius_y: f32,
+        angle: f32,
+        x_param: impl Into<Arc<str>>,
+        y_param: impl Into<Arc<str>>,
+    ) -> Result<Self> {
+        use crate::geometry::create_ellipse_geometry;
+        let x_param_arc = x_param.into();
+        let y_param_arc = y_param.into();
+        let coords = vec![center];
+        let geometry = create_ellipse_geometry(coords, x_param_arc.as_ref(), y_param_arc.as_ref())?;
+        // Override radii and angle since create_ellipse_geometry may calculate them differently
+        let geometry = match geometry {
+            GateGeometry::Ellipse { center: c, .. } => GateGeometry::Ellipse {
+                center: c,
+                radius_x,
+                radius_y,
+                angle,
+            },
+            _ => geometry,
+        };
+        Ok(Self::new(id, name, geometry, x_param_arc, y_param_arc))
+    }
+}
+
+/// Builder for constructing gates with a fluent API
+///
+/// The `GateBuilder` provides a convenient way to construct gates step by step,
+/// allowing you to set geometry, parameters, mode, and other properties before
+/// finalizing the gate.
+///
+/// # Example
+///
+/// ```rust
+/// use flow_gates::{GateBuilder, GateMode};
+///
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let gate = GateBuilder::new("my-gate", "My Gate")
+///     .polygon(vec![(100.0, 200.0), (300.0, 200.0), (300.0, 400.0)], "FSC-A", "SSC-A")?
+///     .mode(GateMode::Global)
+///     .build()?;
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone)]
+pub struct GateBuilder {
+    id: Arc<str>,
+    name: String,
+    geometry: Option<GateGeometry>,
+    x_param: Option<Arc<str>>,
+    y_param: Option<Arc<str>>,
+    mode: GateMode,
+    label_position: Option<LabelPosition>,
+}
+
+impl GateBuilder {
+    /// Create a new gate builder
+    ///
+    /// # Arguments
+    /// * `id` - Unique identifier for the gate
+    /// * `name` - Human-readable name for the gate
+    pub fn new(id: impl Into<Arc<str>>, name: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            geometry: None,
+            x_param: None,
+            y_param: None,
+            mode: GateMode::Global,
+            label_position: None,
+        }
+    }
+
+    /// Set the geometry to a polygon
+    ///
+    /// This also sets the parameters from the geometry creation.
+    ///
+    /// # Arguments
+    /// * `coords` - Vector of (x, y) coordinate tuples
+    /// * `x_param` - Channel name for the x-axis parameter
+    /// * `y_param` - Channel name for the y-axis parameter
+    pub fn polygon(
+        mut self,
+        coords: Vec<(f32, f32)>,
+        x_param: impl Into<Arc<str>>,
+        y_param: impl Into<Arc<str>>,
+    ) -> Result<Self> {
+        use crate::geometry::create_polygon_geometry;
+        let x_param_arc = x_param.into();
+        let y_param_arc = y_param.into();
+        let geometry = create_polygon_geometry(coords, x_param_arc.as_ref(), y_param_arc.as_ref())?;
+        self.geometry = Some(geometry);
+        self.x_param = Some(x_param_arc);
+        self.y_param = Some(y_param_arc);
+        Ok(self)
+    }
+
+    /// Set the geometry to a rectangle
+    ///
+    /// This also sets the parameters from the geometry creation.
+    ///
+    /// # Arguments
+    /// * `min` - (x, y) coordinates for the minimum corner
+    /// * `max` - (x, y) coordinates for the maximum corner
+    /// * `x_param` - Channel name for the x-axis parameter
+    /// * `y_param` - Channel name for the y-axis parameter
+    pub fn rectangle(
+        mut self,
+        min: (f32, f32),
+        max: (f32, f32),
+        x_param: impl Into<Arc<str>>,
+        y_param: impl Into<Arc<str>>,
+    ) -> Result<Self> {
+        use crate::geometry::create_rectangle_geometry;
+        let x_param_arc = x_param.into();
+        let y_param_arc = y_param.into();
+        let coords = vec![min, max];
+        let geometry =
+            create_rectangle_geometry(coords, x_param_arc.as_ref(), y_param_arc.as_ref())?;
+        self.geometry = Some(geometry);
+        self.x_param = Some(x_param_arc);
+        self.y_param = Some(y_param_arc);
+        Ok(self)
+    }
+
+    /// Set the geometry to an ellipse
+    ///
+    /// This also sets the parameters from the geometry creation.
+    ///
+    /// # Arguments
+    /// * `center` - (x, y) coordinates for the center point
+    /// * `radius_x` - Radius along the x-axis
+    /// * `radius_y` - Radius along the y-axis
+    /// * `angle` - Rotation angle in radians
+    /// * `x_param` - Channel name for the x-axis parameter
+    /// * `y_param` - Channel name for the y-axis parameter
+    pub fn ellipse(
+        mut self,
+        center: (f32, f32),
+        radius_x: f32,
+        radius_y: f32,
+        angle: f32,
+        x_param: impl Into<Arc<str>>,
+        y_param: impl Into<Arc<str>>,
+    ) -> Result<Self> {
+        use crate::geometry::create_ellipse_geometry;
+        let x_param_arc = x_param.into();
+        let y_param_arc = y_param.into();
+        let coords = vec![center];
+        let geometry = create_ellipse_geometry(coords, x_param_arc.as_ref(), y_param_arc.as_ref())?;
+        // Override radii and angle
+        let geometry = match geometry {
+            GateGeometry::Ellipse { center: c, .. } => GateGeometry::Ellipse {
+                center: c,
+                radius_x,
+                radius_y,
+                angle,
+            },
+            _ => geometry,
+        };
+        self.geometry = Some(geometry);
+        self.x_param = Some(x_param_arc);
+        self.y_param = Some(y_param_arc);
+        Ok(self)
+    }
+
+    /// Set the parameters (channels) this gate operates on
+    ///
+    /// # Arguments
+    /// * `x` - Channel name for the x-axis parameter
+    /// * `y` - Channel name for the y-axis parameter
+    pub fn parameters(mut self, x: impl Into<Arc<str>>, y: impl Into<Arc<str>>) -> Self {
+        self.x_param = Some(x.into());
+        self.y_param = Some(y.into());
+        self
+    }
+
+    /// Set the gate mode (scope)
+    ///
+    /// # Arguments
+    /// * `mode` - The gate mode (Global, FileSpecific, or FileGroup)
+    pub fn mode(mut self, mode: GateMode) -> Self {
+        self.mode = mode;
+        self
+    }
+
+    /// Set the label position
+    ///
+    /// # Arguments
+    /// * `position` - The label position as an offset from the first node
+    pub fn label_position(mut self, position: LabelPosition) -> Self {
+        self.label_position = Some(position);
+        self
+    }
+
+    /// Build the gate from the builder
+    ///
+    /// # Returns
+    /// A new `Gate` instance
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - Geometry is not set
+    /// - Parameters are not set
+    /// - Builder is in an invalid state
+    pub fn build(self) -> Result<Gate> {
+        let geometry = self.geometry.ok_or_else(|| {
+            GateError::invalid_builder_state("geometry", "Geometry must be set before building")
+        })?;
+        let x_param = self.x_param.ok_or_else(|| {
+            GateError::invalid_builder_state("x_param", "X parameter must be set before building")
+        })?;
+        let y_param = self.y_param.ok_or_else(|| {
+            GateError::invalid_builder_state("y_param", "Y parameter must be set before building")
+        })?;
+
+        Ok(Gate {
+            id: self.id,
+            name: self.name,
+            geometry,
+            mode: self.mode,
+            parameters: (x_param, y_param),
+            label_position: self.label_position,
+        })
     }
 }
 
