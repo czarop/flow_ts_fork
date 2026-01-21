@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -40,9 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.1.6 ([`3343b32`](https://github.com/jrmoynihan/flow/commit/3343b32dbfeda6e2f0e1efa05c1b903bf457d5be))
     - Adjusting changelogs prior to release of flow-fcs v0.1.6 ([`37f1d61`](https://github.com/jrmoynihan/flow/commit/37f1d61dcb790b63c2ef0ea148b4fde57a6414b2))
     - Adjusting changelogs prior to release of flow-fcs v0.1.6 ([`7fb88db`](https://github.com/jrmoynihan/flow/commit/7fb88db9ede05b317a03d367cea18a3b8b73c5a1))
 </details>
+
+<csr-unknown>
+GPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysis<csr-unknown/>
 
 ## 0.1.5 (2026-01-21)
 
