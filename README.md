@@ -2,7 +2,7 @@
 
 # flow
 
-A Rust workspace for flow cytometry analysis tools, including libraries for reading FCS files, creating plots, working with gates, and QC'ing data.
+Flow cytometry analysis tools, including libraries for reading FCS files, creating plots, working with gates, and QC'ing data, written in Rust.
 
 :construction: 
 > **⚠️ Under Construction**: This workspace is actively under development. APIs may change, and some features may be incomplete. Use with caution in production environments.
