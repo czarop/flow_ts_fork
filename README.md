@@ -1,3 +1,5 @@
+<img width="1245" height="705" alt="FerrisAtCytometer" src="https://github.com/user-attachments/assets/87278ae7-a1db-4b22-8fe7-557d1e84d25e" />
+
 # flow
 
 A Rust workspace for flow cytometry analysis tools, including libraries for reading FCS files, creating plots, working with gates, and QC'ing data.
