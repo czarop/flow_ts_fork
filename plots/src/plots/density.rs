@@ -72,7 +72,7 @@ impl DensityPlot {
 
 impl Plot for DensityPlot {
     type Options = DensityPlotOptions;
-    type Data = Vec<(f32, f32)>;
+    type Data = std::sync::Arc<Vec<(f32, f32)>>;
 
     fn render(
         &self,
