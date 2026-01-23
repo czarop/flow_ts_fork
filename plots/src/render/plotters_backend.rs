@@ -13,7 +13,7 @@ fn format_transform_value(transform: &TransformType, value: &f32) -> String {
         TransformType::Linear => format!("{:.1e}", value),
         TransformType::Arcsinh { cofactor } => {
             // Convert from transformed space back to original space
-            let original_value = (value / cofactor).sinh() * cofactor;
+            let original_value = (value).sinh() * cofactor;
             // Make nice rounded labels in original space
             format!("{:.1e}", original_value)
         }
