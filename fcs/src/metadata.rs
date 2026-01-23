@@ -178,7 +178,8 @@ impl Metadata {
         let n_params = self.get_number_of_parameters()?;
         let n_params_string = n_params.to_string();
         let n_digits = n_params_string.chars().count().to_string();
-        let regex_string = r"[PR]\d{1,".to_string() + &n_digits + "}[BENRDFGLOPSTVIW]";
+        // let regex_string = r"[PR]\d{1,".to_string() + &n_digits + "}[BENRDFGLOPSTVIW]";
+        let regex_string = format!(r"[PR]\d{{1,{}}}[BENRDFGLOPSTVIW]", n_digits);
         let param_keywords = Regex::new(&regex_string)?;
 
         for keyword in self.keywords.keys() {

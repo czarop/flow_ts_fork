@@ -31,13 +31,15 @@ polars = { version = "0.51.0", default-features = false, features = [
     "dtype-full"
 ] }
 # Matrix manipulation
-ndarray = { version = "0.17.2", features = [
+ndarray = { version = "0.16.1", features = [
     "blas",
     "matrixmultiply-threading",
     "rayon",
     "serde",
 ] }
-ndarray-linalg = { version = "0.18.1", default-features = false, features = ["openblas-system"] }
+# ndarray-linalg = { version = "0.18.1", default-features = false, features = ["openblas-system"] }
+faer = "0.23"
+faer-ext = {version = "0.7", features = ["ndarray", "polars"] }
 
 # Parallelization
 rayon = "1.11"
@@ -73,3 +75,6 @@ clap = { version = "4.5.54", features = ["derive", "cargo"] }
 # Logging/Tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+[profile.dev.package.faer]
+opt-level = 3

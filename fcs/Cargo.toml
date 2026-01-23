@@ -36,9 +36,11 @@ ndarray={ workspace=true, features=[
     "rayon",
     "serde",
 ] }
-ndarray-linalg={ workspace=true, default-features=false, features=[
-    "openblas-system",
-] }
+# ndarray-linalg={ workspace=true, default-features=false, features=[
+#     "openblas-system",
+# ] }
+faer={ workspace=true }
+faer-ext={ workspace=true , features = ["ndarray"]}
 
 ts-rs={ version="11.1.0", optional=true } # Generate TypeScript bindings for Rust types
 
@@ -87,9 +89,9 @@ rand="0.8"                                              # For generating test da
 # Enable LAPACK backend for tests (OpenBLAS provides both BLAS and LAPACK)
 # Note: Requires OpenBLAS installed via Homebrew: brew install openblas
 # Set OPENBLAS_DIR environment variable: export OPENBLAS_DIR=$(brew --prefix openblas)
-ndarray-linalg={ workspace=true, features=[
-    "openblas-system",
-] }
+# ndarray-linalg={ workspace=true, features=[
+#     "openblas-system",
+# ] }
 
 [[bench]]
 name   ="dataframe_parsing"

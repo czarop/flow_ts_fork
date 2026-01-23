@@ -100,13 +100,22 @@ impl Header {
     }
     /// Parse an inclusive range of bytes from the memory map as an ASCII-encoded offset (in usize bytes)
     fn get_offset_from_header(mmap: &Mmap, start: usize, end: usize) -> Result<usize> {
-        let offset_char = mmap[start..=end].as_ascii().expect("ascii not found");
+        // let offset_char = mmap[start..=end].as_ascii().expect("ascii not found");
+        let slice = &mmap[start..=end]; // &[u8]
+
+        // Check if it's valid ASCII (or UTF-8)
+        let offset_str = std::str::from_utf8(slice)
+            .expect("ascii not found");
         // println!("Offset bytes {:?}-{:?}: {:?}", &start, &end, &offset_char);
         // println!(
         //     "returned: {:?}",
         //     &offset_char.as_str().trim_ascii().parse::<usize>()?
         // );
-        Ok(offset_char.as_str().trim_ascii().parse::<usize>()?)
+        let trimmed = offset_str.trim(); // stable, trims ASCII whitespace
+
+        // Parse to usize
+        let value: usize = trimmed.parse().expect("failed to parse usize");
+        Ok(value)
     }
     /// Parse bytes 10-17 from the memory map as the ASCII-encoded offset (in usize bytes) to the first byte of the TEXT segment:
     fn get_text_offset_start(mmap: &Mmap) -> Result<usize> {
@@ -162,7 +171,9 @@ impl Header {
     /// # Errors
     /// Will return `Err` if offsets cannot be read from the header
     pub fn check_fcs_offsets(mmap: &Mmap) -> Result<()> {
-        println!("HEADER (first 58 bytes): {:?}", &mmap[0..58].as_ascii());
+        let header_slice = &mmap[0..58];
+        let header_str = str::from_utf8(header_slice).expect("invalid ASCII in header");
+        println!("HEADER (first 58 bytes): {:?}", header_str);
         println!(
             "TEXT segment start offset: {:?}",
             Self::get_text_offset_start(mmap)?
@@ -188,7 +199,10 @@ impl Header {
             Self::get_analysis_offset_end(mmap)
         );
         // print from byte 4700 to 5210 (end of text, beginning of data)
-        println!("header range of TEXT: {:?}", &mmap[4700..=5216].as_ascii());
+        let header_slice = &mmap[4700..=5216];
+        let header_str = str::from_utf8(header_slice).expect("invalid ASCII in header");
+        println!("header range of TEXT: {:?}", header_str);
+        
         Ok(())
     }
 }

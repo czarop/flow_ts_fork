@@ -1,11 +1,6 @@
 // Internal crate imports
 use crate::{
-    FcsDataType, TransformType, Transformable,
-    byteorder::ByteOrder,
-    header::Header,
-    keyword::{IntegerableKeyword, StringableKeyword},
-    metadata::Metadata,
-    parameter::{EventDataFrame, EventDatum, Parameter, ParameterBuilder, ParameterMap},
+    FcsDataType, MatrixOps, TransformType, Transformable, byteorder::ByteOrder, header::Header, keyword::{IntegerableKeyword, StringableKeyword}, metadata::Metadata, parameter::{EventDataFrame, EventDatum, Parameter, ParameterBuilder, ParameterMap}
 };
 // Standard library imports
 use std::borrow::Cow;
@@ -1604,10 +1599,11 @@ impl Fcs {
 
         // Use CPU compensation (benchmarked: GPU was slower due to transfer overhead)
         // Invert sub-matrix
-        use ndarray_linalg::Inverse;
-        let comp_inv = sub_matrix
-            .inv()
-            .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
+        // use ndarray_linalg::Inverse;
+        // let comp_inv = sub_matrix
+        //     .inv()
+        //     .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
+        let comp_inv = MatrixOps::invert_matrix(&sub_matrix).expect("error inverting comp matrix");
 
         // Compensate ONLY the involved channels
         use rayon::prelude::*;
@@ -1690,10 +1686,11 @@ impl Fcs {
         // Use CPU compensation (benchmarked: GPU was slower due to transfer overhead)
         // Apply compensation: compensated = original * inverse(compensation_matrix)
         // For efficiency, we pre-compute the inverse
-        use ndarray_linalg::Inverse;
-        let comp_inv = compensation_matrix
-            .inv()
-            .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
+        // use ndarray_linalg::Inverse;
+        // let comp_inv = compensation_matrix
+        //     .inv()
+        //     .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
+        let comp_inv = MatrixOps::invert_matrix(compensation_matrix).expect("error inverting comp matrix");
 
         // Perform matrix multiplication for each event
         use rayon::prelude::*;

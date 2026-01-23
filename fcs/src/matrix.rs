@@ -5,17 +5,43 @@
 use anyhow::Result;
 use ndarray::Array2;
 
+use faer::prelude::*;
+use faer::linalg::solvers::PartialPivLu;
+use faer::linalg::solvers::DenseSolveCore;
+
+use faer_ext::{IntoFaer, IntoNdarray};
+
 /// Matrix operations for compensation
 pub struct MatrixOps;
 
 impl MatrixOps {
     /// Invert matrix on CPU using ndarray-linalg
     pub fn invert_matrix(matrix: &Array2<f32>) -> Result<Array2<f32>> {
-        use ndarray_linalg::Inverse;
-        matrix
-            .inv()
-            .map_err(|e| anyhow::anyhow!("Failed to invert matrix: {:?}", e))
+
+        let faer_view: mat::generic::Mat<mat::Ref<'_, f32>> = matrix
+            .view()
+            .into_faer();
+        let lu = PartialPivLu::new(faer_view);
+        let inv_mat = lu
+            .inverse();
+
+        // Ok(Self::faer_to_ndarray(&inv_mat))
+        Ok(inv_mat.as_ref().into_ndarray().to_owned())
+
     }
+    fn faer_to_ndarray(mat: &faer::Mat<f32>) -> Array2<f32> {
+        let (nrows, ncols) = mat.shape();
+        let mut out = Array2::<f32>::zeros((nrows, ncols));
+
+        for i in 0..nrows {
+            for j in 0..ncols {
+                out[(i, j)] = mat[(i, j)];
+            }
+        }
+
+        out
+    }
+
 
     /// Batch matrix-vector multiplication on CPU
     /// Input: matrix [n×n], channel_data [n_channels × n_events]
