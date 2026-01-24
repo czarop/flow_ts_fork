@@ -235,8 +235,6 @@ pub enum IntegerKeyword {
     PnL(usize),
     /// The transformation to apply when displaying the data (FCS 1.0+)
     PnDisplay(usize),
-    /// Data type for parameter `n` (FCS 3.2+), overriding the default $DATATYPE for a given parameter
-    PnDATATYPE(usize),
 }
 
 #[derive(Clone, Debug, Display, Serialize, Deserialize, PartialEq)]
@@ -406,8 +404,10 @@ pub enum StringKeyword {
 pub enum ByteKeyword {
     /// The byte order (endianness) of the data
     BYTEORD(ByteOrder),
-    /// The data type of the FCS file (number of bytes per event)
+    /// The data type of the FCS file (integer, float, double, ascii)
     DATATYPE(FcsDataType),
+    /// Data type for parameter `n` (FCS 3.2+), overriding the default $DATATYPE for a given parameter
+    PnDATATYPE(FcsDataType),
 }
 
 pub trait StringableKeyword {
@@ -436,7 +436,6 @@ impl IntegerableKeyword for IntegerKeyword {
             | Self::PnV(value)
             | Self::PnL(value)
             | Self::PnDisplay(value)
-            | Self::PnDATATYPE(value)
             | Self::PAR(value) => value,
         }
     }
@@ -500,7 +499,9 @@ impl StringableKeyword for ByteKeyword {
     /// Get a reference to the string value (if it exists) from a ByteKeyword variant
     fn get_str(&self) -> Cow<'_, str> {
         match self {
-            Self::DATATYPE(data_type) => Cow::Borrowed(data_type.to_keyword_str()),
+            Self::DATATYPE(data_type) | Self::PnDATATYPE(data_type) => {
+                Cow::Borrowed(data_type.to_keyword_str())
+            }
             Self::BYTEORD(byte_order) => Cow::Borrowed(byte_order.to_keyword_str()),
         }
     }
@@ -517,11 +518,10 @@ impl StringableKeyword for IntegerKeyword {
             | Self::EndText(value)
             | Self::PAR(value)
             | Self::TOT(value)
-            | Self::PnR(value)
+            |             Self::PnR(value)
             | Self::PnB(value)
             | Self::PnV(value)
             | Self::PnL(value)
-            | Self::PnDATATYPE(value)
             | Self::PnDisplay(value) => Cow::Owned(value.to_string()),
         }
     }

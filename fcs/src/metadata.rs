@@ -249,20 +249,10 @@ impl Metadata {
     pub fn get_data_type_for_channel(&self, parameter_number: usize) -> Result<FcsDataType> {
         // First try to get parameter-specific data type (FCS 3.2+)
         if let Ok(pn_datatype_keyword) =
-            self.get_parameter_numeric_metadata(parameter_number, "DATATYPE")
+            self.get_parameter_byte_metadata(parameter_number, "DATATYPE")
         {
-            if let IntegerKeyword::PnDATATYPE(datatype_code) = pn_datatype_keyword {
-                // Map datatype code to enum: 0=I, 1=F, 2=D
-                match datatype_code {
-                    0 => Ok(FcsDataType::I),
-                    1 => Ok(FcsDataType::F),
-                    2 => Ok(FcsDataType::D),
-                    _ => Err(anyhow!(
-                        "Invalid $P{}DATATYPE code: {}",
-                        parameter_number,
-                        datatype_code
-                    )),
-                }
+            if let ByteKeyword::PnDATATYPE(data_type) = pn_datatype_keyword {
+                Ok(*data_type)
             } else {
                 // Shouldn't happen, but fall back to default
                 Ok(self.get_data_type()?.clone())
@@ -420,7 +410,7 @@ impl Metadata {
         self.get_string_keyword(&keyword)
     }
 
-    /// Generic function to get a given parameter's integer keyword from the file's metadata (e.g. `$PnN`, `$PnS`, `$PnDATATYPE`)
+    /// Generic function to get a given parameter's integer keyword from the file's metadata (e.g. `$PnN`, `$PnS`)
     /// # Errors
     /// Will return `Err` if the keyword is not present in the keywords hashmap
     pub fn get_parameter_numeric_metadata(
@@ -431,6 +421,19 @@ impl Metadata {
         // Interpolate the parameter number into the keyword:
         let keyword = format!("$P{parameter_number}{suffix}");
         self.get_integer_keyword(&keyword)
+    }
+
+    /// Generic function to get a given parameter's byte keyword from the file's metadata (e.g. `$PnDATATYPE`)
+    /// # Errors
+    /// Will return `Err` if the keyword is not present in the keywords hashmap
+    pub fn get_parameter_byte_metadata(
+        &self,
+        parameter_number: usize,
+        suffix: &str,
+    ) -> Result<&ByteKeyword> {
+        // Interpolate the parameter number into the keyword:
+        let keyword = format!("$P{parameter_number}{suffix}");
+        self.get_byte_keyword(&keyword)
     }
 
     /// Get excitation wavelength(s) for a parameter from `$PnL` keyword
