@@ -24,6 +24,7 @@ flow-fcs = { path = "../fcs", version = "^0.2.0" }
 flow-tru-ols = { path = "../tru-ols", version = "^0.1.0", features = ["flow-fcs", "plotting"] }
 flow-plots = { path = "../plots", version = "^0.2.0" }
 flow-utils = { path = "../utils", version = "^0.1.0" }
+flow-gates = { path = "../gates", version = "^0.2.0" }
 polars = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
