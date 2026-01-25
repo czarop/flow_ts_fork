@@ -196,7 +196,7 @@ use test_helpers::{create_synthetic_fcs, TestScenario};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create output directory
-    let output_dir = PathBuf::from("examples/synthetic_plots");
+    let output_dir = PathBuf::from("gates/examples/synthetic_plots");
     fs::create_dir_all(&output_dir)?;
 
     // Generate and plot each scenario
