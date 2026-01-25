@@ -264,3 +264,55 @@ fn generate_noisy_data(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f3
     
     (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
 }
+
+/// Generate data with debris population
+///
+/// Creates main population plus debris population near origin (low FSC/SSC).
+fn generate_with_debris(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>) {
+    use rand_distr::{Distribution, Normal};
+    let mut rng = rand::thread_rng();
+    
+    // Main population
+    let main_fsc_dist = Normal::new(50000.0, 12000.0).unwrap();
+    let main_ssc_dist = Normal::new(30000.0, 9000.0).unwrap();
+    
+    // Debris population: very low FSC/SSC near origin
+    let debris_fsc_dist = Normal::new(2000.0, 1500.0).unwrap();
+    let debris_ssc_dist = Normal::new(1500.0, 1000.0).unwrap();
+    
+    // 15% debris, 85% main population
+    let n_debris = (n_events as f64 * 0.15) as usize;
+    let n_main = n_events - n_debris;
+    
+    let mut fsc_a = Vec::with_capacity(n_events);
+    let mut fsc_h = Vec::with_capacity(n_events);
+    let mut fsc_w = Vec::with_capacity(n_events);
+    let mut ssc_a = Vec::with_capacity(n_events);
+    let mut ssc_h = Vec::with_capacity(n_events);
+    
+    // Main population
+    for _ in 0..n_main {
+        let fsc_a_val = (main_fsc_dist.sample(&mut rng) as f32).max(1000.0);
+        fsc_a.push(fsc_a_val);
+        fsc_h.push((fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+        fsc_w.push((fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32)).max(0.0));
+        
+        let ssc_a_val = (main_ssc_dist.sample(&mut rng) as f32).max(500.0);
+        ssc_a.push(ssc_a_val);
+        ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+    }
+    
+    // Debris: very low values near origin
+    for _ in 0..n_debris {
+        let fsc_a_val = (debris_fsc_dist.sample(&mut rng) as f32).max(100.0);
+        fsc_a.push(fsc_a_val);
+        fsc_h.push((fsc_a_val * 0.85 + (Normal::new(0.0, fsc_a_val as f64 * 0.15).unwrap().sample(&mut rng) as f32)).max(0.0));
+        fsc_w.push((fsc_a_val * 0.40 + (Normal::new(0.0, fsc_a_val as f64 * 0.10).unwrap().sample(&mut rng) as f32)).max(0.0));
+        
+        let ssc_a_val = (debris_ssc_dist.sample(&mut rng) as f32).max(50.0);
+        ssc_a.push(ssc_a_val);
+        ssc_h.push((ssc_a_val * 0.90 + (Normal::new(0.0, ssc_a_val as f64 * 0.15).unwrap().sample(&mut rng) as f32)).max(0.0));
+    }
+    
+    (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
+}
