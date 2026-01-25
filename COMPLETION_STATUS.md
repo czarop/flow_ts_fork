@@ -244,31 +244,34 @@ Combine unstained control autofluorescence with negative event autofluorescence 
 ---
 
 #### Task 2.5: Add CLI Configuration Options
-**Status:** Pending  
+**Status:** ✅ Complete  
 **Priority:** 2  
 **Estimated Effort:** Low
 
 **Description:**
 Add command-line options to control peak-based methods and autofluorescence modes.
 
-**Options to Add:**
-- `--peak-detection` / `--no-peak-detection` (default: enabled)
-- `--peak-bias <fraction>` (default: 0.5)
-- `--use-negative-events` / `--no-negative-events` (default: disabled)
-- `--autofluorescence-mode <mode>` (universal|negative-events|hybrid|channel)
+**Options Added:**
+- `--peak-detection` (default: disabled, opt-in)
+- `--peak-threshold <fraction>` (default: 0.3)
+- `--peak-bias <fraction>` (default: 0.5, for positive peaks)
+- `--peak-bias-negative <fraction>` (default: 0.5, for negative peaks)
+- `--use-negative-events` (default: disabled)
+- `--autofluorescence-mode <mode>` (universal|negative-events|hybrid, default: universal)
 - `--af-weight <weight>` (default: 0.7, for hybrid mode)
+- `--min-negative-events <count>` (default: 100)
 
-**Files to Modify:**
+**Files Modified:**
 - `flow-crates/tru-ols-cli/src/commands.rs`
-  - Add CLI argument parsing
-  - Create configuration struct
+  - Added CLI argument parsing for all options
+  - Created `SingleStainConfig` struct
   - Pass configuration to processing functions
 
 **Acceptance Criteria:**
-- [ ] All configuration options added
-- [ ] Defaults match current behavior (backward compatible)
-- [ ] Help text updated
-- [ ] Validation of option values
+- [x] All configuration options added
+- [x] Defaults match current behavior (backward compatible - peak detection disabled by default)
+- [x] Help text included in CLI args
+- [x] Validation of option values (type checking)
 
 ---
 
