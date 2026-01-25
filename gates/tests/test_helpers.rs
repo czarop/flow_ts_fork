@@ -91,6 +91,8 @@ pub enum TestScenario {
     WithDoublets,
     /// Noisy data (edge case test)
     NoisyData,
+    /// Data with debris population near origin (low FSC/SSC)
+    WithDebris,
 }
 
 /// Generate single population scatter data
