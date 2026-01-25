@@ -21,6 +21,8 @@ pub enum ClusteringError {
     InsufficientData { min: usize, actual: usize },
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
+    #[error("Parameter validation failed: {0}")]
+    ValidationFailed(String),
     #[error("Clustering failed: {0}")]
     ClusteringFailed(String),
 }
