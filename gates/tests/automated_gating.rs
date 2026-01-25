@@ -8,18 +8,16 @@ use flow_gates::automated::{
 use flow_gates::automated::scatter::{create_scatter_gate, ClusterAlgorithm};
 use flow_gates::automated::doublets::detect_doublets;
 use flow_fcs::Fcs;
-use std::path::PathBuf;
+
+mod test_helpers;
+use test_helpers::{create_synthetic_fcs, TestScenario};
 
 /// Helper function to create a simple test FCS file
-/// This is a placeholder - in real tests, we'd load actual FCS files
 fn create_test_fcs() -> Result<Fcs, Box<dyn std::error::Error>> {
-    // TODO: Create or load a test FCS file
-    // For now, this is a placeholder
-    Err("Test FCS creation not yet implemented".into())
+    create_synthetic_fcs(5000, TestScenario::SinglePopulation)
 }
 
 #[test]
-#[ignore] // Ignore until we have test data
 fn test_scatter_gating_ellipse_fit() {
     let fcs = create_test_fcs().unwrap();
     
@@ -41,7 +39,6 @@ fn test_scatter_gating_ellipse_fit() {
 }
 
 #[test]
-#[ignore]
 fn test_scatter_gating_density_contour() {
     let fcs = create_test_fcs().unwrap();
     
@@ -62,7 +59,6 @@ fn test_scatter_gating_density_contour() {
 }
 
 #[test]
-#[ignore]
 fn test_doublet_detection_ratio_mad() {
     let fcs = create_test_fcs().unwrap();
     
@@ -82,7 +78,6 @@ fn test_doublet_detection_ratio_mad() {
 }
 
 #[test]
-#[ignore]
 fn test_doublet_detection_density_based() {
     let fcs = create_test_fcs().unwrap();
     
@@ -102,7 +97,6 @@ fn test_doublet_detection_density_based() {
 }
 
 #[test]
-#[ignore]
 fn test_preprocessing_pipeline() {
     let fcs = create_test_fcs().unwrap();
     
@@ -132,7 +126,6 @@ fn test_preprocessing_pipeline() {
 }
 
 #[test]
-#[ignore]
 fn test_interactive_pipeline() {
     let fcs = create_test_fcs().unwrap();
     

@@ -37,6 +37,7 @@ default=[]
 [dev-dependencies]
 criterion={ version="0.8.1", features=["html_reports"] }
 rand     ="0.9"
+polars    = { workspace = true }
 
 [package.metadata.scripts]
 test-compliance     ="cargo test --test compliance_tests -- --ignored"
