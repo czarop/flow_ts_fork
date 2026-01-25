@@ -283,6 +283,11 @@ fn create_clustering_gate(
     match algorithm {
         ClusterAlgorithm::KMeans => {
             // Use K-means to identify main population
+            // Convert ndarray 0.17 to Vec<Vec<f64>> for version compatibility
+            let data_rows: Vec<Vec<f64>> = (0..data.nrows())
+                .map(|i| data.row(i).iter().copied().collect())
+                .collect();
+            
             let kmeans_config = KMeansConfig {
                 n_clusters: 2, // Main population + debris/noise
                 max_iterations: 100,
@@ -290,7 +295,7 @@ fn create_clustering_gate(
                 seed: None,
             };
             
-            let result = KMeans::fit(data, &kmeans_config)
+            let result = KMeans::fit_from_rows(data_rows, &kmeans_config)
                 .map_err(|e| GateError::Other {
                     message: format!("K-means clustering failed: {:?}", e),
                     source: None,
@@ -374,6 +379,11 @@ fn create_clustering_gate(
         }
         ClusterAlgorithm::Gmm => {
             // Use GMM to identify main population
+            // Convert ndarray 0.17 to Vec<Vec<f64>> for version compatibility
+            let data_rows: Vec<Vec<f64>> = (0..data.nrows())
+                .map(|i| data.row(i).iter().copied().collect())
+                .collect();
+            
             let gmm_config = GmmConfig {
                 n_components: 2,
                 max_iterations: 100,
@@ -381,7 +391,7 @@ fn create_clustering_gate(
                 seed: None,
             };
             
-            let result = Gmm::fit(data, &gmm_config)
+            let result = Gmm::fit_from_rows(data_rows, &gmm_config)
                 .map_err(|e| GateError::Other {
                     message: format!("GMM clustering failed: {:?}", e),
                     source: None,

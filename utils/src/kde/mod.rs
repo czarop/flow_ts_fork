@@ -3,6 +3,7 @@
 //! Provides FFT-accelerated KDE with optional GPU support.
 
 mod fft;
+mod kde2d;
 #[cfg(feature = "gpu")]
 mod gpu;
 
@@ -10,6 +11,7 @@ use crate::common::{interquartile_range, standard_deviation};
 use thiserror::Error;
 
 pub use fft::kde_fft;
+pub use kde2d::KernelDensity2D;
 #[cfg(feature = "gpu")]
 pub use gpu::kde_fft_gpu;
 
