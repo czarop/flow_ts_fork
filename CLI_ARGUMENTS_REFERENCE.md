@@ -29,7 +29,7 @@ The CLI requires at least one of the following mixing matrix sources:
 ### Basic Unmixing Parameters
 - `--autofluorescence` / `-a`: Autofluorescence endmember name (default: `"Autofluorescence"`)
 - `--cutoff-percentile` / `-p`: Cutoff percentile (default: `0.995`)
-- `--strategy` / `-s`: Unmixing strategy - "zero" or "ucm" (default: `"zero"`)
+- `--strategy`: Unmixing strategy - "zero" or "ucm" (default: `"zero"`)
 - `--output` / `-o`: Output FCS file path (optional, no output file created if omitted)
 
 ### Plotting Options
