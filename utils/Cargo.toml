@@ -21,8 +21,11 @@ gpu = ["dep:burn", "dep:cubecl", "dep:bytemuck"]
 
 [dependencies]
 # Array operations
-ndarray = { workspace = true }
-ndarray-linalg = { workspace = true }
+# Note: linfa-clustering requires ndarray 0.16, but workspace uses 0.17
+# We'll use ndarray 0.16 for compatibility with linfa
+ndarray = "0.16"
+# Use linfa-linalg for SVD (compatible with ndarray 0.16)
+linfa-linalg = "0.2"
 
 # FFT for KDE
 realfft = "3.5.0"

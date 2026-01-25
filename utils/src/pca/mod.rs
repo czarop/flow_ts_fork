@@ -1,7 +1,7 @@
 //! Principal Component Analysis (PCA) module
 
 use ndarray::{s, Array2, Axis};
-use ndarray_linalg::SVD;
+use linfa_linalg::svd::SVD;
 use thiserror::Error;
 
 /// Error type for PCA operations
@@ -76,10 +76,15 @@ impl Pca {
             row -= &mean;
         }
 
-        // Perform SVD
-        let (u, s, vt) = centered
+        // Perform SVD using linfa-linalg (compatible with ndarray 0.16)
+        // SVD returns (Option<U>, S, Option<Vt>) tuple
+        let svd_result = centered
             .svd(true, true)
             .map_err(|e| PcaError::SvdFailed(format!("SVD failed: {:?}", e)))?;
+        
+        let _u = svd_result.0.ok_or_else(|| PcaError::SvdFailed("U matrix not available".to_string()))?;
+        let s = svd_result.1;
+        let vt = svd_result.2.ok_or_else(|| PcaError::SvdFailed("Vt matrix not available".to_string()))?;
 
         // Extract components (right singular vectors, transposed)
         let components = vt
