@@ -48,15 +48,15 @@ pub fn create_preprocessing_gates(
 
     // 1. Scatter gate (multi-population)
     let scatter_result = create_scatter_gate(fcs, &config.scatter_config)?;
-    if let Some(gate) = scatter_result.gate {
-        hierarchy.add_gate(gate.clone(), None)?;
-    }
+    // Note: Gates are stored separately, hierarchy tracks relationships
+    // If scatter gate has a parent, we'd add it here: hierarchy.add_child(parent_id, gate.id())
 
     // 2. Doublet exclusion
     let doublet_result = detect_doublets(fcs, &config.doublet_config)?;
-    if let Some(gate) = doublet_result.exclusion_gate {
-        hierarchy.add_gate(gate.clone(), None)?;
-    }
+    // If doublet gate should be a child of scatter gate, add relationship:
+    // if let (Some(scatter_gate), Some(doublet_gate)) = (&scatter_result.gate, &doublet_result.exclusion_gate) {
+    //     hierarchy.add_child(scatter_gate.id(), doublet_gate.id());
+    // }
 
     Ok(PreprocessingGates {
         scatter_gate: scatter_result.gate,
@@ -80,9 +80,7 @@ pub fn create_preprocessing_gates_interactive(
     let scatter_review = review_callback(PipelineBreakpoint::ScatterGate(scatter_result.clone()));
     
     if let UserReview::Accept = scatter_review {
-        if let Some(gate) = scatter_result.gate {
-            hierarchy.add_gate(gate.clone(), None)?;
-        }
+        // Gate stored in result, hierarchy tracks relationships if needed
     }
 
     // 2. Doublet exclusion (with user review)
@@ -90,9 +88,11 @@ pub fn create_preprocessing_gates_interactive(
     let doublet_review = review_callback(PipelineBreakpoint::DoubletGate(doublet_result.clone()));
     
     if let UserReview::Accept = doublet_review {
-        if let Some(gate) = doublet_result.exclusion_gate {
-            hierarchy.add_gate(gate.clone(), None)?;
-        }
+        // Gate stored in result, hierarchy tracks relationships if needed
+        // If doublet should be child of scatter:
+        // if let (Some(scatter_gate), Some(doublet_gate)) = (&scatter_result.gate, &doublet_result.exclusion_gate) {
+        //     hierarchy.add_child(scatter_gate.id(), doublet_gate.id());
+        // }
     }
 
     Ok(PreprocessingGates {
