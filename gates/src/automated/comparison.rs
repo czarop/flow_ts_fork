@@ -122,10 +122,13 @@ pub fn compare_doublet_methods(
         .map(|(idx, _)| idx)
         .unwrap_or(0);
 
+    // Extract recommended method name before moving results
+    let recommended_method = results[recommended_idx].method_name.clone();
+
     Ok(DoubletComparisonResult {
         results,
         agreement_matrix,
-        recommended_method: results[recommended_idx].method_name.clone(),
+        recommended_method,
     })
 }
 
