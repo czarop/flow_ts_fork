@@ -86,6 +86,7 @@
 
 use std::sync::Arc;
 
+pub mod automated;
 pub mod batch_filtering;
 pub mod ellipse;
 pub mod error;

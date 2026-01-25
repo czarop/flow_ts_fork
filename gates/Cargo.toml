@@ -1,9 +1,9 @@
 [package]
 name="flow-gates"
-version= "0.2.0"
+version="0.2.0"
 edition.workspace=true
 authors.workspace=true
-repository="https://github.com/jrmoynihan/flow/flow-gates"
+repository="https://github.com/jrmoynihan/flow/gates"
 license="MIT"
 description="Package for drawing and interacting with gates in flow cytometry data"
 keywords=[
@@ -16,8 +16,9 @@ keywords=[
 categories=["science", "visualization"]
 
 [dependencies]
-flow-fcs            ={ path="../fcs", version= "^0.2.0" }
-flow-plots          ={ path="../plots", version= "^0.2.0" }
+flow-fcs            ={ path="../fcs", version="^0.2.0" }
+flow-plots          ={ path="../plots", version="^0.2.0" }
+flow-utils           ={ path="../utils", version="^0.1.0" }
 anyhow.workspace    =true
 thiserror.workspace =true
 serde.workspace     =true
@@ -28,13 +29,14 @@ quick-xml           ={ version="0.39", features=["serialize"] }
 rayon               ={ workspace=true }
 once_cell           ="1.20"
 bytemuck            ={ workspace=true }
+ndarray              ={ workspace = true }
 
 [features]
 default=[]
 
 [dev-dependencies]
 criterion={ version="0.8.1", features=["html_reports"] }
-rand="0.9"
+rand     ="0.9"
 
 [package.metadata.scripts]
 test-compliance     ="cargo test --test compliance_tests -- --ignored"
