@@ -4,7 +4,7 @@
 //! scatter plots for each test scenario.
 
 use flow_fcs::Fcs;
-use flow_plots::{DensityPlot, DensityPlotOptions, BasePlotOptions, AxisOptions};
+use flow_plots::{DensityPlot, DensityPlotOptions, BasePlotOptions, AxisOptions, Plot};
 use flow_plots::render::RenderConfig;
 use std::fs;
 use std::path::PathBuf;
@@ -225,16 +225,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect();
         
         // Create plot options
-        let base_options = BasePlotOptions::new()
-            .width(800)
-            .height(600)
+        let x_axis = AxisOptions::new()
+            .range(0.0..=100_000.0)
+            .label("FSC-A".to_string())
+            .build()?;
+        
+        let y_axis = AxisOptions::new()
+            .range(0.0..=100_000.0)
+            .label("SSC-A".to_string())
+            .build()?;
+        
+        let base = BasePlotOptions::new()
+            .width(800u32)
+            .height(600u32)
             .title(format!("Synthetic Data: {}", name.replace("_", " ")))
-            .x_axis(AxisOptions::new().label("FSC-A"))
-            .y_axis(AxisOptions::new().label("SSC-A"))
             .build()?;
         
         let plot_options = DensityPlotOptions::new()
-            .base(base_options)
+            .base(base)
+            .x_axis(x_axis)
+            .y_axis(y_axis)
             .build()?;
         
         // Render plot
