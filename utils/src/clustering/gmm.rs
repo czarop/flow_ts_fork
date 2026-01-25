@@ -67,7 +67,8 @@ impl Gmm {
         }
 
         // Use linfa-clustering for GMM
-        let dataset = DatasetBase::from(data.clone());
+        // Use DatasetBase::new with empty targets () for unsupervised learning
+        let dataset = DatasetBase::new(data.clone(), ());
         let model = LinfaGmm::params(config.n_components)
             .max_n_iterations(config.max_iterations as u64)
             .tolerance(config.tolerance)

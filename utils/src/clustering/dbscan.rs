@@ -53,10 +53,9 @@ impl Dbscan {
 
         // Use linfa-clustering for DBSCAN
         // Note: linfa DBSCAN params only takes min_points, eps is set via tolerance
-        // Array2 implements Records trait, so we can use DatasetBase::from
-        // For ndarray 0.16 compatibility, ensure we're using the right version
-        let dataset: DatasetBase<ndarray::ArrayBase<ndarray::OwnedRepr<f64>, ndarray::Dim<[usize; 2]>>, ()> = 
-            DatasetBase::from(data.clone());
+        // Array2 implements Records trait, so we can use DatasetBase::new
+        // Use empty targets () for unsupervised learning
+        let dataset = DatasetBase::new(data.clone(), ());
         let model = LinfaDbscan::params(config.min_samples)
             .tolerance(config.eps) // eps is set via tolerance
             .fit(&dataset)

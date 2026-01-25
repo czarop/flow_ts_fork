@@ -69,7 +69,8 @@ impl KMeans {
         // Use linfa-clustering for K-means
         // Array2 implements Records, so we can create DatasetBase directly
         // Note: linfa expects data as records (samples × features)
-        let dataset = DatasetBase::from(data.clone());
+        // Use DatasetBase::new with empty targets () for unsupervised learning
+        let dataset = DatasetBase::new(data.clone(), ());
         let model = LinfaKMeans::params(config.n_clusters)
             .max_n_iterations(config.max_iterations as u64)
             .tolerance(config.tolerance)
