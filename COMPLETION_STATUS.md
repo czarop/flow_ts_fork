@@ -276,7 +276,7 @@ Add command-line options to control peak-based methods and autofluorescence mode
 ---
 
 #### Task 2.6: Add Validation and Diagnostics
-**Status:** Pending  
+**Status:** ✅ Complete  
 **Priority:** 2  
 **Estimated Effort:** Medium
 
