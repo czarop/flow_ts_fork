@@ -1,5 +1,6 @@
 pub mod plotters_backend;
 pub mod progress;
+pub mod plotmap;
 
 pub use progress::{ProgressCallback, ProgressInfo};
 

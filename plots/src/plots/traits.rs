@@ -66,5 +66,5 @@ pub trait Plot {
         data: Self::Data,
         options: &Self::Options,
         render_config: &mut RenderConfig,
-    ) -> Result<PlotBytes>;
+    ) -> Result<crate::render::plotmap::PlotData>;
 }
