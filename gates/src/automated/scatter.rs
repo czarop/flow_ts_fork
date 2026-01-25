@@ -79,17 +79,33 @@ pub fn create_scatter_gate(
     config: &ScatterGateConfig,
 ) -> GateResult<ScatterGateResult> {
     // Extract FSC/SSC data (NO transformation - raw values)
-    let fsc_data = fcs
-        .get_channel_f64(&config.fsc_channel)
-        .map_err(|e| GateError::InvalidParameter(format!("Failed to get FSC channel: {}", e)))?;
-    let ssc_data = fcs
-        .get_channel_f64(&config.ssc_channel)
-        .map_err(|e| GateError::InvalidParameter(format!("Failed to get SSC channel: {}", e)))?;
+    // Fcs API returns f32 slices, convert to f64 for processing
+    let fsc_data_f32 = fcs
+        .get_parameter_events_slice(&config.fsc_channel)
+        .map_err(|e| GateError::Other {
+            message: format!("Failed to get FSC channel {}: {}", config.fsc_channel, e),
+            source: Some(Box::new(e)),
+        })?;
+    let ssc_data_f32 = fcs
+        .get_parameter_events_slice(&config.ssc_channel)
+        .map_err(|e| GateError::Other {
+            message: format!("Failed to get SSC channel {}: {}", config.ssc_channel, e),
+            source: Some(Box::new(e)),
+        })?;
+    
+    // Convert to f64 for processing
+    let fsc_data: Vec<f64> = fsc_data_f32.iter().map(|&x| x as f64).collect();
+    let ssc_data: Vec<f64> = ssc_data_f32.iter().map(|&x| x as f64).collect();
 
     if fsc_data.len() != ssc_data.len() {
-        return Err(GateError::InvalidData(
-            "FSC and SSC channels have different lengths".to_string(),
-        ));
+        return Err(GateError::Other {
+            message: format!(
+                "FSC and SSC channels have different lengths: {} vs {}",
+                fsc_data.len(),
+                ssc_data.len()
+            ),
+            source: None,
+        });
     }
 
     if fsc_data.len() < config.min_events {
@@ -165,12 +181,18 @@ fn create_density_contour_gate(
     // For now, use a simple approach: find main population using KDE on FSC
     let fsc_values: Vec<f64> = data.column(0).iter().copied().collect();
     let kde = KernelDensity::estimate(&fsc_values, 1.0, 512)
-        .map_err(|e| GateError::InvalidData(format!("KDE failed: {:?}", e)))?;
+        .map_err(|e| GateError::Other {
+            message: format!("KDE failed: {:?}", e),
+            source: None,
+        })?;
     
     // Find peak in FSC distribution
     let peaks = kde.find_peaks(threshold);
     if peaks.is_empty() {
-        return Err(GateError::InvalidData("No peaks found in FSC distribution".to_string()));
+        return Err(GateError::Other {
+            message: "No peaks found in FSC distribution".to_string(),
+            source: None,
+        });
     }
     
     let main_peak = peaks[0];

@@ -80,26 +80,43 @@ pub fn detect_doublets(
     config: &DoubletGateConfig,
 ) -> GateResult<DoubletGateResult> {
     if config.channels.is_empty() {
-        return Err(GateError::InvalidParameter(
-            "No channel pairs specified for doublet detection".to_string(),
-        ));
+        return Err(GateError::Other {
+            message: "No channel pairs specified for doublet detection".to_string(),
+            source: None,
+        });
     }
 
     // Use first channel pair for now (can extend to multiple pairs)
     let (area_channel, height_channel) = &config.channels[0];
 
     // Extract channel data (NO transformation - raw values)
-    let area_data = fcs
-        .get_channel_f64(area_channel)
-        .map_err(|e| GateError::InvalidParameter(format!("Failed to get area channel: {}", e)))?;
-    let height_data = fcs
-        .get_channel_f64(height_channel)
-        .map_err(|e| GateError::InvalidParameter(format!("Failed to get height channel: {}", e)))?;
+    // Fcs API returns f32 slices, convert to f64 for processing
+    let area_data_f32 = fcs
+        .get_parameter_events_slice(area_channel)
+        .map_err(|e| GateError::Other {
+            message: format!("Failed to get area channel {}: {}", area_channel, e),
+            source: Some(Box::new(e)),
+        })?;
+    let height_data_f32 = fcs
+        .get_parameter_events_slice(height_channel)
+        .map_err(|e| GateError::Other {
+            message: format!("Failed to get height channel {}: {}", height_channel, e),
+            source: Some(Box::new(e)),
+        })?;
+    
+    // Convert to f64 for processing
+    let area_data: Vec<f64> = area_data_f32.iter().map(|&x| x as f64).collect();
+    let height_data: Vec<f64> = height_data_f32.iter().map(|&x| x as f64).collect();
 
     if area_data.len() != height_data.len() {
-        return Err(GateError::InvalidData(
-            "Area and height channels have different lengths".to_string(),
-        ));
+        return Err(GateError::Other {
+            message: format!(
+                "Area and height channels have different lengths: {} vs {}",
+                area_data.len(),
+                height_data.len()
+            ),
+            source: None,
+        });
     }
 
     // Apply detection method
@@ -211,12 +228,18 @@ fn detect_density_based(
 
     // Use KDE to estimate density of ratios
     let kde = KernelDensity::estimate(&ratios, 1.0, 512)
-        .map_err(|e| GateError::InvalidData(format!("KDE failed: {:?}", e)))?;
+        .map_err(|e| GateError::Other {
+            message: format!("KDE failed: {:?}", e),
+            source: None,
+        })?;
 
     // Find peak (main population)
     let peaks = kde.find_peaks(threshold);
     if peaks.is_empty() {
-        return Err(GateError::InvalidData("No peaks found in ratio distribution".to_string()));
+        return Err(GateError::Other {
+            message: "No peaks found in ratio distribution".to_string(),
+            source: None,
+        });
     }
 
     let main_peak = peaks[0];
