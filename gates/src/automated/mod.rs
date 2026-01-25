@@ -11,7 +11,7 @@ pub use scatter::{ScatterGateConfig, ScatterGateMethod, ScatterGateResult, creat
 pub use doublets::{DoubletGateConfig, DoubletMethod, DoubletGateResult, detect_doublets};
 pub use interactive::{UserReview, PipelineBreakpoint};
 
-use crate::Gate;
+use crate::{Gate, GateError};
 use crate::hierarchy::GateHierarchy;
 use flow_fcs::Fcs;
 
