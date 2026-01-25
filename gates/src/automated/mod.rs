@@ -6,10 +6,12 @@
 pub mod scatter;
 pub mod doublets;
 pub mod interactive;
+pub mod comparison;
 
 pub use scatter::{ScatterGateConfig, ScatterGateMethod, ScatterGateResult, create_scatter_gate, ClusterAlgorithm};
 pub use doublets::{DoubletGateConfig, DoubletMethod, DoubletGateResult, detect_doublets};
 pub use interactive::{UserReview, PipelineBreakpoint};
+pub use comparison::{compare_doublet_methods, compare_with_peacoqc, DoubletComparisonResult, MethodResult};
 
 use crate::{Gate, GateError};
 use crate::hierarchy::GateHierarchy;
