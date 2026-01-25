@@ -5,6 +5,9 @@ members = [
     "gates",
     "peacoqc-rs",
     "peacoqc-cli",
+    "tru-ols",
+    "tru-ols-cli",
+    "utils",
 ]
 resolver = "3"
 repository="https://github.com/jrmoynihan/flow"
@@ -21,6 +24,7 @@ run = "cargo run --workspace"
 check = "cargo check --workspace"
 clippy = "cargo clippy --workspace"
 fmt = "cargo fmt --workspace"
+publish-workspace = "cargo publish --workspace"
 
 [workspace.dependencies]
 # Polars for columnar data storage

@@ -1,0 +1,48 @@
+[package]
+name = "flow-utils"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shared algorithms and utilities for flow cytometry crates"
+repository = "https://github.com/jrmoynihan/flow/utils"
+keywords = [
+    "flow-cytometry",
+    "algorithms",
+    "kde",
+    "clustering",
+    "pca",
+]
+categories = ["science", "algorithms"]
+
+[features]
+default = []
+gpu = ["dep:burn", "dep:cubecl", "dep:bytemuck"]
+
+[dependencies]
+# Array operations
+ndarray = { workspace = true }
+ndarray-linalg = { workspace = true }
+
+# FFT for KDE
+realfft = "3.5.0"
+
+# Clustering
+linfa-clustering = "0.8"
+linfa = "0.8"
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Parallelization
+rayon = { workspace = true }
+
+# GPU support (optional)
+burn = { version = "0.20", optional = true, features = ["wgpu"] }
+cubecl = { version = "0.9", optional = true }
+bytemuck = { workspace = true, optional = true }
+
+[dev-dependencies]
+approx = "0.5"
+criterion = "0.8.1"
