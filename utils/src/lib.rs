@@ -18,7 +18,7 @@ pub mod clustering;
 pub mod pca;
 pub mod common;
 
-pub use kde::{KernelDensity, KdeError, KdeResult};
+pub use kde::{KernelDensity, KernelDensity2D, KdeError, KdeResult};
 pub use clustering::{
     KMeans, KMeansConfig, KMeansResult,
     Dbscan, DbscanConfig, DbscanResult,

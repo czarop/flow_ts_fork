@@ -4,9 +4,9 @@
 //! in scatter plots, supporting multi-population detection.
 
 use crate::{Gate, GateError, GateResult, GateStatistics};
-use crate::geometry::create_ellipse_geometry;
+use crate::geometry::{create_ellipse_geometry, create_polygon_geometry};
 use flow_fcs::Fcs;
-use flow_utils::kde::KernelDensity;
+use flow_utils::kde::{KernelDensity, KernelDensity2D};
 use ndarray::Array2;
 use std::sync::Arc;
 
@@ -221,62 +221,32 @@ fn create_density_contour_gate(
     config: &ScatterGateConfig,
     threshold: f64,
 ) -> GateResult<(Option<Gate>, Vec<bool>, String)> {
-    // Use KDE to estimate density
-    // For 2D, we'll use 1D KDE on each dimension and combine
-    // TODO: Implement 2D KDE or use a different approach
-    
-    // For now, use a simple approach: find main population using KDE on FSC
+    // Extract FSC and SSC values
     let fsc_values: Vec<f64> = data.column(0).iter().copied().collect();
-    let kde = KernelDensity::estimate(&fsc_values, 1.0, 512)
+    let ssc_values: Vec<f64> = data.column(1).iter().copied().collect();
+    
+    // Use 2D KDE for better density estimation
+    let kde2d = KernelDensity2D::estimate(&fsc_values, &ssc_values, 1.0, 128)
         .map_err(|e| GateError::Other {
-            message: format!("KDE failed: {:?}", e),
+            message: format!("2D KDE failed: {:?}", e),
             source: None,
         })?;
     
-    // Find peak in FSC distribution
-    let peaks = kde.find_peaks(threshold);
-    if peaks.is_empty() {
-        return Err(GateError::Other {
-            message: "No peaks found in FSC distribution".to_string(),
-            source: None,
-        });
+    // Find density contour at threshold level
+    let contour_points = kde2d.find_contour(threshold);
+    
+    if contour_points.len() < 3 {
+        // Fall back to ellipse if contour is too simple
+        return create_ellipse_fit_gate(data, config);
     }
     
-    let main_peak = peaks[0];
+    // Create polygon gate from contour
+    let coords: Vec<(f32, f32)> = contour_points
+        .iter()
+        .map(|(x, y)| (*x as f32, *y as f32))
+        .collect();
     
-    // Create simple ellipse around main population
-    // This is a placeholder - full implementation would use 2D density contours
-    let center_x = main_peak;
-    let center_y = data.column(1).iter().sum::<f64>() / data.nrows() as f64;
-    
-    // Calculate spread
-    let mut sum_dist_x = 0.0;
-    let mut sum_dist_y = 0.0;
-    let mut count = 0;
-    for i in 0..data.nrows() {
-        let dist_x = (data[[i, 0]] - center_x).abs();
-        let dist_y = (data[[i, 1]] - center_y).abs();
-        if dist_x < 3.0 * (data.column(0).iter().map(|x| (x - center_x).abs()).sum::<f64>() / data.nrows() as f64) {
-            sum_dist_x += dist_x;
-            sum_dist_y += dist_y;
-            count += 1;
-        }
-    }
-    
-    let radius_x = if count > 0 { sum_dist_x / count as f64 * 2.0 } else { 1000.0 };
-    let radius_y = if count > 0 { sum_dist_y / count as f64 * 2.0 } else { 1000.0 };
-    
-    // Create ellipse gate
-    // create_ellipse_geometry expects Vec<(f32, f32)> coordinates
-    // Create coordinates: center, right, top, left, bottom
-    let center = (center_x as f32, center_y as f32);
-    let right = ((center_x + radius_x) as f32, center_y as f32);
-    let top = (center_x as f32, (center_y + radius_y) as f32);
-    let left = ((center_x - radius_x) as f32, center_y as f32);
-    let bottom = (center_x as f32, (center_y - radius_y) as f32);
-    let coords = vec![center, right, top, left, bottom];
-    
-    let geometry = create_ellipse_geometry(
+    let geometry = create_polygon_geometry(
         coords,
         &config.fsc_channel,
         &config.ssc_channel,
@@ -284,18 +254,18 @@ fn create_density_contour_gate(
     
     let gate = Gate::new(
         "scatter-gate",
-        "Automated Scatter Gate",
+        "Automated Scatter Gate (Density Contour)",
         geometry,
         Arc::from(config.fsc_channel.as_str()),
         Arc::from(config.ssc_channel.as_str()),
     );
     
-    // Create mask (simple ellipse check)
+    // Create mask using density threshold
     let mask: Vec<bool> = (0..data.nrows())
         .map(|i| {
-            let dx = (data[[i, 0]] - center_x) / radius_x;
-            let dy = (data[[i, 1]] - center_y) / radius_y;
-            dx * dx + dy * dy <= 1.0
+            let density = kde2d.density_at(data[[i, 0]], data[[i, 1]]);
+            let max_density = kde2d.z.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            density >= threshold * max_density
         })
         .collect();
     
