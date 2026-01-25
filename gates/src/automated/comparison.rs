@@ -61,7 +61,7 @@ pub fn compare_doublet_methods(
         };
 
         results.push(MethodResult {
-            method_name: method_name.clone(),
+            method_name,
             result,
             performance_ms: Some(elapsed),
         });
@@ -69,6 +69,13 @@ pub fn compare_doublet_methods(
 
     // Calculate agreement matrix
     let n_methods = results.len();
+    if n_methods == 0 {
+        return Err(crate::GateError::Other {
+            message: "No methods to compare".to_string(),
+            source: None,
+        });
+    }
+    
     let n_events = results[0].result.singlet_mask.len();
     let mut agreement_matrix = vec![vec![0.0; n_methods]; n_methods];
 
