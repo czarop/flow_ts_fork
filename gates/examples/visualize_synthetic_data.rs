@@ -75,8 +75,10 @@ mod test_helpers {
         let mut rng = rand::thread_rng();
         
         // Use Gaussian distributions for realistic flow cytometry data
-        let fsc_dist = Normal::new(50000.0, 12000.0).unwrap();
-        let ssc_dist = Normal::new(30000.0, 9000.0).unwrap();
+        // Reduced FSC mean by 35%: 50000 * 0.65 = 32500
+        // Narrowed distribution: reduced std dev by ~40% for more concentration
+        let fsc_dist = Normal::new(32500.0, 7200.0).unwrap();
+        let ssc_dist = Normal::new(30000.0, 5400.0).unwrap();
         
         let mut fsc_a = Vec::with_capacity(n_events);
         let mut fsc_h = Vec::with_capacity(n_events);
@@ -114,10 +116,11 @@ mod test_helpers {
         let mut rng = rand::thread_rng();
         
         // Two distinct populations with Gaussian distributions
-        let pop1_fsc_dist = Normal::new(30000.0, 8000.0).unwrap();
-        let pop1_ssc_dist = Normal::new(20000.0, 6000.0).unwrap();
-        let pop2_fsc_dist = Normal::new(70000.0, 10000.0).unwrap();
-        let pop2_ssc_dist = Normal::new(50000.0, 8000.0).unwrap();
+        // Narrowed distributions for more concentration
+        let pop1_fsc_dist = Normal::new(30000.0, 4800.0).unwrap();
+        let pop1_ssc_dist = Normal::new(20000.0, 3600.0).unwrap();
+        let pop2_fsc_dist = Normal::new(70000.0, 6000.0).unwrap();
+        let pop2_ssc_dist = Normal::new(50000.0, 4800.0).unwrap();
         
         let n_pop1 = n_events / 2;
         let n_pop2 = n_events - n_pop1;
@@ -159,8 +162,10 @@ mod test_helpers {
         use rand_distr::{Distribution, Normal};
         let mut rng = rand::thread_rng();
         
-        let singlet_fsc_dist = Normal::new(50000.0, 12000.0).unwrap();
-        let singlet_ssc_dist = Normal::new(30000.0, 9000.0).unwrap();
+        // Reduced FSC mean by 35%: 50000 * 0.65 = 32500
+        // Narrowed distribution for more concentration
+        let singlet_fsc_dist = Normal::new(32500.0, 7200.0).unwrap();
+        let singlet_ssc_dist = Normal::new(30000.0, 5400.0).unwrap();
         
         let n_doublets = n_events / 10;
         let n_singlets = n_events - n_doublets;
@@ -203,9 +208,9 @@ mod test_helpers {
         use rand_distr::{Distribution, Normal};
         let mut rng = rand::thread_rng();
         
-        // Wider distributions for noisy data
-        let fsc_dist = Normal::new(50000.0, 25000.0).unwrap();
-        let ssc_dist = Normal::new(30000.0, 20000.0).unwrap();
+        // Narrowed distributions (still wider than others, but more concentrated)
+        let fsc_dist = Normal::new(50000.0, 15000.0).unwrap();
+        let ssc_dist = Normal::new(30000.0, 12000.0).unwrap();
         
         let mut fsc_a = Vec::with_capacity(n_events);
         let mut fsc_h = Vec::with_capacity(n_events);
@@ -233,8 +238,10 @@ mod test_helpers {
         use rand_distr::{Distribution, Normal};
         let mut rng = rand::thread_rng();
         
-        let main_fsc_dist = Normal::new(50000.0, 12000.0).unwrap();
-        let main_ssc_dist = Normal::new(30000.0, 9000.0).unwrap();
+        // Narrowed main population distribution for more concentration
+        // Debris population keeps original wider distribution
+        let main_fsc_dist = Normal::new(50000.0, 7200.0).unwrap();
+        let main_ssc_dist = Normal::new(30000.0, 5400.0).unwrap();
         let debris_fsc_dist = Normal::new(2000.0, 1500.0).unwrap();
         let debris_ssc_dist = Normal::new(1500.0, 1000.0).unwrap();
         
@@ -291,11 +298,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Generating plot for: {}", name);
         
         // Create synthetic FCS file with higher event count for better visualization
-        // Use more events for with_debris to increase main population density
+        // Triple the events: 60k for most scenarios, 90k for with_debris
         let n_events = if matches!(scenario, TestScenario::WithDebris) {
-            30000  // More events for with_debris main population
+            90000  // Triple: 30k -> 90k for with_debris
         } else {
-            20000
+            60000  // Triple: 20k -> 60k for other scenarios
         };
         let fcs = create_synthetic_fcs(n_events, scenario)?;
         
