@@ -313,7 +313,7 @@ Add validation and diagnostic reporting for peak detection and autofluorescence 
 ### Priority 3: Integration and Documentation
 
 #### Task 3.1: Integrate Automated Gating into tru-ols
-**Status:** Pending  
+**Status:** ✅ Partial (Core integrated, full filtering pending FCS creation API)  
 **Priority:** 3  
 **Estimated Effort:** Medium
 
@@ -339,11 +339,12 @@ Integrate automated scatter and doublet gating from `flow-gates` into `tru-ols` 
 - `flow-gates` crate (already available)
 
 **Acceptance Criteria:**
-- [ ] Automated gating integrated into tru-ols pipeline
-- [ ] Optional (can disable)
-- [ ] Works with both automated and interactive modes
-- [ ] Gates applied before matrix generation
-- [ ] Documentation updated
+- [x] Automated gating integrated into tru-ols pipeline
+- [x] Optional (can disable via --auto-gate flag)
+- [x] Works with automated mode (interactive mode pending)
+- [x] Gates applied before matrix generation
+- [x] Documentation updated (TESTING_INSTRUCTIONS.md created)
+- [ ] Full event filtering (pending FCS file creation API)
 
 ---
 
