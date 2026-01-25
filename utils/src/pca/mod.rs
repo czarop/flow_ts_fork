@@ -78,17 +78,16 @@ impl Pca {
 
         // Perform SVD using linfa-linalg (compatible with ndarray 0.16)
         // SVD returns (Option<U>, S, Option<Vt>) tuple
-        let svd_result = centered
+        let (u_opt, s, vt_opt) = centered
             .svd(true, true)
             .map_err(|e| PcaError::SvdFailed(format!("SVD failed: {:?}", e)))?;
         
-        let _u = svd_result.0.ok_or_else(|| PcaError::SvdFailed("U matrix not available".to_string()))?;
-        let s = svd_result.1;
-        let vt = svd_result.2.ok_or_else(|| PcaError::SvdFailed("Vt matrix not available".to_string()))?;
+        let _u = u_opt.ok_or_else(|| PcaError::SvdFailed("U matrix not available".to_string()))?;
+        let vt = vt_opt.ok_or_else(|| PcaError::SvdFailed("Vt matrix not available".to_string()))?;
 
         // Extract components (right singular vectors, transposed)
-        let components = vt
-            .ok_or_else(|| PcaError::SvdFailed("Vt matrix not available".to_string()))?;
+        // vt is already an Array2, not an Option
+        let components = vt;
 
         // Calculate explained variance ratio
         let s_squared: Vec<f64> = s.iter().map(|&val| val * val).collect();
