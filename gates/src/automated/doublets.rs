@@ -3,12 +3,9 @@
 //! Provides multiple methods for detecting doublet events in flow cytometry data,
 //! including the original peacoqc-rs method and improved density-based approaches.
 
-use crate::{Gate, GateError, GateResult};
-use crate::geometry::create_polygon_geometry;
+use crate::{GateError, GateResult};
 use flow_fcs::Fcs;
 use flow_utils::kde::KernelDensity;
-use ndarray::Array2;
-use std::sync::Arc;
 
 /// Configuration for doublet detection
 #[derive(Debug, Clone)]

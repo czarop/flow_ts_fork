@@ -13,7 +13,7 @@ pub use doublets::{DoubletGateConfig, DoubletMethod, DoubletGateResult, detect_d
 pub use interactive::{UserReview, PipelineBreakpoint};
 pub use comparison::{compare_doublet_methods, compare_with_peacoqc, DoubletComparisonResult, MethodResult};
 
-use crate::{Gate, GateError};
+use crate::Gate;
 use crate::hierarchy::GateHierarchy;
 use flow_fcs::Fcs;
 
@@ -44,7 +44,7 @@ pub fn create_preprocessing_gates(
     fcs: &Fcs,
     config: PreprocessingConfig,
 ) -> Result<PreprocessingGates, crate::GateError> {
-    let mut hierarchy = GateHierarchy::new();
+    let hierarchy = GateHierarchy::new();
 
     // 1. Scatter gate (multi-population)
     let scatter_result = create_scatter_gate(fcs, &config.scatter_config)?;
@@ -73,7 +73,7 @@ pub fn create_preprocessing_gates_interactive(
     config: PreprocessingConfig,
     review_callback: impl Fn(PipelineBreakpoint) -> UserReview,
 ) -> Result<PreprocessingGates, crate::GateError> {
-    let mut hierarchy = GateHierarchy::new();
+    let hierarchy = GateHierarchy::new();
 
     // 1. Scatter gate (with user review)
     let scatter_result = create_scatter_gate(fcs, &config.scatter_config)?;

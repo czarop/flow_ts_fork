@@ -15,7 +15,7 @@ keywords=[
 categories=["science", "algorithms"]
 
 [features]
-default =["flow-fcs"]
+default =["flow-fcs", "gpu"]
 flow-fcs=["dep:flow-fcs", "dep:polars"]
 gpu = ["dep:burn"]
 cubecl = ["dep:cubecl", "dep:bytemuck", "gpu"]

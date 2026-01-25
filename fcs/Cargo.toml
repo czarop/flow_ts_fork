@@ -1,9 +1,9 @@
 [package]
 name="flow-fcs"
-version= "0.2.0"
+version="0.2.0"
 edition.workspace=true
 authors.workspace=true
-repository="https://github.com/jrmoynihan/flow/flow-fcs"
+repository="https://github.com/jrmoynihan/flow/fcs"
 license="MIT"
 description="High-level Flow Cytometry Standard (FCS) file struct and operations"
 keywords=[
@@ -83,7 +83,7 @@ tracing={ workspace=true }
 [dev-dependencies]
 approx   ="0.5.1"                                        # For approximate comparisons
 criterion={ version="0.8.1", features=["html_reports"] }
-rand="0.8"                                              # For generating test data in benchmarks
+rand     ="0.8"                                          # For generating test data in benchmarks
 # Enable LAPACK backend for tests (OpenBLAS provides both BLAS and LAPACK)
 # Note: Requires OpenBLAS installed via Homebrew: brew install openblas
 # Set OPENBLAS_DIR environment variable: export OPENBLAS_DIR=$(brew --prefix openblas)

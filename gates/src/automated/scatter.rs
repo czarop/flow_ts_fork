@@ -306,7 +306,7 @@ fn create_density_contour_gate(
 fn create_clustering_gate(
     data: &Array2<f64>,
     config: &ScatterGateConfig,
-    algorithm: ClusterAlgorithm,
+    _algorithm: ClusterAlgorithm,
 ) -> GateResult<(Option<Gate>, Vec<bool>, String)> {
     // TODO: Implement clustering-based gating once linfa API is fixed
     // For now, fall back to ellipse fit

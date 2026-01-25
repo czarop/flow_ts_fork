@@ -1727,69 +1727,83 @@ impl Fcs {
         Ok(Arc::new(df))
     }
 
-    /// Apply spectral unmixing (similar to compensation but for spectral flow cytometry)
-    /// Uses a good default cofactor of 200 for transformation before/after unmixing
+    /// Apply spectral unmixing (matrix solve only, no compensation or transformation)
+    ///
+    /// This method performs unmixing by solving: observation = mixing_matrix × abundances
+    /// Does NOT apply compensation or transformations - these should be done separately.
     ///
     /// # Arguments
-    /// * `unmixing_matrix` - Matrix describing spectral signatures of fluorophores
-    /// * `channel_names` - Names of spectral channels
-    /// * `cofactor` - Cofactor for arcsinh transformation (default: 200)
+    /// * `unmixing_matrix` - Matrix describing spectral signatures of fluorophores (detectors × endmembers)
+    /// * `detector_names` - Names of detector channels (must match matrix rows)
     ///
     /// # Returns
-    /// New DataFrame with unmixed and transformed fluorescence values
+    /// New DataFrame with unmixed endmember abundances (columns named by endmember indices)
+    ///
+    /// # Errors
+    /// Returns error if detector names don't match matrix dimensions or data cannot be extracted
     pub fn apply_spectral_unmixing(
         &self,
         unmixing_matrix: &Array2<f32>,
-        channel_names: &[&str],
-        cofactor: Option<f32>,
+        detector_names: &[&str],
     ) -> Result<EventDataFrame> {
-        let cofactor = cofactor.unwrap_or(200.0);
+        use ndarray_linalg::Solve;
 
-        // First, inverse-transform the data (go back to linear scale)
-        let mut df = (*self.data_frame).clone();
-        let transform = TransformType::Arcsinh { cofactor };
-
-        use rayon::prelude::*;
-        for &channel_name in channel_names {
-            let col = df
-                .column(channel_name)
-                .map_err(|e| anyhow!("Parameter {} not found: {}", channel_name, e))?;
-
-            let series = col.as_materialized_series();
-            let ca = series
-                .f32()
-                .map_err(|e| anyhow!("Parameter {} is not f32: {}", channel_name, e))?;
-
-            // Inverse arcsinh using TransformType implementation
-            let linear: Vec<f32> = ca
-                .cont_slice()
-                .map_err(|e| anyhow!("Data not contiguous: {}", e))?
-                .par_iter()
-                .map(|&y| transform.inverse_transform(&y))
-                .collect();
-
-            let new_series = Series::new(channel_name.into(), linear);
-            df.replace(channel_name, new_series)
-                .map_err(|e| anyhow!("Failed to replace column: {}", e))?;
+        // Verify matrix dimensions match detector names
+        let n_detectors = detector_names.len();
+        if unmixing_matrix.nrows() != n_detectors {
+            return Err(anyhow!(
+                "Unmixing matrix rows ({}) don't match number of detectors ({})",
+                unmixing_matrix.nrows(),
+                n_detectors
+            ));
         }
 
-        // Apply unmixing matrix (same as compensation)
-        let df_with_linear = Arc::new(df);
-        let fcs_temp = Fcs {
-            data_frame: df_with_linear,
-            ..self.clone()
-        };
-        let unmixed = fcs_temp.apply_compensation(unmixing_matrix, channel_names)?;
+        let n_endmembers = unmixing_matrix.ncols();
+        let n_events = self.get_event_count_from_dataframe();
 
-        // Re-apply arcsinh transformation
-        let fcs_unmixed = Fcs {
-            data_frame: unmixed,
-            ..self.clone()
-        };
+        // Extract data for detectors
+        let mut detector_data: Vec<Vec<f32>> = Vec::with_capacity(n_detectors);
+        for &detector_name in detector_names {
+            let data = self.get_parameter_events_slice(detector_name)?;
+            detector_data.push(data.to_vec());
+        }
 
-        let params_with_cofactor: Vec<(&str, f32)> =
-            channel_names.iter().map(|&name| (name, cofactor)).collect();
+        // Convert to Array2 for matrix operations
+        // Observations matrix: events × detectors
+        let mut observations = Array2::<f32>::zeros((n_events, n_detectors));
+        for (detector_idx, data) in detector_data.iter().enumerate() {
+            for (event_idx, &value) in data.iter().enumerate() {
+                observations[(event_idx, detector_idx)] = value;
+            }
+        }
 
-        fcs_unmixed.apply_arcsinh_transforms(&params_with_cofactor)
+        // Perform unmixing: for each event, solve: observation = unmixing_matrix × abundances
+        // This is: abundances = unmixing_matrix^(-1) × observation
+        // But we use solve() which is more numerically stable
+        let mut unmixed_data: Vec<Vec<f32>> = Vec::with_capacity(n_events);
+
+        for event_idx in 0..n_events {
+            let observation = observations.row(event_idx);
+            let abundances = unmixing_matrix
+                .solve(&observation.to_owned())
+                .map_err(|e| anyhow!("Failed to solve unmixing for event {}: {:?}", event_idx, e))?;
+            unmixed_data.push(abundances.to_vec());
+        }
+
+        // Create DataFrame with endmember abundances
+        let mut columns: Vec<Column> = Vec::with_capacity(n_endmembers);
+        for endmember_idx in 0..n_endmembers {
+            let values: Vec<f32> = unmixed_data
+                .iter()
+                .map(|abundances| abundances[endmember_idx])
+                .collect();
+            let series = Column::new(format!("Endmember{}", endmember_idx + 1).into(), values);
+            columns.push(series);
+        }
+
+        let df = DataFrame::new(columns)
+            .map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
+
+        Ok(Arc::new(df))
     }
 }

@@ -1,0 +1,42 @@
+[package]
+name = "flow-tru-ols-cli"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+repository = "https://github.com/jrmoynihan/flow/tru-ols-cli"
+license = "MIT"
+description = "Command-line tool for TRU-OLS flow cytometry unmixing"
+keywords = [
+    "flow-cytometry",
+    "unmixing",
+    "compensation",
+    "bioinformatics",
+    "command-line",
+]
+categories = ["science", "command-line-utilities"]
+
+[[bin]]
+name = "tru-ols"
+path = "src/main.rs"
+
+[dependencies]
+flow-fcs = { path = "../fcs", version = "^0.2.0" }
+flow-tru-ols = { path = "../tru-ols", version = "^0.1.0", features = ["flow-fcs", "plotting"] }
+flow-plots = { path = "../plots", version = "^0.2.0" }
+polars = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+clap = { version = "4.5.54", features = ["derive", "cargo"] }
+indicatif = "0.18.3"
+rayon = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+ndarray = { workspace = true }
+csv = "1.3"
+
+[package.metadata.scripts]
+test = "cargo test"
+dry-release = "cargo smart-release flow-tru-ols-cli --update-crates-index"
+publish = "cargo smart-release flow-tru-ols-cli --update-crates-index --execute"
+changelog = "cargo changelog flow-tru-ols-cli --write"

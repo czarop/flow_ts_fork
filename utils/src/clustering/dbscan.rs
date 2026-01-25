@@ -1,8 +1,6 @@
 //! DBSCAN clustering implementation
 
 use crate::clustering::{ClusteringError, ClusteringResult};
-use linfa::prelude::*;
-use linfa_clustering::Dbscan as LinfaDbscan;
 use ndarray::Array2;
 
 /// Configuration for DBSCAN clustering
@@ -46,7 +44,7 @@ impl Dbscan {
     ///
     /// # Returns
     /// DbscanResult with cluster assignments
-    pub fn fit(data: &Array2<f64>, config: &DbscanConfig) -> ClusteringResult<DbscanResult> {
+    pub fn fit(data: &Array2<f64>, _config: &DbscanConfig) -> ClusteringResult<DbscanResult> {
         if data.nrows() == 0 {
             return Err(ClusteringError::EmptyData);
         }
@@ -55,10 +53,10 @@ impl Dbscan {
         // NOTE: DBSCAN in linfa-clustering 0.8 has trait bound issues with ParamGuard
         // This is a known limitation - DBSCAN clustering is temporarily disabled
         // TODO: Fix DBSCAN once linfa-clustering API is updated or use alternative implementation
-        return Err(ClusteringError::ClusteringFailed(
+        Err(ClusteringError::ClusteringFailed(
             "DBSCAN clustering is temporarily disabled due to linfa-clustering API limitations. \
              Please use K-means or GMM clustering instead.".to_string()
-        ));
+        ))
         
         // Original implementation (commented out until API issue is resolved):
         /*
@@ -69,14 +67,27 @@ impl Dbscan {
             .map_err(|e| ClusteringError::ValidationFailed(format!("DBSCAN params validation failed: {:?}", e)))?
             .fit(&dataset)
             .map_err(|e| ClusteringError::ClusteringFailed(format!("{}", e)))?;
-        */
-
-        // Placeholder result until DBSCAN API is fixed
-        // Return empty result with error indication
+        
+        let assignments: Vec<i32> = model
+            .labels()
+            .iter()
+            .map(|&label| label as i32)
+            .collect();
+        
+        let n_clusters = assignments
+            .iter()
+            .filter(|&&a| a >= 0)
+            .map(|&a| a as usize)
+            .max()
+            .map(|m| m + 1)
+            .unwrap_or(0);
+        let n_noise = assignments.iter().filter(|&&a| a == -1).count();
+        
         Ok(DbscanResult {
-            assignments: vec![-1; data.nrows()], // All marked as noise
-            n_clusters: 0,
-            n_noise: data.nrows(),
+            assignments,
+            n_clusters,
+            n_noise,
         })
+        */
     }
 }
