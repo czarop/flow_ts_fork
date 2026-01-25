@@ -7,7 +7,7 @@ pub mod scatter;
 pub mod doublets;
 pub mod interactive;
 
-pub use scatter::{ScatterGateConfig, ScatterGateMethod, ScatterGateResult, create_scatter_gate};
+pub use scatter::{ScatterGateConfig, ScatterGateMethod, ScatterGateResult, create_scatter_gate, ClusterAlgorithm};
 pub use doublets::{DoubletGateConfig, DoubletMethod, DoubletGateResult, detect_doublets};
 pub use interactive::{UserReview, PipelineBreakpoint};
 
