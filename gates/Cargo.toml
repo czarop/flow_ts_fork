@@ -37,7 +37,13 @@ default=[]
 [dev-dependencies]
 criterion={ version="0.8.1", features=["html_reports"] }
 rand     ="0.9"
+rand_distr = "0.4"
 polars    = { workspace = true }
+
+[[example]]
+name = "visualize_synthetic_data"
+path = "examples/visualize_synthetic_data.rs"
+required-features = []
 
 [package.metadata.scripts]
 test-compliance     ="cargo test --test compliance_tests -- --ignored"

@@ -35,6 +35,7 @@ pub fn create_synthetic_fcs(n_events: usize, scenario: TestScenario) -> Result<F
         TestScenario::MultiPopulation => generate_multi_population(n_events),
         TestScenario::WithDoublets => generate_with_doublets(n_events),
         TestScenario::NoisyData => generate_noisy_data(n_events),
+        TestScenario::WithDebris => generate_with_debris(n_events),
     };
 
     // Create DataFrame with scatter channels

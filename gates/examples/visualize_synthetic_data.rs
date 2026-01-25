@@ -205,13 +205,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (TestScenario::MultiPopulation, "multi_population"),
         (TestScenario::WithDoublets, "with_doublets"),
         (TestScenario::NoisyData, "noisy_data"),
+        (TestScenario::WithDebris, "with_debris"),
     ];
 
     for (scenario, name) in scenarios {
         println!("Generating plot for: {}", name);
         
-        // Create synthetic FCS file
-        let fcs = create_synthetic_fcs(5000, scenario)?;
+        // Create synthetic FCS file with higher event count for better visualization
+        let fcs = create_synthetic_fcs(20000, scenario)?;
         
         // Extract FSC-A and SSC-A data
         let fsc_a = fcs.get_parameter_events_slice("FSC-A")?;
