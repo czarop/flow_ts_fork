@@ -2,6 +2,20 @@
 
 ## ✅ Completed Work
 
+### Synthetic Data Generation Improvements ✅
+- **Status:** Complete
+- **Description:** Improved synthetic FCS file generation with realistic Gaussian distributions
+- **Changes:**
+  - Migrated from uniform random blocks to `rand_distr::Normal` distributions
+  - Added proper correlations between FSC-A/FSC-H and SSC-A/SSC-H
+  - Increased event density (20k events for visualization)
+  - Added `WithDebris` scenario: 15% debris population near origin (low FSC/SSC)
+  - All scenarios now use Poisson/Gaussian-like distributions for realism
+- **Files Modified:**
+  - `gates/tests/test_helpers.rs` - All generation functions updated
+  - `gates/examples/visualize_synthetic_data.rs` - Added WithDebris scenario
+  - `gates/Cargo.toml` - Added `rand_distr` dependency
+
 ### Plan 1: Automated Scatter and Doublet Gating (90% Complete)
 
 #### ✅ flow-utils Crate
@@ -158,10 +172,10 @@ Add right-side biasing for positive peaks and left-side biasing for negative pea
 - Add `--peak-bias-negative` flag for negative peak biasing
 
 **Acceptance Criteria:**
-- [ ] Right-side biasing for positive peaks implemented
-- [ ] Left-side biasing for negative peaks implemented
-- [ ] Configurable bias percentage
-- [ ] Validation that bias improves matrix accuracy
+- [x] Right-side biasing for positive peaks implemented
+- [x] Left-side biasing for negative peaks implemented
+- [x] Configurable bias percentage (`--peak-bias`, `--peak-bias-negative`)
+- [ ] Validation that bias improves matrix accuracy (pending testing)
 
 ---
 
@@ -190,15 +204,15 @@ Extract negative population from single-stain controls (events below threshold, 
 - Add `--negative-threshold` for threshold-based extraction
 
 **Acceptance Criteria:**
-- [ ] Negative events extracted from single-stain controls
-- [ ] Autofluorescence calculated from negative events
-- [ ] Validation that sufficient negative events exist
-- [ ] Reporting of negative event counts
+- [x] Negative events extracted from single-stain controls
+- [x] Autofluorescence calculated from negative events
+- [x] Validation that sufficient negative events exist (`--min-negative-events`)
+- [x] Reporting of negative event counts (info logging)
 
 ---
 
 #### Task 2.4: Implement Hybrid Autofluorescence
-**Status:** Pending  
+**Status:** ✅ Partial (Core implemented, needs testing)  
 **Priority:** 2  
 **Estimated Effort:** Medium
 
@@ -222,10 +236,10 @@ Combine unstained control autofluorescence with negative event autofluorescence 
 - Add `--af-weight` for hybrid mode (default: 0.7)
 
 **Acceptance Criteria:**
-- [ ] Hybrid autofluorescence calculation implemented
-- [ ] Configurable weighting
-- [ ] Fallback logic for insufficient data
-- [ ] Validation that hybrid improves accuracy
+- [x] Hybrid autofluorescence calculation implemented
+- [x] Configurable weighting (`--af-weight`, default: 0.7)
+- [x] Fallback logic for insufficient data (falls back to universal AF)
+- [ ] Validation that hybrid improves accuracy (pending testing)
 
 ---
 
