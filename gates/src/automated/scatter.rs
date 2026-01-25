@@ -276,11 +276,199 @@ fn create_density_contour_gate(
 fn create_clustering_gate(
     data: &Array2<f64>,
     config: &ScatterGateConfig,
-    _algorithm: ClusterAlgorithm,
+    algorithm: ClusterAlgorithm,
 ) -> GateResult<(Option<Gate>, Vec<bool>, String)> {
-    // TODO: Implement clustering-based gating once linfa API is fixed
-    // For now, fall back to ellipse fit
-    create_ellipse_fit_gate(data, config)
+    use flow_utils::clustering::{KMeans, KMeansConfig, Gmm, GmmConfig};
+    
+    match algorithm {
+        ClusterAlgorithm::KMeans => {
+            // Use K-means to identify main population
+            let kmeans_config = KMeansConfig {
+                n_clusters: 2, // Main population + debris/noise
+                max_iterations: 100,
+                tolerance: 1e-4,
+                seed: None,
+            };
+            
+            let result = KMeans::fit(data, &kmeans_config)
+                .map_err(|e| GateError::Other {
+                    message: format!("K-means clustering failed: {:?}", e),
+                    source: None,
+                })?;
+            
+            // Find largest cluster (main population)
+            let mut cluster_counts = vec![0; result.centroids.nrows()];
+            for &assignment in &result.assignments {
+                cluster_counts[assignment] += 1;
+            }
+            
+            let main_cluster = cluster_counts
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.cmp(b))
+                .map(|(idx, _)| idx)
+                .unwrap_or(0);
+            
+            // Create mask for main cluster
+            let mask: Vec<bool> = result
+                .assignments
+                .iter()
+                .map(|&cluster| cluster == main_cluster)
+                .collect();
+            
+            // Create ellipse gate around main cluster
+            let mut sum_x = 0.0;
+            let mut sum_y = 0.0;
+            let mut count = 0;
+            for (i, &in_cluster) in mask.iter().enumerate() {
+                if in_cluster {
+                    sum_x += data[[i, 0]];
+                    sum_y += data[[i, 1]];
+                    count += 1;
+                }
+            }
+            
+            if count == 0 {
+                return create_ellipse_fit_gate(data, config);
+            }
+            
+            let center_x = sum_x / count as f64;
+            let center_y = sum_y / count as f64;
+            
+            // Calculate spread
+            let mut sum_dist_x = 0.0;
+            let mut sum_dist_y = 0.0;
+            for (i, &in_cluster) in mask.iter().enumerate() {
+                if in_cluster {
+                    sum_dist_x += (data[[i, 0]] - center_x).abs();
+                    sum_dist_y += (data[[i, 1]] - center_y).abs();
+                }
+            }
+            
+            let radius_x = sum_dist_x / count as f64 * 2.0;
+            let radius_y = sum_dist_y / count as f64 * 2.0;
+            
+            // Create ellipse gate
+            let center = (center_x as f32, center_y as f32);
+            let right = ((center_x + radius_x) as f32, center_y as f32);
+            let top = (center_x as f32, (center_y + radius_y) as f32);
+            let left = ((center_x - radius_x) as f32, center_y as f32);
+            let bottom = (center_x as f32, (center_y - radius_y) as f32);
+            let coords = vec![center, right, top, left, bottom];
+            
+            let geometry = create_ellipse_geometry(
+                coords,
+                &config.fsc_channel,
+                &config.ssc_channel,
+            )?;
+            
+            let gate = Gate::new(
+                "scatter-gate",
+                "Automated Scatter Gate (K-means)",
+                geometry,
+                Arc::from(config.fsc_channel.as_str()),
+                Arc::from(config.ssc_channel.as_str()),
+            );
+            
+            Ok((Some(gate), mask, "Clustering(KMeans)".to_string()))
+        }
+        ClusterAlgorithm::Gmm => {
+            // Use GMM to identify main population
+            let gmm_config = GmmConfig {
+                n_components: 2,
+                max_iterations: 100,
+                tolerance: 1e-3,
+                seed: None,
+            };
+            
+            let result = Gmm::fit(data, &gmm_config)
+                .map_err(|e| GateError::Other {
+                    message: format!("GMM clustering failed: {:?}", e),
+                    source: None,
+                })?;
+            
+            // Find largest component (main population)
+            let mut component_counts = vec![0; result.means.nrows()];
+            for &assignment in &result.assignments {
+                component_counts[assignment] += 1;
+            }
+            
+            let main_component = component_counts
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.cmp(b))
+                .map(|(idx, _)| idx)
+                .unwrap_or(0);
+            
+            // Create mask for main component
+            let mask: Vec<bool> = result
+                .assignments
+                .iter()
+                .map(|&component| component == main_component)
+                .collect();
+            
+            // Create ellipse gate around main component (similar to K-means)
+            let mut sum_x = 0.0;
+            let mut sum_y = 0.0;
+            let mut count = 0;
+            for (i, &in_component) in mask.iter().enumerate() {
+                if in_component {
+                    sum_x += data[[i, 0]];
+                    sum_y += data[[i, 1]];
+                    count += 1;
+                }
+            }
+            
+            if count == 0 {
+                return create_ellipse_fit_gate(data, config);
+            }
+            
+            let center_x = sum_x / count as f64;
+            let center_y = sum_y / count as f64;
+            
+            let mut sum_dist_x = 0.0;
+            let mut sum_dist_y = 0.0;
+            for (i, &in_component) in mask.iter().enumerate() {
+                if in_component {
+                    sum_dist_x += (data[[i, 0]] - center_x).abs();
+                    sum_dist_y += (data[[i, 1]] - center_y).abs();
+                }
+            }
+            
+            let radius_x = sum_dist_x / count as f64 * 2.0;
+            let radius_y = sum_dist_y / count as f64 * 2.0;
+            
+            let center = (center_x as f32, center_y as f32);
+            let right = ((center_x + radius_x) as f32, center_y as f32);
+            let top = (center_x as f32, (center_y + radius_y) as f32);
+            let left = ((center_x - radius_x) as f32, center_y as f32);
+            let bottom = (center_x as f32, (center_y - radius_y) as f32);
+            let coords = vec![center, right, top, left, bottom];
+            
+            let geometry = create_ellipse_geometry(
+                coords,
+                &config.fsc_channel,
+                &config.ssc_channel,
+            )?;
+            
+            let gate = Gate::new(
+                "scatter-gate",
+                "Automated Scatter Gate (GMM)",
+                geometry,
+                Arc::from(config.fsc_channel.as_str()),
+                Arc::from(config.ssc_channel.as_str()),
+            );
+            
+            Ok((Some(gate), mask, "Clustering(GMM)".to_string()))
+        }
+        ClusterAlgorithm::Dbscan => {
+            // DBSCAN is temporarily disabled
+            Err(GateError::Other {
+                message: "DBSCAN clustering is temporarily unavailable. Please use K-means or GMM.".to_string(),
+                source: None,
+            })
+        }
+    }
 }
 
 /// Create gate using ellipse fitting
