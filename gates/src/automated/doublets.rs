@@ -95,13 +95,13 @@ pub fn detect_doublets(
         .get_parameter_events_slice(area_channel)
         .map_err(|e| GateError::Other {
             message: format!("Failed to get area channel {}: {}", area_channel, e),
-            source: Some(Box::new(e)),
+            source: None, // anyhow::Error doesn't implement StdError, use message only
         })?;
     let height_data_f32 = fcs
         .get_parameter_events_slice(height_channel)
         .map_err(|e| GateError::Other {
             message: format!("Failed to get height channel {}: {}", height_channel, e),
-            source: Some(Box::new(e)),
+            source: None, // anyhow::Error doesn't implement StdError, use message only
         })?;
     
     // Convert to f64 for processing

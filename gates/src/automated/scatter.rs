@@ -84,13 +84,13 @@ pub fn create_scatter_gate(
         .get_parameter_events_slice(&config.fsc_channel)
         .map_err(|e| GateError::Other {
             message: format!("Failed to get FSC channel {}: {}", config.fsc_channel, e),
-            source: Some(Box::new(e)),
+            source: None, // anyhow::Error doesn't implement StdError, use message only
         })?;
     let ssc_data_f32 = fcs
         .get_parameter_events_slice(&config.ssc_channel)
         .map_err(|e| GateError::Other {
             message: format!("Failed to get SSC channel {}: {}", config.ssc_channel, e),
-            source: Some(Box::new(e)),
+            source: None, // anyhow::Error doesn't implement StdError, use message only
         })?;
     
     // Convert to f64 for processing
@@ -139,25 +139,72 @@ pub fn create_scatter_gate(
     };
 
     // Calculate statistics using GateStatistics
-    // Note: GateStatistics::calculate requires a gate, so we'll create a temporary one if needed
+    // Note: GateStatistics::calculate requires a gate
     let statistics = if let Some(ref gate) = gate {
         GateStatistics::calculate(fcs, gate)
-            .unwrap_or_else(|_| GateStatistics::empty(gate))
+            .unwrap_or_else(|_| {
+                // Create empty statistics manually if calculation fails
+                GateStatistics {
+                    event_count: 0,
+                    percentage: 0.0,
+                    centroid: (0.0, 0.0),
+                    x_stats: crate::statistics::ParameterStatistics {
+                        parameter: config.fsc_channel.clone(),
+                        mean: 0.0,
+                        geometric_mean: 0.0,
+                        median: 0.0,
+                        std_dev: 0.0,
+                        min: 0.0,
+                        max: 0.0,
+                        q1: 0.0,
+                        q3: 0.0,
+                        cv: 0.0,
+                    },
+                    y_stats: crate::statistics::ParameterStatistics {
+                        parameter: config.ssc_channel.clone(),
+                        mean: 0.0,
+                        geometric_mean: 0.0,
+                        median: 0.0,
+                        std_dev: 0.0,
+                        min: 0.0,
+                        max: 0.0,
+                        q1: 0.0,
+                        q3: 0.0,
+                        cv: 0.0,
+                    },
+                }
+            })
     } else {
-        // Create a dummy gate for empty statistics
-        let dummy_geometry = create_ellipse_geometry(
-            0.0, 0.0, 1.0, 1.0,
-            &config.fsc_channel,
-            &config.ssc_channel,
-        )?;
-        let dummy_gate = Gate::new(
-            "dummy",
-            "Dummy",
-            dummy_geometry,
-            Arc::from(config.fsc_channel.as_str()),
-            Arc::from(config.ssc_channel.as_str()),
-        );
-        GateStatistics::empty(&dummy_gate)
+        // Create empty statistics if no gate
+        GateStatistics {
+            event_count: 0,
+            percentage: 0.0,
+            centroid: (0.0, 0.0),
+            x_stats: crate::statistics::ParameterStatistics {
+                parameter: config.fsc_channel.clone(),
+                mean: 0.0,
+                geometric_mean: 0.0,
+                median: 0.0,
+                std_dev: 0.0,
+                min: 0.0,
+                max: 0.0,
+                q1: 0.0,
+                q3: 0.0,
+                cv: 0.0,
+            },
+            y_stats: crate::statistics::ParameterStatistics {
+                parameter: config.ssc_channel.clone(),
+                mean: 0.0,
+                geometric_mean: 0.0,
+                median: 0.0,
+                std_dev: 0.0,
+                min: 0.0,
+                max: 0.0,
+                q1: 0.0,
+                q3: 0.0,
+                cv: 0.0,
+            },
+        }
     };
 
     Ok(ScatterGateResult {
@@ -220,11 +267,17 @@ fn create_density_contour_gate(
     let radius_y = if count > 0 { sum_dist_y / count as f64 * 2.0 } else { 1000.0 };
     
     // Create ellipse gate
+    // create_ellipse_geometry expects Vec<(f32, f32)> coordinates
+    // Create coordinates: center, right, top, left, bottom
+    let center = (center_x as f32, center_y as f32);
+    let right = ((center_x + radius_x) as f32, center_y as f32);
+    let top = (center_x as f32, (center_y + radius_y) as f32);
+    let left = ((center_x - radius_x) as f32, center_y as f32);
+    let bottom = (center_x as f32, (center_y - radius_y) as f32);
+    let coords = vec![center, right, top, left, bottom];
+    
     let geometry = create_ellipse_geometry(
-        center_x,
-        center_y,
-        radius_x,
-        radius_y,
+        coords,
         &config.fsc_channel,
         &config.ssc_channel,
     )?;
@@ -278,11 +331,17 @@ fn create_ellipse_fit_gate(
     let radius_y = var_y.sqrt() * 2.0;
     
     // Create ellipse gate
+    // create_ellipse_geometry expects Vec<(f32, f32)> coordinates
+    // Create coordinates: center, right, top, left, bottom
+    let center = (center_x as f32, center_y as f32);
+    let right = ((center_x + radius_x) as f32, center_y as f32);
+    let top = (center_x as f32, (center_y + radius_y) as f32);
+    let left = ((center_x - radius_x) as f32, center_y as f32);
+    let bottom = (center_x as f32, (center_y - radius_y) as f32);
+    let coords = vec![center, right, top, left, bottom];
+    
     let geometry = create_ellipse_geometry(
-        center_x,
-        center_y,
-        radius_x,
-        radius_y,
+        coords,
         &config.fsc_channel,
         &config.ssc_channel,
     )?;
