@@ -114,23 +114,23 @@ fn generate_single_population(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>,
     
     for _ in 0..n_events {
         // Generate correlated FSC-A and FSC-H (height slightly less than area)
-        let fsc_a_val = fsc_dist.sample(&mut rng).max(1000.0);
+        let fsc_a_val = (fsc_dist.sample(&mut rng) as f32).max(1000.0);
         fsc_a.push(fsc_a_val);
         
         // FSC-H is correlated with FSC-A but slightly lower with some noise
-        let fsc_h_val = fsc_a_val * 0.92 + Normal::new(0.0, fsc_a_val * 0.05).unwrap().sample(&mut rng);
+        let fsc_h_val = fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32);
         fsc_h.push(fsc_h_val.max(0.0));
         
         // FSC-W is typically 30-40% of FSC-A
-        let fsc_w_val = fsc_a_val * 0.35 + Normal::new(0.0, fsc_a_val * 0.03).unwrap().sample(&mut rng);
+        let fsc_w_val = fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32);
         fsc_w.push(fsc_w_val.max(0.0));
         
         // SSC-A is correlated but independent
-        let ssc_a_val = ssc_dist.sample(&mut rng).max(500.0);
+        let ssc_a_val = (ssc_dist.sample(&mut rng) as f32).max(500.0);
         ssc_a.push(ssc_a_val);
         
         // SSC-H is correlated with SSC-A
-        let ssc_h_val = ssc_a_val * 0.94 + Normal::new(0.0, ssc_a_val * 0.05).unwrap().sample(&mut rng);
+        let ssc_h_val = ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32);
         ssc_h.push(ssc_h_val.max(0.0));
     }
     
@@ -161,26 +161,26 @@ fn generate_multi_population(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, 
     
     // Population 1: smaller cells
     for _ in 0..n_pop1 {
-        let fsc_a_val = pop1_fsc_dist.sample(&mut rng).max(1000.0);
+        let fsc_a_val = (pop1_fsc_dist.sample(&mut rng) as f32).max(1000.0);
         fsc_a.push(fsc_a_val);
-        fsc_h.push((fsc_a_val * 0.92 + Normal::new(0.0, fsc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
-        fsc_w.push((fsc_a_val * 0.35 + Normal::new(0.0, fsc_a_val * 0.03).unwrap().sample(&mut rng)).max(0.0));
+        fsc_h.push((fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+        fsc_w.push((fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32)).max(0.0));
         
-        let ssc_a_val = pop1_ssc_dist.sample(&mut rng).max(500.0);
+        let ssc_a_val = (pop1_ssc_dist.sample(&mut rng) as f32).max(500.0);
         ssc_a.push(ssc_a_val);
-        ssc_h.push((ssc_a_val * 0.94 + Normal::new(0.0, ssc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
+        ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
     }
     
     // Population 2: larger cells
     for _ in 0..n_pop2 {
-        let fsc_a_val = pop2_fsc_dist.sample(&mut rng).max(1000.0);
+        let fsc_a_val = (pop2_fsc_dist.sample(&mut rng) as f32).max(1000.0);
         fsc_a.push(fsc_a_val);
-        fsc_h.push((fsc_a_val * 0.92 + Normal::new(0.0, fsc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
-        fsc_w.push((fsc_a_val * 0.35 + Normal::new(0.0, fsc_a_val * 0.03).unwrap().sample(&mut rng)).max(0.0));
+        fsc_h.push((fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+        fsc_w.push((fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32)).max(0.0));
         
-        let ssc_a_val = pop2_ssc_dist.sample(&mut rng).max(500.0);
+        let ssc_a_val = (pop2_ssc_dist.sample(&mut rng) as f32).max(500.0);
         ssc_a.push(ssc_a_val);
-        ssc_h.push((ssc_a_val * 0.94 + Normal::new(0.0, ssc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
+        ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
     }
     
     (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
@@ -207,27 +207,27 @@ fn generate_with_doublets(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec
     
     // Singlets: normal distribution
     for _ in 0..n_singlets {
-        let fsc_a_val = singlet_fsc_dist.sample(&mut rng).max(1000.0);
+        let fsc_a_val = (singlet_fsc_dist.sample(&mut rng) as f32).max(1000.0);
         fsc_a.push(fsc_a_val);
-        fsc_h.push((fsc_a_val * 0.92 + Normal::new(0.0, fsc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
-        fsc_w.push((fsc_a_val * 0.35 + Normal::new(0.0, fsc_a_val * 0.03).unwrap().sample(&mut rng)).max(0.0));
+        fsc_h.push((fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+        fsc_w.push((fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32)).max(0.0));
         
-        let ssc_a_val = singlet_ssc_dist.sample(&mut rng).max(500.0);
+        let ssc_a_val = (singlet_ssc_dist.sample(&mut rng) as f32).max(500.0);
         ssc_a.push(ssc_a_val);
-        ssc_h.push((ssc_a_val * 0.94 + Normal::new(0.0, ssc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
+        ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
     }
     
     // Doublets: higher FSC-A, lower FSC-H/FSC-A ratio (wider)
     for _ in 0..n_doublets {
-        let fsc_a_val = singlet_fsc_dist.sample(&mut rng).max(1000.0) * 1.8;
+        let fsc_a_val = (singlet_fsc_dist.sample(&mut rng) as f32).max(1000.0) * 1.8;
         fsc_a.push(fsc_a_val);
         // Doublets have lower height/area ratio (wider cells)
-        fsc_h.push((fsc_a_val * 0.65 + Normal::new(0.0, fsc_a_val * 0.08).unwrap().sample(&mut rng)).max(0.0));
-        fsc_w.push((fsc_a_val * 0.42 + Normal::new(0.0, fsc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
+        fsc_h.push((fsc_a_val * 0.65 + (Normal::new(0.0, fsc_a_val as f64 * 0.08).unwrap().sample(&mut rng) as f32)).max(0.0));
+        fsc_w.push((fsc_a_val * 0.42 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
         
-        let ssc_a_val = singlet_ssc_dist.sample(&mut rng).max(500.0) * 1.5;
+        let ssc_a_val = (singlet_ssc_dist.sample(&mut rng) as f32).max(500.0) * 1.5;
         ssc_a.push(ssc_a_val);
-        ssc_h.push((ssc_a_val * 0.94 + Normal::new(0.0, ssc_a_val * 0.05).unwrap().sample(&mut rng)).max(0.0));
+        ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
     }
     
     (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
@@ -251,15 +251,15 @@ fn generate_noisy_data(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f3
     let mut ssc_h = Vec::with_capacity(n_events);
     
     for _ in 0..n_events {
-        let fsc_a_val = fsc_dist.sample(&mut rng).max(1000.0);
+        let fsc_a_val = (fsc_dist.sample(&mut rng) as f32).max(1000.0);
         fsc_a.push(fsc_a_val);
         // Higher noise in correlations
-        fsc_h.push((fsc_a_val * 0.88 + Normal::new(0.0, fsc_a_val * 0.12).unwrap().sample(&mut rng)).max(0.0));
-        fsc_w.push((fsc_a_val * 0.33 + Normal::new(0.0, fsc_a_val * 0.08).unwrap().sample(&mut rng)).max(0.0));
+        fsc_h.push((fsc_a_val * 0.88 + (Normal::new(0.0, fsc_a_val as f64 * 0.12).unwrap().sample(&mut rng) as f32)).max(0.0));
+        fsc_w.push((fsc_a_val * 0.33 + (Normal::new(0.0, fsc_a_val as f64 * 0.08).unwrap().sample(&mut rng) as f32)).max(0.0));
         
-        let ssc_a_val = ssc_dist.sample(&mut rng).max(500.0);
+        let ssc_a_val = (ssc_dist.sample(&mut rng) as f32).max(500.0);
         ssc_a.push(ssc_a_val);
-        ssc_h.push((ssc_a_val * 0.90 + Normal::new(0.0, ssc_a_val * 0.12).unwrap().sample(&mut rng)).max(0.0));
+        ssc_h.push((ssc_a_val * 0.90 + (Normal::new(0.0, ssc_a_val as f64 * 0.12).unwrap().sample(&mut rng) as f32)).max(0.0));
     }
     
     (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
