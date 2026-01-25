@@ -71,11 +71,12 @@ mod test_helpers {
     }
 
     fn generate_single_population(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>) {
-        use rand::Rng;
+        use rand_distr::{Distribution, Normal};
         let mut rng = rand::thread_rng();
-        let center_fsc: f32 = 50000.0;
-        let center_ssc: f32 = 30000.0;
-        let spread: f32 = 10000.0;
+        
+        // Use Gaussian distributions for realistic flow cytometry data
+        let fsc_dist = Normal::new(50000.0, 12000.0).unwrap();
+        let ssc_dist = Normal::new(30000.0, 9000.0).unwrap();
         
         let mut fsc_a = Vec::with_capacity(n_events);
         let mut fsc_h = Vec::with_capacity(n_events);
@@ -84,25 +85,40 @@ mod test_helpers {
         let mut ssc_h = Vec::with_capacity(n_events);
         
         for _ in 0..n_events {
-            let fsc_a_val = center_fsc + rng.gen_range(-spread..spread);
-            fsc_a.push(fsc_a_val.max(0.0));
-            fsc_h.push((fsc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
-            fsc_w.push((fsc_a_val * 0.3 + rng.gen_range(-spread * 0.05..spread * 0.05)).max(0.0));
-            let ssc_a_val = center_ssc + rng.gen_range(-spread * 0.8..spread * 0.8);
-            ssc_a.push(ssc_a_val.max(0.0));
-            ssc_h.push((ssc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
+            // Generate correlated FSC-A and FSC-H (height slightly less than area)
+            let fsc_a_val = (fsc_dist.sample(&mut rng) as f32).max(1000.0);
+            fsc_a.push(fsc_a_val);
+            
+            // FSC-H is correlated with FSC-A but slightly lower with some noise
+            let fsc_h_val = fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32);
+            fsc_h.push(fsc_h_val.max(0.0));
+            
+            // FSC-W is typically 30-40% of FSC-A
+            let fsc_w_val = fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32);
+            fsc_w.push(fsc_w_val.max(0.0));
+            
+            // SSC-A is correlated but independent
+            let ssc_a_val = (ssc_dist.sample(&mut rng) as f32).max(500.0);
+            ssc_a.push(ssc_a_val);
+            
+            // SSC-H is correlated with SSC-A
+            let ssc_h_val = ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32);
+            ssc_h.push(ssc_h_val.max(0.0));
         }
+        
         (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
     }
 
     fn generate_multi_population(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>) {
-        use rand::Rng;
+        use rand_distr::{Distribution, Normal};
         let mut rng = rand::thread_rng();
-        let center1_fsc: f32 = 30000.0;
-        let center1_ssc: f32 = 20000.0;
-        let center2_fsc: f32 = 70000.0;
-        let center2_ssc: f32 = 50000.0;
-        let spread: f32 = 8000.0;
+        
+        // Two distinct populations with Gaussian distributions
+        let pop1_fsc_dist = Normal::new(30000.0, 8000.0).unwrap();
+        let pop1_ssc_dist = Normal::new(20000.0, 6000.0).unwrap();
+        let pop2_fsc_dist = Normal::new(70000.0, 10000.0).unwrap();
+        let pop2_ssc_dist = Normal::new(50000.0, 8000.0).unwrap();
+        
         let n_pop1 = n_events / 2;
         let n_pop2 = n_events - n_pop1;
         
@@ -112,33 +128,40 @@ mod test_helpers {
         let mut ssc_a = Vec::with_capacity(n_events);
         let mut ssc_h = Vec::with_capacity(n_events);
         
+        // Population 1: smaller cells
         for _ in 0..n_pop1 {
-            let fsc_a_val = center1_fsc + rng.gen_range(-spread..spread);
-            fsc_a.push(fsc_a_val.max(0.0));
-            fsc_h.push((fsc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
-            fsc_w.push((fsc_a_val * 0.3 + rng.gen_range(-spread * 0.05..spread * 0.05)).max(0.0));
-            let ssc_a_val = center1_ssc + rng.gen_range(-spread * 0.8..spread * 0.8);
-            ssc_a.push(ssc_a_val.max(0.0));
-            ssc_h.push((ssc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
+            let fsc_a_val = (pop1_fsc_dist.sample(&mut rng) as f32).max(1000.0);
+            fsc_a.push(fsc_a_val);
+            fsc_h.push((fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+            fsc_w.push((fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32)).max(0.0));
+            
+            let ssc_a_val = (pop1_ssc_dist.sample(&mut rng) as f32).max(500.0);
+            ssc_a.push(ssc_a_val);
+            ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
         }
+        
+        // Population 2: larger cells
         for _ in 0..n_pop2 {
-            let fsc_a_val = center2_fsc + rng.gen_range(-spread..spread);
-            fsc_a.push(fsc_a_val.max(0.0));
-            fsc_h.push((fsc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
-            fsc_w.push((fsc_a_val * 0.3 + rng.gen_range(-spread * 0.05..spread * 0.05)).max(0.0));
-            let ssc_a_val = center2_ssc + rng.gen_range(-spread * 0.8..spread * 0.8);
-            ssc_a.push(ssc_a_val.max(0.0));
-            ssc_h.push((ssc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
+            let fsc_a_val = (pop2_fsc_dist.sample(&mut rng) as f32).max(1000.0);
+            fsc_a.push(fsc_a_val);
+            fsc_h.push((fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+            fsc_w.push((fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32)).max(0.0));
+            
+            let ssc_a_val = (pop2_ssc_dist.sample(&mut rng) as f32).max(500.0);
+            ssc_a.push(ssc_a_val);
+            ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
         }
+        
         (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
     }
 
     fn generate_with_doublets(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>) {
-        use rand::Rng;
+        use rand_distr::{Distribution, Normal};
         let mut rng = rand::thread_rng();
-        let center_fsc: f32 = 50000.0;
-        let center_ssc: f32 = 30000.0;
-        let spread: f32 = 10000.0;
+        
+        let singlet_fsc_dist = Normal::new(50000.0, 12000.0).unwrap();
+        let singlet_ssc_dist = Normal::new(30000.0, 9000.0).unwrap();
+        
         let n_doublets = n_events / 10;
         let n_singlets = n_events - n_doublets;
         
@@ -148,33 +171,41 @@ mod test_helpers {
         let mut ssc_a = Vec::with_capacity(n_events);
         let mut ssc_h = Vec::with_capacity(n_events);
         
+        // Singlets: normal distribution
         for _ in 0..n_singlets {
-            let fsc_a_val = center_fsc + rng.gen_range(-spread..spread);
-            fsc_a.push(fsc_a_val.max(0.0));
-            fsc_h.push((fsc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
-            fsc_w.push((fsc_a_val * 0.3 + rng.gen_range(-spread * 0.05..spread * 0.05)).max(0.0));
-            let ssc_a_val = center_ssc + rng.gen_range(-spread * 0.8..spread * 0.8);
-            ssc_a.push(ssc_a_val.max(0.0));
-            ssc_h.push((ssc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
+            let fsc_a_val = (singlet_fsc_dist.sample(&mut rng) as f32).max(1000.0);
+            fsc_a.push(fsc_a_val);
+            fsc_h.push((fsc_a_val * 0.92 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+            fsc_w.push((fsc_a_val * 0.35 + (Normal::new(0.0, fsc_a_val as f64 * 0.03).unwrap().sample(&mut rng) as f32)).max(0.0));
+            
+            let ssc_a_val = (singlet_ssc_dist.sample(&mut rng) as f32).max(500.0);
+            ssc_a.push(ssc_a_val);
+            ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
         }
+        
+        // Doublets: higher FSC-A, lower FSC-H/FSC-A ratio (wider)
         for _ in 0..n_doublets {
-            let fsc_a_val = center_fsc * 1.8 + rng.gen_range(-spread..spread);
-            fsc_a.push(fsc_a_val.max(0.0));
-            fsc_h.push((fsc_a_val * 0.6 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
-            fsc_w.push((fsc_a_val * 0.4 + rng.gen_range(-spread * 0.05..spread * 0.05)).max(0.0));
-            let ssc_a_val = center_ssc * 1.5 + rng.gen_range(-spread * 0.8..spread * 0.8);
-            ssc_a.push(ssc_a_val.max(0.0));
-            ssc_h.push((ssc_a_val * 0.95 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
+            let fsc_a_val = (singlet_fsc_dist.sample(&mut rng) as f32).max(1000.0) * 1.8;
+            fsc_a.push(fsc_a_val);
+            // Doublets have lower height/area ratio (wider cells)
+            fsc_h.push((fsc_a_val * 0.65 + (Normal::new(0.0, fsc_a_val as f64 * 0.08).unwrap().sample(&mut rng) as f32)).max(0.0));
+            fsc_w.push((fsc_a_val * 0.42 + (Normal::new(0.0, fsc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
+            
+            let ssc_a_val = (singlet_ssc_dist.sample(&mut rng) as f32).max(500.0) * 1.5;
+            ssc_a.push(ssc_a_val);
+            ssc_h.push((ssc_a_val * 0.94 + (Normal::new(0.0, ssc_a_val as f64 * 0.05).unwrap().sample(&mut rng) as f32)).max(0.0));
         }
+        
         (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
     }
 
     fn generate_noisy_data(n_events: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>) {
-        use rand::Rng;
+        use rand_distr::{Distribution, Normal};
         let mut rng = rand::thread_rng();
-        let center_fsc: f32 = 50000.0;
-        let center_ssc: f32 = 30000.0;
-        let spread: f32 = 20000.0;
+        
+        // Wider distributions for noisy data
+        let fsc_dist = Normal::new(50000.0, 25000.0).unwrap();
+        let ssc_dist = Normal::new(30000.0, 20000.0).unwrap();
         
         let mut fsc_a = Vec::with_capacity(n_events);
         let mut fsc_h = Vec::with_capacity(n_events);
@@ -183,14 +214,17 @@ mod test_helpers {
         let mut ssc_h = Vec::with_capacity(n_events);
         
         for _ in 0..n_events {
-            let fsc_a_val = center_fsc + rng.gen_range(-spread..spread);
-            fsc_a.push(fsc_a_val.max(0.0));
-            fsc_h.push((fsc_a_val * 0.9 + rng.gen_range(-spread * 0.2..spread * 0.2)).max(0.0));
-            fsc_w.push((fsc_a_val * 0.3 + rng.gen_range(-spread * 0.1..spread * 0.1)).max(0.0));
-            let ssc_a_val = center_ssc + rng.gen_range(-spread * 0.8..spread * 0.8);
-            ssc_a.push(ssc_a_val.max(0.0));
-            ssc_h.push((ssc_a_val * 0.9 + rng.gen_range(-spread * 0.2..spread * 0.2)).max(0.0));
+            let fsc_a_val = (fsc_dist.sample(&mut rng) as f32).max(1000.0);
+            fsc_a.push(fsc_a_val);
+            // Higher noise in correlations
+            fsc_h.push((fsc_a_val * 0.88 + (Normal::new(0.0, fsc_a_val as f64 * 0.12).unwrap().sample(&mut rng) as f32)).max(0.0));
+            fsc_w.push((fsc_a_val * 0.33 + (Normal::new(0.0, fsc_a_val as f64 * 0.08).unwrap().sample(&mut rng) as f32)).max(0.0));
+            
+            let ssc_a_val = (ssc_dist.sample(&mut rng) as f32).max(500.0);
+            ssc_a.push(ssc_a_val);
+            ssc_h.push((ssc_a_val * 0.90 + (Normal::new(0.0, ssc_a_val as f64 * 0.12).unwrap().sample(&mut rng) as f32)).max(0.0));
         }
+        
         (fsc_a, fsc_h, fsc_w, ssc_a, ssc_h)
     }
 
@@ -204,7 +238,8 @@ mod test_helpers {
         let debris_fsc_dist = Normal::new(2000.0, 1500.0).unwrap();
         let debris_ssc_dist = Normal::new(1500.0, 1000.0).unwrap();
         
-        let n_debris = (n_events as f64 * 0.15) as usize;
+        // 10% debris, 90% main population (increased main population density)
+        let n_debris = (n_events as f64 * 0.10) as usize;
         let n_main = n_events - n_debris;
         
         let mut fsc_a = Vec::with_capacity(n_events);
@@ -256,7 +291,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Generating plot for: {}", name);
         
         // Create synthetic FCS file with higher event count for better visualization
-        let fcs = create_synthetic_fcs(20000, scenario)?;
+        // Use more events for with_debris to increase main population density
+        let n_events = if matches!(scenario, TestScenario::WithDebris) {
+            30000  // More events for with_debris main population
+        } else {
+            20000
+        };
+        let fcs = create_synthetic_fcs(n_events, scenario)?;
         
         // Extract FSC-A and SSC-A data
         let fsc_a = fcs.get_parameter_events_slice("FSC-A")?;
