@@ -31,7 +31,7 @@ polars={ workspace=true, default-features=false, features=[
 ] }
 # Matrix manipulation
 ndarray={ workspace=true, features=[
-    "blas",
+    # "blas",
     "matrixmultiply-threading",
     "rayon",
     "serde",

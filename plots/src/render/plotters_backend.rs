@@ -226,18 +226,31 @@ pub fn render_pixels(
     eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
     // Return the JPEG-encoded bytes directly
+    // let plot_map = crate::render::plotmap::PlotMapper {
+    //     view_width: width as f32,
+    //     view_height: height as f32,
+    //     plot_left: margin as f32,
+    //     plot_top: margin as f32,
+    //     plot_width: (width - 2 * margin) as f32,
+    //     plot_height: (height - 2 * margin) as f32,
+    //     x_data_min: x_spec.start,
+    //     x_data_max: x_spec.end,
+    //     y_data_min: y_spec.start,
+    //     y_data_max: y_spec.end,
+    // };
     let plot_map = crate::render::plotmap::PlotMapper {
-        view_width: width as f32,
-        view_height: height as f32,
-        plot_left: margin as f32,
-        plot_top: margin as f32,
-        plot_width: (width - 2 * margin) as f32,
-        plot_height: (height - 2 * margin) as f32,
-        x_data_min: x_spec.start,
-        x_data_max: x_spec.end,
-        y_data_min: y_spec.start,
-        y_data_max: y_spec.end,
-    };
+    view_width: width as f32,
+    view_height: height as f32,
+    // Use the actual pixel ranges Plotters reported
+    plot_left: plot_x_range.start as f32,
+    plot_top: plot_y_range.start as f32,
+    plot_width: (plot_x_range.end - plot_x_range.start) as f32,
+    plot_height: (plot_y_range.end - plot_y_range.start) as f32,
+    x_data_min: x_spec.start,
+    x_data_max: x_spec.end,
+    y_data_min: y_spec.start,
+    y_data_max: y_spec.end,
+};
 
     let plot_data = crate::render::plotmap::PlotData{
         plot_map,

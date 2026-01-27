@@ -20,6 +20,7 @@ impl PlotMapper {
 
         // 2. Check if the click was actually inside the plot (not on the margins)
         if rel_x < 0.0 || rel_x > 1.0 || rel_y < 0.0 || rel_y > 1.0 {
+            println!("Click outside plot area: rel_x = {}, rel_y = {}", rel_x, rel_y);
             return None;
         }
 

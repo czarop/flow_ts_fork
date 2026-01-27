@@ -32,7 +32,7 @@ polars = { version = "0.52.0", default-features = false, features = [
 ] }
 # Matrix manipulation
 ndarray = { version = "0.16.1", features = [
-    "blas",
+    # "blas",
     "matrixmultiply-threading",
     "rayon",
     "serde",

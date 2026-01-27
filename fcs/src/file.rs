@@ -262,268 +262,577 @@ impl Fcs {
     /// - The data cannot be read
     /// - The data cannot be converted to f32 values
     /// - The DataFrame cannot be constructed
+    // fn store_raw_data_as_dataframe(
+    //     header: &Header,
+    //     mmap: &Mmap,
+    //     metadata: &Metadata,
+    // ) -> Result<EventDataFrame> {
+    //     // Validate data offset bounds before accessing mmap
+    //     let mut data_start = *header.data_offset.start();
+    //     let mut data_end = *header.data_offset.end();
+    //     let mmap_len = mmap.len();
+
+    //     // Handle zero offsets by checking keywords
+    //     if data_start == 0 {
+    //         if let Ok(begin_data) = metadata.get_integer_keyword("$BEGINDATA") {
+    //             data_start = begin_data.get_usize().clone();
+    //         } else {
+    //             return Err(anyhow!(
+    //                 "$BEGINDATA keyword not found. Unable to determine data start."
+    //             ));
+    //         }
+    //     }
+
+    //     if data_end == 0 {
+    //         if let Ok(end_data) = metadata.get_integer_keyword("$ENDDATA") {
+    //             data_end = end_data.get_usize().clone();
+    //         } else {
+    //             return Err(anyhow!(
+    //                 "$ENDDATA keyword not found. Unable to determine data end."
+    //             ));
+    //         }
+    //     }
+
+    //     // Validate offsets
+    //     if data_start >= mmap_len {
+    //         return Err(anyhow!(
+    //             "Data start offset {} is beyond mmap length {}",
+    //             data_start,
+    //             mmap_len
+    //         ));
+    //     }
+
+    //     if data_end >= mmap_len {
+    //         return Err(anyhow!(
+    //             "Data end offset {} is beyond mmap length {}",
+    //             data_end,
+    //             mmap_len
+    //         ));
+    //     }
+
+    //     if data_start > data_end {
+    //         return Err(anyhow!(
+    //             "Data start offset {} is greater than end offset {}",
+    //             data_start,
+    //             data_end
+    //         ));
+    //     }
+
+    //     // Extract data bytes
+    //     let data_bytes = &mmap[data_start..=data_end];
+
+    //     let number_of_parameters = metadata
+    //         .get_number_of_parameters()
+    //         .expect("Should be able to retrieve the number of parameters");
+    //     let number_of_events = metadata
+    //         .get_number_of_events()
+    //         .expect("Should be able to retrieve the number of events");
+
+    //     // Calculate bytes per event by summing $PnB / 8 for each parameter
+    //     // This is more accurate than using $DATATYPE which only provides a default
+    //     let bytes_per_event = metadata
+    //         .calculate_bytes_per_event()
+    //         .expect("Should be able to calculate bytes per event");
+
+    //     let byte_order = metadata
+    //         .get_byte_order()
+    //         .expect("Should be able to get the byte order");
+
+    //     // Validate data size
+    //     let expected_total_bytes = number_of_events * bytes_per_event;
+    //     if data_bytes.len() < expected_total_bytes {
+    //         return Err(anyhow!(
+    //             "Insufficient data: expected {} bytes ({} events × {} bytes/event), but only have {} bytes",
+    //             expected_total_bytes,
+    //             number_of_events,
+    //             bytes_per_event,
+    //             data_bytes.len()
+    //         ));
+    //     }
+
+    //     // Collect bytes per parameter and data types for each parameter
+    //     let bytes_per_parameter: Vec<usize> = (1..=*number_of_parameters)
+    //         .map(|param_num| {
+    //             metadata
+    //                 .get_bytes_per_parameter(param_num)
+    //                 .expect("Should be able to get bytes per parameter")
+    //         })
+    //         .collect();
+
+    //     let data_types: Vec<FcsDataType> = (1..=*number_of_parameters)
+    //         .map(|param_num| {
+    //             metadata
+    //                 .get_data_type_for_channel(param_num)
+    //                 .expect("Should be able to get data type for channel")
+    //         })
+    //         .collect();
+
+    //     // Fast path: Check if all parameters are uniform (same bytes, same data type)
+    //     // This allows us to use bytemuck zero-copy optimization
+    //     let uniform_bytes = bytes_per_parameter.first().copied();
+    //     let uniform_data_type = data_types.first().copied();
+    //     let is_uniform = uniform_bytes.is_some()
+    //         && uniform_data_type.is_some()
+    //         && bytes_per_parameter
+    //             .iter()
+    //             .all(|&b| b == uniform_bytes.unwrap())
+    //         && data_types
+    //             .iter()
+    //             .all(|&dt| dt == uniform_data_type.unwrap());
+
+    //     let f32_values: Vec<f32> = if is_uniform {
+    //         // Fast path: All parameters have same size and type - use bytemuck for zero-copy
+    //         let bytes_per_param = uniform_bytes.unwrap();
+    //         let data_type = uniform_data_type.unwrap();
+
+    //         match (data_type, bytes_per_param) {
+    //             (FcsDataType::F, 4) => {
+    //                 // Fast path: float32 - use sequential (benchmarks show 2.57x faster than parallel)
+    //                 let needs_swap = match (byte_order, cfg!(target_endian = "little")) {
+    //                     (ByteOrder::LittleEndian, true) | (ByteOrder::BigEndian, false) => false,
+    //                     _ => true,
+    //                 };
+
+    //                 match bytemuck::try_cast_slice::<u8, f32>(data_bytes) {
+    //                     Ok(f32_slice) => {
+    //                         #[cfg(debug_assertions)]
+    //                         eprintln!(
+    //                             "✓ Fast path (bytemuck zero-copy, sequential): {} bytes, {} f32s",
+    //                             data_bytes.len(),
+    //                             f32_slice.len()
+    //                         );
+
+    //                         if needs_swap {
+    //                             // Sequential byte swap - faster than parallel for float32
+    //                             f32_slice
+    //                                 .iter()
+    //                                 .map(|&f| f32::from_bits(f.to_bits().swap_bytes()))
+    //                                 .collect()
+    //                         } else {
+    //                             f32_slice.to_vec()
+    //                         }
+    //                     }
+    //                     Err(_) => {
+    //                         #[cfg(debug_assertions)]
+    //                         eprintln!(
+    //                             "⚠ Fast path (bytemuck fallback, sequential): unaligned data ({} bytes)",
+    //                             data_bytes.len()
+    //                         );
+
+    //                         // Fallback: parse in chunks sequentially (faster than parallel for float32)
+    //                         data_bytes
+    //                             .chunks_exact(4)
+    //                             .map(|chunk| {
+    //                                 let mut bytes = [0u8; 4];
+    //                                 bytes.copy_from_slice(chunk);
+    //                                 let bits = u32::from_ne_bytes(bytes);
+    //                                 let bits = if needs_swap { bits.swap_bytes() } else { bits };
+    //                                 f32::from_bits(bits)
+    //                             })
+    //                             .collect()
+    //                     }
+    //                 }
+    //             }
+    //             _ => {
+    //                 // Uniform but not float32 - use optimized bulk parsing
+    //                 Self::parse_uniform_data_bulk(
+    //                     data_bytes,
+    //                     bytes_per_param,
+    //                     &data_type,
+    //                     byte_order,
+    //                     *number_of_events,
+    //                     *number_of_parameters,
+    //                 )?
+    //             }
+    //         }
+    //     } else {
+    //         // Slow path: Variable-width parameters - parse event-by-event
+    //         Self::parse_variable_width_data(
+    //             data_bytes,
+    //             &bytes_per_parameter,
+    //             &data_types,
+    //             byte_order,
+    //             *number_of_events,
+    //             *number_of_parameters,
+    //         )?
+    //     };
+
+    //     // Create Polars Series for each parameter (column)
+    //     // FCS data is stored row-wise (event1_param1, event1_param2, ..., event2_param1, ...)
+    //     // We need to extract columns using stride access
+    //     let mut columns: Vec<Column> = Vec::with_capacity(*number_of_parameters);
+
+    //     for param_idx in 0..*number_of_parameters {
+    //         // Extract this parameter's values across all events
+    //         // Use iterator with step_by for efficient stride access
+    //         let param_values: Vec<f32> = f32_values
+    //             .iter()
+    //             .skip(param_idx)
+    //             .step_by(*number_of_parameters)
+    //             .copied()
+    //             .collect();
+
+    //         // Verify we got the right number of events
+    //         assert_eq!(
+    //             param_values.len(),
+    //             *number_of_events,
+    //             "Parameter {} should have {} events, got {}",
+    //             param_idx + 1,
+    //             number_of_events,
+    //             param_values.len()
+    //         );
+
+    //         // Get parameter name from metadata for column name
+    //         let param_name = metadata
+    //             .get_parameter_channel_name(param_idx + 1)
+    //             .map(|s| s.to_string())
+    //             .unwrap_or_else(|_| format!("P{}", param_idx + 1));
+
+    //         // Create Series (Polars column) with name
+    //         let series = Column::new(param_name.as_str().into(), param_values);
+    //         columns.push(series);
+    //     }
+
+    //     // Create DataFrame from columns
+    //     let df = DataFrame::new(columns).map_err(|e| {
+    //         anyhow!(
+    //             "Failed to create DataFrame from {} columns: {}",
+    //             number_of_parameters,
+    //             e
+    //         )
+    //     })?;
+
+    //     // Verify DataFrame shape
+    //     assert_eq!(
+    //         df.height(),
+    //         *number_of_events,
+    //         "DataFrame height {} doesn't match expected events {}",
+    //         df.height(),
+    //         number_of_events
+    //     );
+    //     assert_eq!(
+    //         df.width(),
+    //         *number_of_parameters,
+    //         "DataFrame width {} doesn't match expected parameters {}",
+    //         df.width(),
+    //         number_of_parameters
+    //     );
+
+    //     #[cfg(debug_assertions)]
+    //     eprintln!(
+    //         "✓ Created DataFrame: {} events × {} parameters",
+    //         df.height(),
+    //         df.width()
+    //     );
+
+    //     Ok(Arc::new(df))
+        
+    // }
+    /// Reads raw data from FCS file and stores it as a Polars DataFrame
+/// Returns columnar data optimized for parameter-wise access patterns
+    // fn store_raw_data_as_dataframe(
+    //     header: &Header,
+    //     mmap: &Mmap,
+    //     metadata: &Metadata,
+    // ) -> Result<EventDataFrame> {
+    //     // Validate data offset bounds before accessing mmap
+    //     let mut data_start = *header.data_offset.start();
+    //     let mut data_end = *header.data_offset.end();
+    //     let mmap_len = mmap.len();
+
+    //     // Handle zero offsets by checking keywords
+    //     if data_start == 0 {
+    //         if let Ok(begin_data) = metadata.get_integer_keyword("$BEGINDATA") {
+    //             data_start = begin_data.get_usize().clone();
+    //         } else {
+    //             return Err(anyhow!(
+    //                 "$BEGINDATA keyword not found. Unable to determine data start."
+    //             ));
+    //         }
+    //     }
+
+    //     if data_end == 0 {
+    //         if let Ok(end_data) = metadata.get_integer_keyword("$ENDDATA") {
+    //             data_end = end_data.get_usize().clone();
+    //         } else {
+    //             return Err(anyhow!(
+    //                 "$ENDDATA keyword not found. Unable to determine data end."
+    //             ));
+    //         }
+    //     }
+
+    //     // Validate offsets
+    //     if data_start >= mmap_len {
+    //         return Err(anyhow!("Data start offset {} is beyond mmap length {}", data_start, mmap_len));
+    //     }
+    //     if data_end >= mmap_len {
+    //         return Err(anyhow!("Data end offset {} is beyond mmap length {}", data_end, mmap_len));
+    //     }
+    //     if data_start > data_end {
+    //         return Err(anyhow!("Data start offset {} is greater than end offset {}", data_start, data_end));
+    //     }
+
+    //     // Extract data bytes
+    //     let data_bytes = &mmap[data_start..=data_end];
+
+    //     let number_of_parameters = *metadata
+    //         .get_number_of_parameters()
+    //         .expect("Should be able to retrieve the number of parameters");
+    //     let number_of_events = *metadata
+    //         .get_number_of_events()
+    //         .expect("Should be able to retrieve the number of events");
+
+    //     let bytes_per_event = metadata
+    //         .calculate_bytes_per_event()
+    //         .expect("Should be able to calculate bytes per event");
+
+    //     let byte_order = metadata
+    //         .get_byte_order()
+    //         .expect("Should be able to get the byte order");
+
+    //     // Validate data size
+    //     let expected_total_bytes = number_of_events * bytes_per_event;
+    //     if data_bytes.len() < expected_total_bytes {
+    //         return Err(anyhow!(
+    //             "Insufficient data: expected {} bytes ({} events × {} bytes/event), but only have {} bytes",
+    //             expected_total_bytes, number_of_events, bytes_per_event, data_bytes.len()
+    //         ));
+    //     }
+
+    //     // Collect bytes per parameter and data types
+    //     let bytes_per_parameter: Vec<usize> = (1..=number_of_parameters)
+    //         .map(|param_num| {
+    //             metadata.get_bytes_per_parameter(param_num).expect("Should be able to get bytes per parameter")
+    //         })
+    //         .collect();
+
+    //     let data_types: Vec<FcsDataType> = (1..=number_of_parameters)
+    //         .map(|param_num| {
+    //             metadata.get_data_type_for_channel(param_num).expect("Should be able to get data type for channel")
+    //         })
+    //         .collect();
+
+    //     // Fast path check
+    //     let uniform_bytes = bytes_per_parameter.first().copied();
+    //     let uniform_data_type = data_types.first().copied();
+    //     let is_uniform = uniform_bytes.is_some()
+    //         && uniform_data_type.is_some()
+    //         && bytes_per_parameter.iter().all(|&b| b == uniform_bytes.unwrap())
+    //         && data_types.iter().all(|&dt| dt == uniform_data_type.unwrap());
+
+    //     let mut columns: Vec<Column> = Vec::with_capacity(number_of_parameters);
+
+    //     // Optimized Branching
+    //     if is_uniform && matches!(uniform_data_type, Some(FcsDataType::F)) && uniform_bytes == Some(4) {
+    //         // --- IMPROVED FAST PATH (f32) ---
+    //         let needs_swap = match (byte_order, cfg!(target_endian = "little")) {
+    //             (ByteOrder::LittleEndian, true) | (ByteOrder::BigEndian, false) => false,
+    //             _ => true,
+    //         };
+
+    //         // Solve Windows Alignment: If the mmap slice is not 4-byte aligned, copy it.
+    //         // On Mac, this will usually remain a Borrowed slice (Zero-copy).
+    //         let aligned_storage = if (data_bytes.as_ptr() as usize) % 4 == 0 {
+    //             std::borrow::Cow::Borrowed(data_bytes)
+    //         } else {
+    //             #[cfg(debug_assertions)]
+    //             eprintln!("⚠ Re-aligning buffer for Windows compatibility (Pointer: {:p})", data_bytes.as_ptr());
+    //             std::borrow::Cow::Owned(data_bytes.to_vec())
+    //         };
+
+    //         let f32_slice = bytemuck::cast_slice::<u8, f32>(&aligned_storage);
+
+    //         #[cfg(debug_assertions)]
+    //         eprintln!("✓ Fast path (aligned): {} bytes, {} f32s", data_bytes.len(), f32_slice.len());
+
+    //         for param_idx in 0..number_of_parameters {
+    //             // Extract columnar data directly from the main slice to save a giant allocation
+    //             let param_values: Vec<f32> = f32_slice
+    //                 .iter()
+    //                 .skip(param_idx)
+    //                 .step_by(number_of_parameters)
+    //                 .map(|&bits_f32| {
+    //                     if needs_swap {
+    //                         f32::from_bits(bits_f32.to_bits().swap_bytes())
+    //                     } else {
+    //                         bits_f32
+    //                     }
+    //                 })
+    //                 .collect();
+
+    //             let param_name = metadata.get_parameter_channel_name(param_idx + 1)
+    //                 .map(|s| s.to_string())
+    //                 .unwrap_or_else(|_| format!("P{}", param_idx + 1));
+
+    //             columns.push(Column::new(param_name.as_str().into(), param_values));
+    //         }
+    //     } else {
+    //         // --- SLOW / VARIABLE / NON-F32 PATH ---
+    //         let f32_values: Vec<f32> = if is_uniform {
+    //             Self::parse_uniform_data_bulk(
+    //                 data_bytes,
+    //                 uniform_bytes.unwrap(),
+    //                 &uniform_data_type.unwrap(),
+    //                 byte_order,
+    //                 number_of_events,
+    //                 number_of_parameters,
+    //             )?
+    //         } else {
+    //             Self::parse_variable_width_data(
+    //                 data_bytes,
+    //                 &bytes_per_parameter,
+    //                 &data_types,
+    //                 byte_order,
+    //                 number_of_events,
+    //                 number_of_parameters,
+    //             )?
+    //         };
+
+    //         for param_idx in 0..number_of_parameters {
+    //             let param_values: Vec<f32> = f32_values
+    //                 .iter()
+    //                 .skip(param_idx)
+    //                 .step_by(number_of_parameters)
+    //                 .copied()
+    //                 .collect();
+
+    //             let param_name = metadata.get_parameter_channel_name(param_idx + 1)
+    //                 .map(|s| s.to_string())
+    //                 .unwrap_or_else(|_| format!("P{}", param_idx + 1));
+
+    //             columns.push(Column::new(param_name.as_str().into(), param_values));
+    //         }
+    //     }
+
+    //     // Create DataFrame from columns
+    //     let df = DataFrame::new(columns).map_err(|e| {
+    //         anyhow!("Failed to create DataFrame from {} columns: {}", number_of_parameters, e)
+    //     })?;
+
+    //     // Verify DataFrame shape
+    //     assert_eq!(df.height(), number_of_events);
+    //     assert_eq!(df.width(), number_of_parameters);
+
+    //     #[cfg(debug_assertions)]
+    //     eprintln!("✓ Created DataFrame: {} events × {} parameters", df.height(), df.width());
+
+    //     Ok(std::sync::Arc::new(df))
+    // }
     fn store_raw_data_as_dataframe(
         header: &Header,
         mmap: &Mmap,
         metadata: &Metadata,
     ) -> Result<EventDataFrame> {
-        // Validate data offset bounds before accessing mmap
+        // 1. Determine offsets
         let mut data_start = *header.data_offset.start();
         let mut data_end = *header.data_offset.end();
         let mmap_len = mmap.len();
 
-        // Handle zero offsets by checking keywords
         if data_start == 0 {
-            if let Ok(begin_data) = metadata.get_integer_keyword("$BEGINDATA") {
-                data_start = begin_data.get_usize().clone();
-            } else {
-                return Err(anyhow!(
-                    "$BEGINDATA keyword not found. Unable to determine data start."
-                ));
-            }
+            data_start = metadata.get_integer_keyword("$BEGINDATA")?.get_usize().clone();
         }
-
         if data_end == 0 {
-            if let Ok(end_data) = metadata.get_integer_keyword("$ENDDATA") {
-                data_end = end_data.get_usize().clone();
-            } else {
-                return Err(anyhow!(
-                    "$ENDDATA keyword not found. Unable to determine data end."
-                ));
-            }
+            data_end = metadata.get_integer_keyword("$ENDDATA")?.get_usize().clone();
         }
 
-        // Validate offsets
-        if data_start >= mmap_len {
-            return Err(anyhow!(
-                "Data start offset {} is beyond mmap length {}",
-                data_start,
-                mmap_len
-            ));
+        // 2. Validate offsets
+        if data_start >= mmap_len || data_end >= mmap_len || data_start > data_end {
+            return Err(anyhow!("Invalid data offsets: {} to {}", data_start, data_end));
         }
 
-        if data_end >= mmap_len {
-            return Err(anyhow!(
-                "Data end offset {} is beyond mmap length {}",
-                data_end,
-                mmap_len
-            ));
-        }
-
-        if data_start > data_end {
-            return Err(anyhow!(
-                "Data start offset {} is greater than end offset {}",
-                data_start,
-                data_end
-            ));
-        }
-
-        // Extract data bytes
         let data_bytes = &mmap[data_start..=data_end];
 
-        let number_of_parameters = metadata
-            .get_number_of_parameters()
-            .expect("Should be able to retrieve the number of parameters");
-        let number_of_events = metadata
-            .get_number_of_events()
-            .expect("Should be able to retrieve the number of events");
+        let number_of_parameters = *metadata.get_number_of_parameters().expect("Missing $PAR");
+        let number_of_events = *metadata.get_number_of_events().expect("Missing $TOT");
+        let bytes_per_event = metadata.calculate_bytes_per_event().expect("Invalid event size");
+        let byte_order = metadata.get_byte_order().expect("Missing byte order");
 
-        // Calculate bytes per event by summing $PnB / 8 for each parameter
-        // This is more accurate than using $DATATYPE which only provides a default
-        let bytes_per_event = metadata
-            .calculate_bytes_per_event()
-            .expect("Should be able to calculate bytes per event");
-
-        let byte_order = metadata
-            .get_byte_order()
-            .expect("Should be able to get the byte order");
-
-        // Validate data size
+        // 3. Validation
         let expected_total_bytes = number_of_events * bytes_per_event;
         if data_bytes.len() < expected_total_bytes {
-            return Err(anyhow!(
-                "Insufficient data: expected {} bytes ({} events × {} bytes/event), but only have {} bytes",
-                expected_total_bytes,
-                number_of_events,
-                bytes_per_event,
-                data_bytes.len()
-            ));
+            return Err(anyhow!("Insufficient data: expected {} bytes", expected_total_bytes));
         }
 
-        // Collect bytes per parameter and data types for each parameter
-        let bytes_per_parameter: Vec<usize> = (1..=*number_of_parameters)
-            .map(|param_num| {
-                metadata
-                    .get_bytes_per_parameter(param_num)
-                    .expect("Should be able to get bytes per parameter")
-            })
+        // 4. Uniformity Check
+        let bytes_per_parameter: Vec<usize> = (1..=number_of_parameters)
+            .map(|p| metadata.get_bytes_per_parameter(p).unwrap())
+            .collect();
+        let data_types: Vec<FcsDataType> = (1..=number_of_parameters)
+            .map(|p| metadata.get_data_type_for_channel(p).unwrap())
             .collect();
 
-        let data_types: Vec<FcsDataType> = (1..=*number_of_parameters)
-            .map(|param_num| {
-                metadata
-                    .get_data_type_for_channel(param_num)
-                    .expect("Should be able to get data type for channel")
-            })
-            .collect();
-
-        // Fast path: Check if all parameters are uniform (same bytes, same data type)
-        // This allows us to use bytemuck zero-copy optimization
         let uniform_bytes = bytes_per_parameter.first().copied();
         let uniform_data_type = data_types.first().copied();
         let is_uniform = uniform_bytes.is_some()
             && uniform_data_type.is_some()
-            && bytes_per_parameter
-                .iter()
-                .all(|&b| b == uniform_bytes.unwrap())
-            && data_types
-                .iter()
-                .all(|&dt| dt == uniform_data_type.unwrap());
+            && bytes_per_parameter.iter().all(|&b| b == uniform_bytes.unwrap())
+            && data_types.iter().all(|&dt| dt == uniform_data_type.unwrap());
 
-        let f32_values: Vec<f32> = if is_uniform {
-            // Fast path: All parameters have same size and type - use bytemuck for zero-copy
-            let bytes_per_param = uniform_bytes.unwrap();
-            let data_type = uniform_data_type.unwrap();
+        // 5. Data Extraction
+        let columns: Vec<Column> = if is_uniform && matches!(uniform_data_type, Some(FcsDataType::F)) && uniform_bytes == Some(4) {
+            // --- THE "UNALIGNED HACK" PATH ---
+            let needs_swap = match (byte_order, cfg!(target_endian = "little")) {
+                (ByteOrder::LittleEndian, true) | (ByteOrder::BigEndian, false) => false,
+                _ => true,
+            };
 
-            match (data_type, bytes_per_param) {
-                (FcsDataType::F, 4) => {
-                    // Fast path: float32 - use sequential (benchmarks show 2.57x faster than parallel)
-                    let needs_swap = match (byte_order, cfg!(target_endian = "little")) {
-                        (ByteOrder::LittleEndian, true) | (ByteOrder::BigEndian, false) => false,
-                        _ => true,
-                    };
+            #[cfg(debug_assertions)]
+            eprintln!("✓ Fast path (Unaligned Parallel): {} events", number_of_events);
 
-                    match bytemuck::try_cast_slice::<u8, f32>(data_bytes) {
-                        Ok(f32_slice) => {
-                            #[cfg(debug_assertions)]
-                            eprintln!(
-                                "✓ Fast path (bytemuck zero-copy, sequential): {} bytes, {} f32s",
-                                data_bytes.len(),
-                                f32_slice.len()
-                            );
-
-                            if needs_swap {
-                                // Sequential byte swap - faster than parallel for float32
-                                f32_slice
-                                    .iter()
-                                    .map(|&f| f32::from_bits(f.to_bits().swap_bytes()))
-                                    .collect()
-                            } else {
-                                f32_slice.to_vec()
-                            }
+            // Extract columns in parallel across CPU cores
+            (0..number_of_parameters)
+                .into_par_iter()
+                .map(|param_idx| {
+                    let mut param_values = Vec::with_capacity(number_of_events);
+                    
+                    for i in 0..number_of_events {
+                        // Calculate byte offset for this specific event/parameter
+                        let offset = (i * number_of_parameters + param_idx) * 4;
+                        let chunk = &data_bytes[offset..offset + 4];
+                        
+                        // Direct byte reconstruction - bypasses CPU alignment requirements
+                        let mut arr = [0u8; 4];
+                        arr.copy_from_slice(chunk);
+                        let mut bits = u32::from_ne_bytes(arr);
+                        
+                        if needs_swap {
+                            bits = bits.swap_bytes();
                         }
-                        Err(_) => {
-                            #[cfg(debug_assertions)]
-                            eprintln!(
-                                "⚠ Fast path (bytemuck fallback, sequential): unaligned data ({} bytes)",
-                                data_bytes.len()
-                            );
-
-                            // Fallback: parse in chunks sequentially (faster than parallel for float32)
-                            data_bytes
-                                .chunks_exact(4)
-                                .map(|chunk| {
-                                    let mut bytes = [0u8; 4];
-                                    bytes.copy_from_slice(chunk);
-                                    let bits = u32::from_ne_bytes(bytes);
-                                    let bits = if needs_swap { bits.swap_bytes() } else { bits };
-                                    f32::from_bits(bits)
-                                })
-                                .collect()
-                        }
+                        
+                        param_values.push(f32::from_bits(bits));
                     }
-                }
-                _ => {
-                    // Uniform but not float32 - use optimized bulk parsing
-                    Self::parse_uniform_data_bulk(
-                        data_bytes,
-                        bytes_per_param,
-                        &data_type,
-                        byte_order,
-                        *number_of_events,
-                        *number_of_parameters,
-                    )?
-                }
-            }
+
+                    let param_name = metadata.get_parameter_channel_name(param_idx + 1)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|_| format!("P{}", param_idx + 1));
+
+                    Column::new(param_name.into(), param_values)
+                })
+                .collect()
         } else {
-            // Slow path: Variable-width parameters - parse event-by-event
-            Self::parse_variable_width_data(
-                data_bytes,
-                &bytes_per_parameter,
-                &data_types,
-                byte_order,
-                *number_of_events,
-                *number_of_parameters,
-            )?
+            // --- SLOW / VARIABLE FALLBACK ---
+            let f32_values = if is_uniform {
+                Self::parse_uniform_data_bulk(data_bytes, uniform_bytes.unwrap(), &uniform_data_type.unwrap(), byte_order, number_of_events, number_of_parameters)?
+            } else {
+                Self::parse_variable_width_data(data_bytes, &bytes_per_parameter, &data_types, byte_order, number_of_events, number_of_parameters)?
+            };
+
+            (0..number_of_parameters)
+                .map(|param_idx| {
+                    let param_values: Vec<f32> = f32_values.iter().skip(param_idx).step_by(number_of_parameters).copied().collect();
+                    let param_name = metadata.get_parameter_channel_name(param_idx + 1)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|_| format!("P{}", param_idx + 1));
+                    Column::new(param_name.into(), param_values)
+                })
+                .collect()
         };
 
-        // Create Polars Series for each parameter (column)
-        // FCS data is stored row-wise (event1_param1, event1_param2, ..., event2_param1, ...)
-        // We need to extract columns using stride access
-        let mut columns: Vec<Column> = Vec::with_capacity(*number_of_parameters);
-
-        for param_idx in 0..*number_of_parameters {
-            // Extract this parameter's values across all events
-            // Use iterator with step_by for efficient stride access
-            let param_values: Vec<f32> = f32_values
-                .iter()
-                .skip(param_idx)
-                .step_by(*number_of_parameters)
-                .copied()
-                .collect();
-
-            // Verify we got the right number of events
-            assert_eq!(
-                param_values.len(),
-                *number_of_events,
-                "Parameter {} should have {} events, got {}",
-                param_idx + 1,
-                number_of_events,
-                param_values.len()
-            );
-
-            // Get parameter name from metadata for column name
-            let param_name = metadata
-                .get_parameter_channel_name(param_idx + 1)
-                .map(|s| s.to_string())
-                .unwrap_or_else(|_| format!("P{}", param_idx + 1));
-
-            // Create Series (Polars column) with name
-            let series = Column::new(param_name.as_str().into(), param_values);
-            columns.push(series);
-        }
-
-        // Create DataFrame from columns
-        let df = DataFrame::new(columns).map_err(|e| {
-            anyhow!(
-                "Failed to create DataFrame from {} columns: {}",
-                number_of_parameters,
-                e
-            )
-        })?;
-
-        // Verify DataFrame shape
-        assert_eq!(
-            df.height(),
-            *number_of_events,
-            "DataFrame height {} doesn't match expected events {}",
-            df.height(),
-            number_of_events
-        );
-        assert_eq!(
-            df.width(),
-            *number_of_parameters,
-            "DataFrame width {} doesn't match expected parameters {}",
-            df.width(),
-            number_of_parameters
-        );
+        // 6. Finalize DataFrame
+        let df = DataFrame::new(columns).map_err(|e| anyhow!("DataFrame error: {}", e))?;
 
         #[cfg(debug_assertions)]
-        eprintln!(
-            "✓ Created DataFrame: {} events × {} parameters",
-            df.height(),
-            df.width()
-        );
+        eprintln!("✓ Created DataFrame: {}x{}", df.height(), df.width());
 
         Ok(Arc::new(df))
     }
