@@ -38,10 +38,11 @@ pub fn create_polygon_geometry(
                     if !x.is_finite() { x } else { y },
                 ));
             }
-
+            let x_arc: Arc<str> = Arc::from(x_param);
+            let y_arc: Arc<str> = Arc::from(y_param);
             let mut node = GateNode::new(format!("polygon_node_{}", idx));
-            node.set_coordinate(Arc::from(x_param), x);
-            node.set_coordinate(Arc::from(y_param), y);
+            node.set_coordinate(x_arc, x);
+            node.set_coordinate(y_arc, y);
             Ok(node)
         })
         .collect::<Result<Vec<_>>>()?;
@@ -118,14 +119,15 @@ pub fn create_rectangle_geometry(
             min_x, min_y, max_x, max_y
         )));
     }
-
+    let x_arc: Arc<str> = Arc::from(x_param);
+    let y_arc: Arc<str> = Arc::from(y_param);
     let mut min_node = GateNode::new("rectangle_min");
-    min_node.set_coordinate(Arc::from(x_param), min_x);
-    min_node.set_coordinate(Arc::from(y_param), min_y);
+    min_node.set_coordinate(x_arc.clone(), min_x);
+    min_node.set_coordinate(y_arc.clone(), min_y);
 
     let mut max_node = GateNode::new("rectangle_max");
-    max_node.set_coordinate(Arc::from(x_param), max_x);
-    max_node.set_coordinate(Arc::from(y_param), max_y);
+    max_node.set_coordinate(x_arc, max_x);
+    max_node.set_coordinate(y_arc, max_y);
 
     Ok(GateGeometry::Rectangle {
         min: min_node,

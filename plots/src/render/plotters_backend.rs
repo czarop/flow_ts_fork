@@ -1,7 +1,8 @@
-use crate::PlotBytes;
+use plotters::prelude::*;
 use crate::create_axis_specs;
 use crate::density_calc::RawPixelData;
 use crate::options::DensityPlotOptions;
+use crate::plots::traits::PlotDrawable;
 use crate::render::{ProgressInfo, RenderConfig};
 use flow_fcs::{TransformType, Transformable};
 
@@ -43,6 +44,7 @@ pub fn render_pixels(
     pixels: Vec<RawPixelData>,
     options: &DensityPlotOptions,
     render_config: &mut RenderConfig,
+    gates: Option<&[&dyn PlotDrawable]>,
 ) -> Result<super::plotmap::PlotData> {
     use crate::options::PlotOptions;
 
@@ -107,6 +109,32 @@ pub fn render_pixels(
         mesh.draw()
             .map_err(|e| anyhow::anyhow!("failed to draw plot mesh: {e}"))?;
         eprintln!("    ├─ Mesh drawing: {:?}", mesh_start.elapsed());
+
+
+        //draw the gates if provided
+        if let Some(gate_list) = gates {
+            for gate in gate_list.iter() {
+                let points = gate.get_points();
+                
+                chart.draw_series(std::iter::once(Polygon::new(
+                    points.clone(),
+                    BLACK.mix(0.2).filled(),
+                )))?;
+
+                // Add the first point again to close the path for the outline
+                let mut outline = points.clone();
+                if let Some(first) = points.first() { outline.push(*first); }
+
+                chart.draw_series(std::iter::once(PathElement::new(
+                    outline,
+                    BLACK.stroke_width(2),
+                )))?;
+            }
+        }
+
+
+
+
 
         // Get the plotting area bounds (we'll use these after Plotters releases the buffer)
         let plotting_area = chart.plotting_area();
@@ -225,19 +253,6 @@ pub fn render_pixels(
         .map_err(|e| anyhow::anyhow!("failed to JPEG encode plot: {e}"))?;
     eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
-    // Return the JPEG-encoded bytes directly
-    // let plot_map = crate::render::plotmap::PlotMapper {
-    //     view_width: width as f32,
-    //     view_height: height as f32,
-    //     plot_left: margin as f32,
-    //     plot_top: margin as f32,
-    //     plot_width: (width - 2 * margin) as f32,
-    //     plot_height: (height - 2 * margin) as f32,
-    //     x_data_min: x_spec.start,
-    //     x_data_max: x_spec.end,
-    //     y_data_min: y_spec.start,
-    //     y_data_max: y_spec.end,
-    // };
     let plot_map = crate::render::plotmap::PlotMapper {
     view_width: width as f32,
     view_height: height as f32,

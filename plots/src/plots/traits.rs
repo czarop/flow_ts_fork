@@ -1,4 +1,3 @@
-use crate::PlotBytes;
 use crate::options::PlotOptions;
 use crate::render::RenderConfig;
 use anyhow::Result;
@@ -66,5 +65,11 @@ pub trait Plot {
         data: Self::Data,
         options: &Self::Options,
         render_config: &mut RenderConfig,
+        gates: Option<&[&dyn PlotDrawable]>,
     ) -> Result<crate::render::plotmap::PlotData>;
+}
+
+
+pub trait PlotDrawable {
+    fn get_points(&self) -> Vec<(f32, f32)>;
 }

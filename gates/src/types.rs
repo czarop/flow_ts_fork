@@ -1,4 +1,5 @@
 use crate::error::{GateError, Result};
+use flow_plots::plots::traits::PlotDrawable;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -177,6 +178,47 @@ pub enum GateGeometry {
 }
 
 impl GateGeometry {
+    pub fn to_render_points(&self, x_param: &str, y_param: &str) -> Vec<(f32, f32)> {
+        match self {
+            GateGeometry::Polygon { nodes, .. } => {
+                nodes.iter()
+                    .filter_map(|n| Some((n.get_coordinate(x_param)?, n.get_coordinate(y_param)?)))
+                    .collect()
+            }
+            GateGeometry::Rectangle { min, max } => {
+                if let (Some(x1), Some(y1), Some(x2), Some(y2)) = (
+                    min.get_coordinate(x_param), min.get_coordinate(y_param),
+                    max.get_coordinate(x_param), max.get_coordinate(y_param)
+                ) {
+                    // Create the 4 corners of the rectangle in sequence
+                    vec![(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+                } else {
+                    vec![]
+                }
+            }
+            GateGeometry::Ellipse { center, radius_x, radius_y, angle } => {
+                if let (Some(cx), Some(cy)) = (center.get_coordinate(x_param), center.get_coordinate(y_param)) {
+                    let points_count = 64; // Smoothness of the ellipse
+                    (0..points_count).map(|i| {
+                        let theta = 2.0 * std::f32::consts::PI * (i as f32 / points_count as f32);
+                        
+                        // 1. Calculate point on an unrotated ellipse
+                        let dx = radius_x * theta.cos();
+                        let dy = radius_y * theta.sin();
+                        
+                        // 2. Apply rotation (2D rotation matrix)
+                        let rx = dx * angle.cos() - dy * angle.sin();
+                        let ry = dx * angle.sin() + dy * angle.cos();
+                        
+                        (cx + rx, cy + ry)
+                    }).collect()
+                } else {
+                    vec![]
+                }
+            }
+            GateGeometry::Boolean { .. } => vec![], // Boolean gates usually don't have a single outline
+        }
+    }
     /// Calculate the bounding box for this geometry in the specified parameter space
     pub fn bounding_box(&self, x_param: &str, y_param: &str) -> Option<(f32, f32, f32, f32)> {
         match self {
@@ -1471,5 +1513,11 @@ mod arc_str_hashmap {
             .into_iter()
             .map(|(k, v)| (Arc::from(k.as_str()), v))
             .collect())
+    }
+}
+
+impl PlotDrawable for Gate {
+    fn get_points(&self) -> Vec<(f32, f32)> {
+        self.geometry.to_render_points(self.x_parameter_channel_name(), self.y_parameter_channel_name())
     }
 }
