@@ -28,7 +28,8 @@ fmt = "cargo fmt --workspace"
 polars = { version = "0.52.0", default-features = false, features = [
     "lazy",
     "ndarray",
-    "dtype-full"
+    "dtype-full",
+    "performant"
 ] }
 # Matrix manipulation
 ndarray = { version = "0.16.1", features = [
