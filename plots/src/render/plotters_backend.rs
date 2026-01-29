@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use plotters::prelude::*;
 use crate::create_axis_specs;
 use crate::density_calc::RawPixelData;
@@ -45,6 +47,7 @@ pub fn render_pixels(
     options: &DensityPlotOptions,
     render_config: &mut RenderConfig,
     gates: Option<&[&dyn PlotDrawable]>,
+    gate_colours : Option<&[u8]>,
 ) -> Result<super::plotmap::PlotData> {
     use crate::options::PlotOptions;
 
@@ -114,21 +117,44 @@ pub fn render_pixels(
         //draw the gates if provided
         if let Some(gate_list) = gates {
             for gate in gate_list.iter() {
-                let points = gate.get_points();
+
+                let colour = if gate.is_finalised(){
+                    BLACK
+                } else {
+                    RED
+                };
                 
-                chart.draw_series(std::iter::once(Polygon::new(
-                    points.clone(),
-                    BLACK.mix(0.2).filled(),
-                )))?;
+                let points = gate.get_points();
+                match points.len() {
+                    0 => continue,
+                    1 => {
+                        // Draw a single point/crosshair
+                        chart.draw_series(std::iter::once(Circle::new(points[0], 3, colour.filled())))?;
+                    }
+                    2 => {
+                        // Draw a single line
+                        chart.draw_series(std::iter::once(PathElement::new(points, colour.stroke_width(2))))?;
+                    }
+                    _ => {
+                        // Draw the full polygon (as we did before)
+                        chart.draw_series(std::iter::once(Polygon::new(
+                            points.clone(),
+                            colour.mix(0.2).filled(),
+                        )))?;
+                        // Add the first point again to close the path for the outline
+                        let mut outline = points.clone();
+                        if let Some(first) = points.first() { outline.push(*first); }
 
-                // Add the first point again to close the path for the outline
-                let mut outline = points.clone();
-                if let Some(first) = points.first() { outline.push(*first); }
+                        chart.draw_series(std::iter::once(PathElement::new(
+                            outline,
+                            colour.stroke_width(2),
+                        )))?;
+                            }
+                }
+                
+                
 
-                chart.draw_series(std::iter::once(PathElement::new(
-                    outline,
-                    BLACK.stroke_width(2),
-                )))?;
+                
             }
         }
 

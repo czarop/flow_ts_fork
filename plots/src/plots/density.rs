@@ -54,6 +54,7 @@ impl DensityPlot {
         requests: &[(Vec<(f32, f32)>, DensityPlotOptions)],
         render_config: &mut RenderConfig,
         gates: Option<&[Option<&[&dyn super::traits::PlotDrawable]>]>,
+        gate_colours: Option<&[Option<&[u8]>]>,
     ) -> Result<Vec<crate::render::plotmap::PlotData>> {
         use crate::density_calc::calculate_density_per_pixel_batch;
 
@@ -65,6 +66,15 @@ impl DensityPlot {
                     requests.len()
                 ));
             }
+            if let Some(gate_colors) = gate_colours {
+                if gate_colors.len() != requests.len() {
+                    return Err(anyhow::anyhow!(
+                        "Number of gate colors ({}) does not match number of requests ({})",
+                        gate_colors.len(),
+                        requests.len()
+                    ));
+                }
+            }
         }
 
         // Calculate density for all plots
@@ -74,7 +84,8 @@ impl DensityPlot {
         let mut results = Vec::with_capacity(requests.len());
         for (i, raw_pixels) in raw_pixels_batch.iter().enumerate() {
             let gate_set = gates.and_then(|g| g[i]);
-            let bytes = render_pixels(raw_pixels.clone(), &requests[i].1, render_config, gate_set)?;
+            let gate_colours = gate_colours.and_then(|gc| gc[i]);
+            let bytes = render_pixels(raw_pixels.clone(), &requests[i].1, render_config, gate_set, gate_colours)?;
             results.push(bytes);
         }
         Ok(results)
@@ -91,6 +102,7 @@ impl Plot for DensityPlot {
         options: &Self::Options,
         render_config: &mut RenderConfig,
         gates: Option<&[&dyn super::traits::PlotDrawable]>,
+        gate_colours: Option<&[u8]>,
     ) -> Result<crate::render::plotmap::PlotData> {
         let density_start = std::time::Instant::now();
 
@@ -112,7 +124,7 @@ impl Plot for DensityPlot {
         );
 
         let draw_start = std::time::Instant::now();
-        let result = render_pixels(raw_pixels, options, render_config, gates);
+        let result = render_pixels(raw_pixels, options, render_config, gates, gate_colours);
         eprintln!("  └─ Draw + encode: {:?}", draw_start.elapsed());
 
         result

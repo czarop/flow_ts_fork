@@ -66,10 +66,12 @@ pub trait Plot {
         options: &Self::Options,
         render_config: &mut RenderConfig,
         gates: Option<&[&dyn PlotDrawable]>,
+        gate_colours: Option<&[u8]>,
     ) -> Result<crate::render::plotmap::PlotData>;
 }
 
 
 pub trait PlotDrawable {
     fn get_points(&self) -> Vec<(f32, f32)>;
+    fn is_finalised(&self) -> bool;
 }

@@ -1520,4 +1520,7 @@ impl PlotDrawable for Gate {
     fn get_points(&self) -> Vec<(f32, f32)> {
         self.geometry.to_render_points(self.x_parameter_channel_name(), self.y_parameter_channel_name())
     }
+    fn is_finalised(&self) -> bool {
+        true
+    }
 }
