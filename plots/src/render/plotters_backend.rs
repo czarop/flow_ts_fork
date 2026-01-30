@@ -48,7 +48,7 @@ pub fn render_pixels(
     render_config: &mut RenderConfig,
     gates: Option<&[&dyn PlotDrawable]>,
     gate_colours : Option<&[u8]>,
-) -> Result<super::plotmap::PlotData> {
+) -> Result<super::plothelper::PlotData> {
     use crate::options::PlotOptions;
 
     let base = options.base();
@@ -279,22 +279,15 @@ pub fn render_pixels(
         .map_err(|e| anyhow::anyhow!("failed to JPEG encode plot: {e}"))?;
     eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
-    let plot_map = crate::render::plotmap::PlotMapper {
-    view_width: width as f32,
-    view_height: height as f32,
-    // Use the actual pixel ranges Plotters reported
-    plot_left: plot_x_range.start as f32,
-    plot_top: plot_y_range.start as f32,
-    plot_width: (plot_x_range.end - plot_x_range.start) as f32,
-    plot_height: (plot_y_range.end - plot_y_range.start) as f32,
+    let plot_map = crate::render::plothelper::PlotHelper {
     x_data_min: x_spec.start,
     x_data_max: x_spec.end,
     y_data_min: y_spec.start,
     y_data_max: y_spec.end,
 };
 
-    let plot_data = crate::render::plotmap::PlotData{
-        plot_map,
+    let plot_data = crate::render::plothelper::PlotData{
+        plot_helper: plot_map,
         plot_bytes: encoded_data.clone(),
 
     };

@@ -67,7 +67,7 @@ pub trait Plot {
         render_config: &mut RenderConfig,
         gates: Option<&[&dyn PlotDrawable]>,
         gate_colours: Option<&[u8]>,
-    ) -> Result<crate::render::plotmap::PlotData>;
+    ) -> Result<crate::render::plothelper::PlotData>;
 }
 
 

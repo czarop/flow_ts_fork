@@ -25,12 +25,16 @@ fmt = "cargo fmt --workspace"
 [workspace.dependencies]
 # Polars for columnar data storage
 # Note: Using default-features = false to reduce bloat, but keeping dtype-full as it's needed
-polars = { version = "0.52.0", default-features = false, features = [
-    "lazy",
-    "ndarray",
-    "dtype-full",
-    "performant"
-] }
+
+
+
+
+# polars = { version = "0.52.0", default-features = false, features = [
+#     "lazy",
+#     "ndarray",
+#     "dtype-full",
+#     "performant"
+# ] }
 # Matrix manipulation
 ndarray = { version = "0.16.1", features = [
     # "blas",
@@ -76,6 +80,7 @@ clap = { version = "4.5.54", features = ["derive", "cargo"] }
 # Logging/Tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
 
 [profile.dev.package.faer]
 opt-level = 3

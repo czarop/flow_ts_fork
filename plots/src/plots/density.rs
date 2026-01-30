@@ -55,7 +55,7 @@ impl DensityPlot {
         render_config: &mut RenderConfig,
         gates: Option<&[Option<&[&dyn super::traits::PlotDrawable]>]>,
         gate_colours: Option<&[Option<&[u8]>]>,
-    ) -> Result<Vec<crate::render::plotmap::PlotData>> {
+    ) -> Result<Vec<crate::render::plothelper::PlotData>> {
         use crate::density_calc::calculate_density_per_pixel_batch;
 
         if let Some(gates) = gates {
@@ -103,7 +103,7 @@ impl Plot for DensityPlot {
         render_config: &mut RenderConfig,
         gates: Option<&[&dyn super::traits::PlotDrawable]>,
         gate_colours: Option<&[u8]>,
-    ) -> Result<crate::render::plotmap::PlotData> {
+    ) -> Result<crate::render::plothelper::PlotData> {
         let density_start = std::time::Instant::now();
 
         // Calculate density per pixel

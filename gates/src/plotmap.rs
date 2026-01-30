@@ -1,0 +1,158 @@
+use flow_fcs::TransformType;
+use std::ops::RangeInclusive;
+// Import the library functions you discovered
+use crate::transforms::{
+    get_plotting_area, pixel_to_raw, pixel_to_raw_y, raw_to_pixel, raw_to_pixel_y,
+};
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlotMapper {
+    pub view_width: f32,
+    pub view_height: f32,
+    pub x_data_min: f32,
+    pub x_data_max: f32,
+    pub y_data_min: f32,
+    pub y_data_max: f32,
+}
+
+impl PlotMapper {
+    pub fn from_plot_helper(
+        helper: &flow_plots::render::plothelper::PlotHelper,
+        width: f32,
+        height: f32,
+    ) -> Self {
+        Self {
+            view_width: width,
+            view_height: height,
+            x_data_min: helper.x_data_min,
+            x_data_max: helper.x_data_max,
+            y_data_min: helper.y_data_min,
+            y_data_max: helper.y_data_max,
+        }
+    }
+    /// Helper to get the internal plotting ranges as the library expects them
+    fn get_ranges(
+        &self,
+    ) -> (
+        RangeInclusive<f32>,
+        RangeInclusive<f32>,
+        (std::ops::Range<u32>, std::ops::Range<u32>),
+    ) {
+        let x_data_range = self.x_data_min..=self.x_data_max;
+        let y_data_range = self.y_data_min..=self.y_data_max;
+        let pixel_ranges = get_plotting_area(self.view_width as u32, self.view_height as u32);
+        (x_data_range, y_data_range, pixel_ranges)
+    }
+
+    /// Convert a single pixel click to raw data space
+    pub fn pixel_to_data(
+        &self,
+        click_x: f32,
+        click_y: f32,
+        x_transform: Option<&TransformType>,
+        y_transform: Option<&TransformType>,
+    ) -> Option<(f32, f32)> {
+        let (x_data_range, y_data_range, (x_pix_range, y_pix_range)) = self.get_ranges();
+
+        let x_transform_local;
+        let y_transform_local;
+        if x_transform.is_none() {
+            x_transform_local = &TransformType::Linear;
+        } else {
+            x_transform_local = x_transform.unwrap()
+        }
+        if y_transform.is_none() {
+            y_transform_local = &TransformType::Linear;
+        } else {
+            y_transform_local = y_transform.unwrap()
+        }
+
+        // The library handles clamping and coordinate inversion internally
+        let data_x = pixel_to_raw(click_x, &x_data_range, &x_pix_range, x_transform_local);
+        let data_y = pixel_to_raw_y(click_y, &y_data_range, &y_pix_range, y_transform_local);
+
+        Some((data_x, data_y))
+    }
+
+    /// Convert a single raw data point to pixel coordinates
+    pub fn data_to_pixel(
+        &self,
+        data_x: f32,
+        data_y: f32,
+        x_transform: Option<&TransformType>,
+        y_transform: Option<&TransformType>,
+    ) -> (f32, f32) {
+        let x_transform_local;
+        let y_transform_local;
+        if x_transform.is_none() {
+            x_transform_local = &TransformType::Linear;
+        } else {
+            x_transform_local = x_transform.unwrap()
+        }
+        if y_transform.is_none() {
+            y_transform_local = &TransformType::Linear;
+        } else {
+            y_transform_local = y_transform.unwrap()
+        }
+
+        let (x_data_range, y_data_range, (x_pix_range, y_pix_range)) = self.get_ranges();
+
+        let pix_x = raw_to_pixel(data_x, &x_data_range, &x_pix_range, x_transform_local);
+        let pix_y = raw_to_pixel_y(data_y, &y_data_range, &y_pix_range, y_transform_local);
+
+        (pix_x, pix_y)
+    }
+
+    /// Transforms a batch of raw data coordinates into screen pixel coordinates.
+    pub fn map_data_to_pixels(
+        &self,
+        data_points: &[(f32, f32)],
+        x_transform: Option<&TransformType>,
+        y_transform: Option<&TransformType>,
+    ) -> Vec<(f32, f32)> {
+        let x_transform_local;
+        let y_transform_local;
+        if x_transform.is_none() {
+            x_transform_local = Some(&TransformType::Linear);
+        } else {
+            x_transform_local = x_transform;
+        }
+        if y_transform.is_none() {
+            y_transform_local = Some(&TransformType::Linear);
+        } else {
+            y_transform_local = y_transform;
+        }
+
+        data_points
+            .iter()
+            .map(|&(x, y)| self.data_to_pixel(x, y, x_transform_local, y_transform_local))
+            .collect()
+    }
+
+    /// Transforms a batch of screen pixels into raw data coordinates.
+    pub fn map_pixels_to_data(
+        &self,
+        pixel_points: &[(f32, f32)],
+        x_transform: Option<&TransformType>,
+        y_transform: Option<&TransformType>,
+    ) -> Vec<(f32, f32)> {
+        let x_transform_local;
+        let y_transform_local;
+        if x_transform.is_none() {
+            x_transform_local = Some(&TransformType::Linear);
+        } else {
+            x_transform_local = x_transform;
+        }
+        if y_transform.is_none() {
+            y_transform_local = Some(&TransformType::Linear);
+        } else {
+            y_transform_local = y_transform;
+        }
+        pixel_points
+            .iter()
+            .filter_map(|&(px, py)| {
+                self.pixel_to_data(px, py, x_transform_local, y_transform_local)
+            })
+            .collect()
+    }
+}

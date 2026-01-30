@@ -102,6 +102,7 @@ pub mod traits;
 pub mod traits_tests;
 pub mod transforms;
 pub mod types;
+pub mod plotmap;
 
 #[cfg(test)]
 mod error_tests;

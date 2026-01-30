@@ -22,7 +22,7 @@ cubecl = ["dep:cubecl", "dep:bytemuck", "gpu"]
 
 [dependencies]
 flow-fcs            ={ path="../fcs", version= "^0.2.0", optional=true }
-polars              ={ workspace=true, optional=true }
+
 anyhow.workspace    =true
 thiserror.workspace =true
 rand.workspace      =true
@@ -38,6 +38,11 @@ ndarray             ="0.17.2" # Required by csaps for array types (must match cs
 burn                ={ version = "0.20", optional = true, features = ["wgpu"] }
 cubecl              ={ version = "0.9", optional = true }
 bytemuck            ={ workspace = true, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+polars = {version = "0.52", optional = true, default-features = false, features = ["lazy", "performant", "timezones", "ndarray"]}
+[target.'cfg(not(windows))'.dependencies]
+polars = {version = "0.52", optional = true, default-features = false, features = ["lazy", "performant", "dtype-full", "ndarray"]}
 
 [dev-dependencies]
 approx   ="0.5"
