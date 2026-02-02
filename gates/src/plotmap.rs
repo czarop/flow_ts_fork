@@ -155,4 +155,19 @@ impl PlotMapper {
             })
             .collect()
     }
+
+    /// Calculates the data-space equivalent of a pixel distance (slop).
+    /// This ensures the hit-test area is consistent with the visual plot.
+    pub fn get_data_tolerance(&self, pixel_slop: f32) -> (f32, f32) {
+        // Calculate total data ranges (these should be in your transformed/arcsinh space)
+        let data_width = (self.x_data_max - self.x_data_min).abs();
+        let data_height = (self.y_data_max - self.y_data_min).abs();
+
+        // Ratio: (Pixel Distance / Total Pixels) * Total Data Range
+        // This calculates how much "data" exists per pixel, then multiplies by the slop.
+        let tx = (pixel_slop / self.view_width) * data_width;
+        let ty = (pixel_slop / self.view_height) * data_height;
+
+        (tx, ty)
+    }
 }
