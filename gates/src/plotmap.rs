@@ -35,7 +35,7 @@ impl PlotMapper {
             plot_width:helper.plot_width,
             plot_height: helper.plot_height,
             plot_left: helper.plot_left,
-            plot_top: helper.plot_height
+            plot_top: helper.plot_top
         }
     }
     /// Helper to get the internal plotting ranges as the library expects them
