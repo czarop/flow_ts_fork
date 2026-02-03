@@ -13,6 +13,10 @@ pub struct PlotMapper {
     pub x_data_max: f32,
     pub y_data_min: f32,
     pub y_data_max: f32,
+    pub plot_left: f32,
+    pub plot_width: f32,
+    pub plot_top: f32,
+    pub plot_height: f32, 
 }
 
 impl PlotMapper {
@@ -28,6 +32,10 @@ impl PlotMapper {
             x_data_max: helper.x_data_max,
             y_data_min: helper.y_data_min,
             y_data_max: helper.y_data_max,
+            plot_width:helper.plot_width,
+            plot_height: helper.plot_height,
+            plot_left: helper.plot_left,
+            plot_top: helper.plot_height
         }
     }
     /// Helper to get the internal plotting ranges as the library expects them
@@ -169,5 +177,19 @@ impl PlotMapper {
         let ty = (pixel_slop / self.view_height) * data_height;
 
         (tx, ty)
+    }
+
+    pub fn map_to_svg(&self, x: f32, y: f32) -> (f32, f32) {
+        // 1. Normalize data to 0.0 - 1.0 range
+        let rel_x = (x - self.x_data_min) / (self.x_data_max - self.x_data_min);
+        let rel_y = (y - self.y_data_min) / (self.y_data_max - self.y_data_min);
+
+        // 2. Map to the "Plot Area" and add the margin offsets
+        let svg_x = self.plot_left + (rel_x * self.plot_width);
+        
+        // 3. Flip Y: SVG 0 is top, Plotters Y-max is top
+        let svg_y = self.plot_top + ((1.0 - rel_y) * self.plot_height);
+
+        (svg_x, svg_y)
     }
 }

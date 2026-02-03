@@ -280,10 +280,14 @@ pub fn render_pixels(
     eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
     let plot_map = crate::render::plothelper::PlotHelper {
-    x_data_min: x_spec.start,
-    x_data_max: x_spec.end,
-    y_data_min: y_spec.start,
-    y_data_max: y_spec.end,
+        x_data_min: x_spec.start,
+        x_data_max: x_spec.end,
+        y_data_min: y_spec.start,
+        y_data_max: y_spec.end,
+        plot_left: plot_x_start,
+        plot_top: plot_y_start,
+        plot_height,
+        plot_width
 };
 
     let plot_data = crate::render::plothelper::PlotData{
