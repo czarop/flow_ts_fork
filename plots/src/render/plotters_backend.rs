@@ -46,8 +46,6 @@ pub fn render_pixels(
     pixels: Vec<RawPixelData>,
     options: &DensityPlotOptions,
     render_config: &mut RenderConfig,
-    gates: Option<&[&dyn PlotDrawable]>,
-    gate_colours : Option<&[u8]>,
 ) -> Result<super::plothelper::PlotData> {
     use crate::options::PlotOptions;
 
@@ -112,52 +110,6 @@ pub fn render_pixels(
         mesh.draw()
             .map_err(|e| anyhow::anyhow!("failed to draw plot mesh: {e}"))?;
         eprintln!("    ├─ Mesh drawing: {:?}", mesh_start.elapsed());
-
-
-        //draw the gates if provided
-        if let Some(gate_list) = gates {
-            for gate in gate_list.iter() {
-
-                let colour = if gate.is_finalised(){
-                    BLACK
-                } else {
-                    RED
-                };
-                
-                let points = gate.get_points();
-                match points.len() {
-                    0 => continue,
-                    1 => {
-                        // Draw a single point/crosshair
-                        chart.draw_series(std::iter::once(Circle::new(points[0], 3, colour.filled())))?;
-                    }
-                    2 => {
-                        // Draw a single line
-                        chart.draw_series(std::iter::once(PathElement::new(points, colour.stroke_width(2))))?;
-                    }
-                    _ => {
-                        // Draw the full polygon (as we did before)
-                        chart.draw_series(std::iter::once(Polygon::new(
-                            points.clone(),
-                            colour.mix(0.2).filled(),
-                        )))?;
-                        // Add the first point again to close the path for the outline
-                        let mut outline = points.clone();
-                        if let Some(first) = points.first() { outline.push(*first); }
-
-                        chart.draw_series(std::iter::once(PathElement::new(
-                            outline,
-                            colour.stroke_width(2),
-                        )))?;
-                            }
-                }
-                
-                
-
-                
-            }
-        }
-
 
 
 
