@@ -1,7 +1,7 @@
-use crate::PlotBytes;
 use crate::create_axis_specs;
 use crate::density_calc::RawPixelData;
 use crate::options::DensityPlotOptions;
+
 use crate::render::{ProgressInfo, RenderConfig};
 use flow_fcs::{TransformType, Transformable};
 
@@ -43,7 +43,7 @@ pub fn render_pixels(
     pixels: Vec<RawPixelData>,
     options: &DensityPlotOptions,
     render_config: &mut RenderConfig,
-) -> Result<super::plotmap::PlotData> {
+) -> Result<super::plothelper::PlotData> {
     use crate::options::PlotOptions;
 
     let base = options.base();
@@ -107,6 +107,9 @@ pub fn render_pixels(
         mesh.draw()
             .map_err(|e| anyhow::anyhow!("failed to draw plot mesh: {e}"))?;
         eprintln!("    ├─ Mesh drawing: {:?}", mesh_start.elapsed());
+
+
+
 
         // Get the plotting area bounds (we'll use these after Plotters releases the buffer)
         let plotting_area = chart.plotting_area();
@@ -225,23 +228,19 @@ pub fn render_pixels(
         .map_err(|e| anyhow::anyhow!("failed to JPEG encode plot: {e}"))?;
     eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
-    // Return the JPEG-encoded bytes directly
-    let plot_map = crate::render::plotmap::PlotMapper {
-        view_width: width as f32,
-        view_height: height as f32,
-        // Use the actual pixel ranges Plotters reported
-        plot_left: plot_x_range.start as f32,
-        plot_top: plot_y_range.start as f32,
-        plot_width: (plot_x_range.end - plot_x_range.start) as f32,
-        plot_height: (plot_y_range.end - plot_y_range.start) as f32,
+    let plot_map = crate::render::plothelper::PlotHelper {
         x_data_min: x_spec.start,
         x_data_max: x_spec.end,
         y_data_min: y_spec.start,
         y_data_max: y_spec.end,
-    };
+        plot_left: plot_x_start,
+        plot_top: plot_y_start,
+        plot_height,
+        plot_width
+};
 
-    let plot_data = crate::render::plotmap::PlotData{
-        plot_map,
+    let plot_data = crate::render::plothelper::PlotData{
+        plot_helper: plot_map,
         plot_bytes: encoded_data.clone(),
 
     };

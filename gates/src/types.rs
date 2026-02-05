@@ -19,7 +19,7 @@ use std::sync::Arc;
 ///
 /// assert_eq!(node.get_coordinate("FSC-A"), Some(1000.0));
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GateNode {
     /// Unique identifier for this node
     pub id: Arc<str>,
@@ -146,7 +146,7 @@ impl BooleanOperation {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum GateGeometry {
     Polygon {
@@ -177,6 +177,59 @@ pub enum GateGeometry {
 }
 
 impl GateGeometry {
+    pub fn to_render_points(&self, x_param: &str, y_param: &str) -> Vec<(f32, f32)> {
+        match self {
+            GateGeometry::Polygon { nodes, .. } => nodes
+                .iter()
+                .filter_map(|n| Some((n.get_coordinate(x_param)?, n.get_coordinate(y_param)?)))
+                .collect(),
+            GateGeometry::Rectangle { min, max } => {
+                if let (Some(x1), Some(y1), Some(x2), Some(y2)) = (
+                    min.get_coordinate(x_param),
+                    min.get_coordinate(y_param),
+                    max.get_coordinate(x_param),
+                    max.get_coordinate(y_param),
+                ) {
+                    // Create the 4 corners of the rectangle in sequence
+                    vec![(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+                } else {
+                    vec![]
+                }
+            }
+            GateGeometry::Ellipse {
+                center,
+                radius_x,
+                radius_y,
+                angle,
+            } => {
+                if let (Some(cx), Some(cy)) = (
+                    center.get_coordinate(x_param),
+                    center.get_coordinate(y_param),
+                ) {
+                    let points_count = 64; // Smoothness of the ellipse
+                    (0..points_count)
+                        .map(|i| {
+                            let theta =
+                                2.0 * std::f32::consts::PI * (i as f32 / points_count as f32);
+
+                            // 1. Calculate point on an unrotated ellipse
+                            let dx = radius_x * theta.cos();
+                            let dy = radius_y * theta.sin();
+
+                            // 2. Apply rotation (2D rotation matrix)
+                            let rx = dx * angle.cos() - dy * angle.sin();
+                            let ry = dx * angle.sin() + dy * angle.cos();
+
+                            (cx + rx, cy + ry)
+                        })
+                        .collect()
+                } else {
+                    vec![]
+                }
+            }
+            GateGeometry::Boolean { .. } => vec![], // Boolean gates usually don't have a single outline
+        }
+    }
     /// Calculate the bounding box for this geometry in the specified parameter space
     pub fn bounding_box(&self, x_param: &str, y_param: &str) -> Option<(f32, f32, f32, f32)> {
         match self {
@@ -853,7 +906,7 @@ pub struct LabelPosition {
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Gate {
     #[serde(with = "arc_str_serde")]
     pub id: Arc<str>,
@@ -1213,6 +1266,7 @@ pub struct GateBuilder {
     y_param: Option<Arc<str>>,
     mode: GateMode,
     label_position: Option<LabelPosition>,
+    finalised: bool,
 }
 
 impl GateBuilder {
@@ -1230,6 +1284,7 @@ impl GateBuilder {
             y_param: None,
             mode: GateMode::Global,
             label_position: None,
+            finalised: false,
         }
     }
 
@@ -1473,3 +1528,4 @@ mod arc_str_hashmap {
             .collect())
     }
 }
+

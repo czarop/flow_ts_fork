@@ -1,4 +1,3 @@
-use crate::PlotBytes;
 use crate::options::PlotOptions;
 use crate::render::RenderConfig;
 use anyhow::Result;
@@ -66,5 +65,7 @@ pub trait Plot {
         data: Self::Data,
         options: &Self::Options,
         render_config: &mut RenderConfig,
-    ) -> Result<crate::render::plotmap::PlotData>;
+    ) -> Result<crate::render::plothelper::PlotData>;
 }
+
+

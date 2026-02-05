@@ -21,17 +21,9 @@ publish    ="cargo smart-release flow-fcs --update-crates-index --execute"
 changelog  ="cargo changelog flow-fcs --write"
 
 [dependencies]
-# Polars for columnar data storage
-# Note: Using default-features = false to reduce bloat, but keeping dtype-full as it's needed
-polars={ workspace=true, default-features=false, features=[
-    "lazy",
-    "ndarray",
-    "dtype-full",
-    "new_streaming",
-] }
 # Matrix manipulation
 ndarray={ workspace=true, features=[
-    "blas",
+    # "blas",
     "matrixmultiply-threading",
     "rayon",
     "serde",
@@ -81,6 +73,12 @@ tracing={ workspace=true }
 # GPU acceleration was previously implemented and benchmarked but found to be slower
 # than CPU for typical flow cytometry workloads due to transfer overhead. See GPU_BENCHMARKING.md
 # for details.
+
+[target.'cfg(windows)'.dependencies]
+polars = {version = "0.52", default-features = false, features = ["lazy", "performant", "timezones", "ndarray"]}
+[target.'cfg(not(windows))'.dependencies]
+polars = {version = "0.52", default-features = false, features = ["lazy", "performant", "dtype-full", "ndarray"]}
+
 
 [dev-dependencies]
 approx   ="0.5.1"                                        # For approximate comparisons
