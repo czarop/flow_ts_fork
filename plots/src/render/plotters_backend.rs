@@ -241,7 +241,7 @@ pub fn render_pixels(
 
     let plot_data = crate::render::plothelper::PlotData{
         plot_helper: plot_map,
-        plot_bytes: encoded_data.clone(),
+        plot_bytes: encoded_data,
 
     };
     Ok(plot_data)
