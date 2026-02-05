@@ -65,7 +65,7 @@ pub trait Plot {
         data: Self::Data,
         options: &Self::Options,
         render_config: &mut RenderConfig,
-    ) -> Result<crate::render::plothelper::PlotData>;
+    ) -> Result<Vec<u8>>;
 }
 
 

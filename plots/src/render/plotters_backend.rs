@@ -43,7 +43,7 @@ pub fn render_pixels(
     pixels: Vec<RawPixelData>,
     options: &DensityPlotOptions,
     render_config: &mut RenderConfig,
-) -> Result<super::plothelper::PlotData> {
+) -> Result<Vec<u8>> {
     use crate::options::PlotOptions;
 
     let base = options.base();
@@ -228,21 +228,6 @@ pub fn render_pixels(
         .map_err(|e| anyhow::anyhow!("failed to JPEG encode plot: {e}"))?;
     eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
-    let plot_map = crate::render::plothelper::PlotHelper {
-        x_data_min: x_spec.start,
-        x_data_max: x_spec.end,
-        y_data_min: y_spec.start,
-        y_data_max: y_spec.end,
-        plot_left: plot_x_start,
-        plot_top: plot_y_start,
-        plot_height,
-        plot_width
-};
-
-    let plot_data = crate::render::plothelper::PlotData{
-        plot_helper: plot_map,
-        plot_bytes: encoded_data,
-
-    };
-    Ok(plot_data)
+    
+    Ok(encoded_data)
 }

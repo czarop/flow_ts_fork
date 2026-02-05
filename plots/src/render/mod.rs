@@ -1,4 +1,3 @@
-pub mod plothelper;
 pub mod plotters_backend;
 pub mod progress;
 

@@ -53,7 +53,7 @@ impl DensityPlot {
         &self,
         requests: &[(Vec<(f32, f32)>, DensityPlotOptions)],
         render_config: &mut RenderConfig,
-    ) -> Result<Vec<crate::render::plothelper::PlotData>> {
+    ) -> Result<Vec<Vec<u8>>> {
         use crate::density_calc::calculate_density_per_pixel_batch;
 
         // Calculate density for all plots
@@ -78,7 +78,7 @@ impl Plot for DensityPlot {
         data: Self::Data,
         options: &Self::Options,
         render_config: &mut RenderConfig,
-    ) -> Result<crate::render::plothelper::PlotData> {
+    ) -> Result<Vec<u8>> {
         let density_start = std::time::Instant::now();
 
         // Calculate density per pixel
