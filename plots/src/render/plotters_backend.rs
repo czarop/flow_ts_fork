@@ -1,10 +1,7 @@
-use std::any::Any;
-
-use plotters::prelude::*;
 use crate::create_axis_specs;
 use crate::density_calc::RawPixelData;
 use crate::options::DensityPlotOptions;
-use crate::plots::traits::PlotDrawable;
+
 use crate::render::{ProgressInfo, RenderConfig};
 use flow_fcs::{TransformType, Transformable};
 
