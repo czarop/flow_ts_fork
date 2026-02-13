@@ -167,8 +167,8 @@ impl Metadata {
 
     /// Validates if a GUID is present in the file's metadata, and if not, generates a new one.
     pub fn validate_guid(&mut self) {
-        if self.get_string_keyword("GUID").is_err() {
-            self.insert_string_keyword("GUID".to_string(), Uuid::new_v4().to_string());
+        if self.get_string_keyword("$GUID").is_err() {
+            self.insert_string_keyword("$GUID".to_string(), Uuid::new_v4().to_string());
         }
     }
 

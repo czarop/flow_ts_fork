@@ -1266,7 +1266,6 @@ pub struct GateBuilder {
     y_param: Option<Arc<str>>,
     mode: GateMode,
     label_position: Option<LabelPosition>,
-    finalised: bool,
 }
 
 impl GateBuilder {
@@ -1284,7 +1283,6 @@ impl GateBuilder {
             y_param: None,
             mode: GateMode::Global,
             label_position: None,
-            finalised: false,
         }
     }
 
@@ -1528,4 +1526,3 @@ mod arc_str_hashmap {
             .collect())
     }
 }
-

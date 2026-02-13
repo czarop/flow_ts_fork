@@ -1297,13 +1297,13 @@ impl Fcs {
     /// # Errors
     /// Will return `Err` if the `GUID` keyword is not found in the `metadata` or if the `GUID` keyword cannot be converted to a `&str`
     pub fn get_guid(&self) -> Result<Cow<'_, str>> {
-        Ok(self.metadata.get_string_keyword("GUID")?.get_str())
+        Ok(self.metadata.get_string_keyword("$GUID")?.get_str())
     }
 
     /// Set or update the GUID keyword in the file's metadata
     pub fn set_guid(&mut self, guid: String) {
         self.metadata
-            .insert_string_keyword("GUID".to_string(), guid);
+            .insert_string_keyword("$GUID".to_string(), guid);
     }
 
     /// A convenience function to return the `$FIL` keyword from the `metadata` as a `&str`
