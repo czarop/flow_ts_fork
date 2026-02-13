@@ -106,7 +106,7 @@ pub fn render_pixels(
         let mesh_start = std::time::Instant::now();
         mesh.draw()
             .map_err(|e| anyhow::anyhow!("failed to draw plot mesh: {e}"))?;
-        eprintln!("    ├─ Mesh drawing: {:?}", mesh_start.elapsed());
+        // eprintln!("    ├─ Mesh drawing: {:?}", mesh_start.elapsed());
 
 
 
@@ -199,17 +199,17 @@ pub fn render_pixels(
         }
     }
 
-    eprintln!(
-        "    ├─ Direct pixel writing: {:?} ({} pixels)",
-        series_start.elapsed(),
-        pixels.len()
-    );
-    eprintln!("    ├─ Total plotting: {:?}", setup_start.elapsed());
+    // eprintln!(
+    //     "    ├─ Direct pixel writing: {:?} ({} pixels)",
+    //     series_start.elapsed(),
+    //     pixels.len()
+    // );
+    // eprintln!("    ├─ Total plotting: {:?}", setup_start.elapsed());
 
     let img_start = std::time::Instant::now();
     let img: RgbImage = image::ImageBuffer::from_vec(width, height, pixel_buffer)
         .ok_or_else(|| anyhow::anyhow!("plot image buffer had unexpected size"))?;
-    eprintln!("    ├─ Image buffer conversion: {:?}", img_start.elapsed());
+    // eprintln!("    ├─ Image buffer conversion: {:?}", img_start.elapsed());
 
     let encode_start = std::time::Instant::now();
 
@@ -226,7 +226,7 @@ pub fn render_pixels(
     encoder
         .encode(img.as_raw(), width, height, image::ExtendedColorType::Rgb8)
         .map_err(|e| anyhow::anyhow!("failed to JPEG encode plot: {e}"))?;
-    eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
+    // eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
     
     Ok(encoded_data)

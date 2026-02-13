@@ -776,8 +776,8 @@ impl Fcs {
                 _ => true,
             };
 
-            #[cfg(debug_assertions)]
-            eprintln!("✓ Fast path (Unaligned Parallel): {} events", number_of_events);
+            // #[cfg(debug_assertions)]
+            // eprintln!("✓ Fast path (Unaligned Parallel): {} events", number_of_events);
 
             // Extract columns in parallel across CPU cores
             (0..number_of_parameters)
@@ -831,8 +831,8 @@ impl Fcs {
         // 6. Finalize DataFrame
         let df = DataFrame::new(columns).map_err(|e| anyhow!("DataFrame error: {}", e))?;
 
-        #[cfg(debug_assertions)]
-        eprintln!("✓ Created DataFrame: {}x{}", df.height(), df.width());
+        // #[cfg(debug_assertions)]
+        // eprintln!("✓ Created DataFrame: {}x{}", df.height(), df.width());
 
         Ok(Arc::new(df))
     }
@@ -1816,7 +1816,7 @@ impl Fcs {
         };
 
         if is_identity {
-            eprintln!("🚀 Identity matrix detected - bypassing compensation");
+            // eprintln!("🚀 Identity matrix detected - bypassing compensation");
             // Just return original data
             let mut result = HashMap::new();
             for &channel in channels_needed {
@@ -1832,11 +1832,11 @@ impl Fcs {
         let sparsity = 1.0 - (non_zero_count as f64 / total_elements as f64);
         let is_sparse = sparsity > 0.8;
 
-        eprintln!(
-            "📊 Compensation matrix: {:.1}% sparse, {} non-zero coefficients",
-            sparsity * 100.0,
-            non_zero_count
-        );
+        // eprintln!(
+        //     "📊 Compensation matrix: {:.1}% sparse, {} non-zero coefficients",
+        //     sparsity * 100.0,
+        //     non_zero_count
+        // );
 
         // Find indices of channels we need
         let channel_indices: HashMap<&str, usize> = matrix_channel_names
@@ -1881,11 +1881,11 @@ impl Fcs {
         let mut involved_vec: Vec<usize> = involved_indices.into_iter().collect();
         involved_vec.sort_unstable();
 
-        eprintln!(
-            "🎯 Lazy compensation: loading {} channels (vs {} total)",
-            involved_vec.len(),
-            matrix_channel_names.len()
-        );
+        // eprintln!(
+        //     "🎯 Lazy compensation: loading {} channels (vs {} total)",
+        //     involved_vec.len(),
+        //     matrix_channel_names.len()
+        // );
 
         // Extract data for involved channels only
         let mut channel_data: Vec<Vec<f32>> = Vec::with_capacity(involved_vec.len());
@@ -1942,7 +1942,7 @@ impl Fcs {
             }
         }
 
-        eprintln!("🚀 Lazy compensation completed");
+        // eprintln!("🚀 Lazy compensation completed");
         Ok(result)
     }
 
