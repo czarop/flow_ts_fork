@@ -11,9 +11,9 @@ use flow_fcs::{TransformType, Transformable};
 fn format_transform_value(transform: &TransformType, value: &f32) -> String {
     match transform {
         TransformType::Linear => format!("{:.1e}", value),
-        TransformType::Arcsinh { cofactor } => {
+        TransformType::Arcsinh { cofactor: _ } => {
             // Convert from transformed space back to original space
-            let original_value = (value / cofactor).sinh() * cofactor;
+            let original_value = transform.inverse_transform(value);
             // Make nice rounded labels in original space
             format!("{:.1e}", original_value)
         }
@@ -226,5 +226,152 @@ pub fn render_pixels(
     eprintln!("    └─ JPEG encoding: {:?}", encode_start.elapsed());
 
     // Return the JPEG-encoded bytes directly
+    Ok(encoded_data)
+}
+
+/// Render spectral signature plot to JPEG
+///
+/// Creates a line plot showing normalized spectral signatures (0.0 to 1.0) across detector channels.
+pub fn render_spectral_signature(
+    data: (Vec<(usize, f64)>, Vec<String>),
+    options: &crate::options::spectral::SpectralSignaturePlotOptions,
+    _render_config: &mut RenderConfig,
+) -> Result<PlotBytes> {
+    use crate::options::PlotOptions;
+    use plotters::prelude::*;
+
+    let (spectrum_data, channel_names) = data;
+    let base = options.base();
+    let width = base.width;
+    let height = base.height;
+    let margin = base.margin;
+    let x_label_area_size = base.x_label_area_size;
+    let y_label_area_size = base.y_label_area_size;
+
+    // Create RGB buffer
+    let mut pixel_buffer = vec![255; (width * height * 3) as usize];
+
+    // Determine x and y ranges (use f32 to match plotters expectations)
+    let x_min = 0.0f32;
+    let x_max = spectrum_data
+        .iter()
+        .map(|(idx, _)| *idx as f32)
+        .fold(0.0f32, f32::max)
+        .max(1.0);
+    let y_min = 0.0f32;
+    let y_max = 1.0f32;
+
+    // Clone channel_names for the closure
+    let channel_names_clone = channel_names.clone();
+
+    {
+        let backend = BitMapBackend::with_buffer(&mut pixel_buffer, (width, height));
+        let root = backend.into_drawing_area();
+        root.fill(&WHITE)
+            .map_err(|e| anyhow::anyhow!("failed to fill plot background: {e}"))?;
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(margin)
+            .x_label_area_size(x_label_area_size)
+            .y_label_area_size(y_label_area_size)
+            .build_cartesian_2d(x_min..x_max, y_min..y_max)
+            .map_err(|e| anyhow::anyhow!("failed to build chart: {e}"))?;
+
+        // Create formatter for x-axis labels if channel names are provided
+        let x_formatter: Option<Box<dyn Fn(&f32) -> String>> = if !channel_names_clone.is_empty()
+            && channel_names_clone.len() == spectrum_data.len()
+        {
+            let channel_names_for_formatter = channel_names_clone.clone();
+            Some(Box::new(move |x: &f32| -> String {
+                // Find closest channel index
+                let idx = x.round() as usize;
+                if idx < channel_names_for_formatter.len() {
+                    channel_names_for_formatter[idx].clone()
+                } else {
+                    format!("{:.0}", x)
+                }
+            }))
+        } else {
+            None
+        };
+
+        // Configure mesh
+        let mut mesh = chart.configure_mesh();
+        if options.show_grid {
+            mesh.x_max_light_lines(4).y_max_light_lines(4);
+        }
+
+        // Set axis labels
+        if let Some(ref x_axis) = options.x_axis {
+            if let Some(ref label) = x_axis.label {
+                mesh.x_desc(label);
+            }
+        } else {
+            mesh.x_desc("Channel");
+        }
+
+        if let Some(ref y_axis) = options.y_axis {
+            if let Some(ref label) = y_axis.label {
+                mesh.y_desc(label);
+            }
+        } else {
+            mesh.y_desc("Normalized Intensity");
+        }
+
+        // Apply x-axis formatter if provided
+        if let Some(ref formatter) = x_formatter {
+            mesh.x_label_formatter(formatter);
+        }
+
+        // Set number of x labels to match number of channels for better readability
+        let x_label_count = if !channel_names_clone.is_empty() {
+            channel_names_clone.len().min(20) // Show all channels if <= 20, otherwise show 20
+        } else {
+            10
+        };
+
+        mesh.x_labels(x_label_count)
+            .y_labels(10)
+            .draw()
+            .map_err(|e| anyhow::anyhow!("failed to draw mesh: {e}"))?;
+
+        // Draw the spectral signature line
+        if !spectrum_data.is_empty() {
+            // Parse hex color (e.g., "#1f77b4" or "1f77b4")
+            let line_color = if options.line_color.starts_with('#') {
+                let hex = &options.line_color[1..];
+                if hex.len() == 6 {
+                    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(31);
+                    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(119);
+                    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(180);
+                    RGBColor(r, g, b)
+                } else {
+                    RGBColor(31, 119, 180) // Default blue
+                }
+            } else {
+                RGBColor(31, 119, 180) // Default blue
+            };
+
+            chart
+                .draw_series(LineSeries::new(
+                    spectrum_data
+                        .iter()
+                        .map(|(idx, val)| (*idx as f32, *val as f32)),
+                    line_color.stroke_width(options.line_width as u32),
+                ))
+                .map_err(|e| anyhow::anyhow!("failed to draw line series: {e}"))?;
+        }
+    } // Backend is dropped here, pixel_buffer is now available
+
+    // Convert to image and encode
+    let img: RgbImage = image::ImageBuffer::from_vec(width, height, pixel_buffer)
+        .ok_or_else(|| anyhow::anyhow!("plot image buffer had unexpected size"))?;
+
+    let mut encoded_data = Vec::new();
+    let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut encoded_data, 85);
+    encoder
+        .encode(img.as_raw(), width, height, image::ExtendedColorType::Rgb8)
+        .map_err(|e| anyhow::anyhow!("failed to JPEG encode plot: {e}"))?;
+
     Ok(encoded_data)
 }
