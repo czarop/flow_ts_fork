@@ -138,4 +138,51 @@ impl KernelDensity {
 
         peaks
     }
+
+    /// Get density value at a specific point using linear interpolation
+    ///
+    /// # Arguments
+    /// * `x` - The point at which to evaluate the density
+    ///
+    /// # Returns
+    /// The interpolated density value, or 0.0 if x is outside the grid range
+    pub fn density_at(&self, x: f64) -> f64 {
+        if self.x.is_empty() || self.y.is_empty() {
+            return 0.0;
+        }
+
+        // Handle out-of-bounds
+        if x <= self.x[0] {
+            return self.y[0];
+        }
+        if x >= self.x[self.x.len() - 1] {
+            return self.y[self.y.len() - 1];
+        }
+
+        // Find the two grid points to interpolate between
+        let mut left_idx = 0;
+        let mut right_idx = self.x.len() - 1;
+
+        // Binary search for the interval
+        while right_idx - left_idx > 1 {
+            let mid = (left_idx + right_idx) / 2;
+            if self.x[mid] <= x {
+                left_idx = mid;
+            } else {
+                right_idx = mid;
+            }
+        }
+
+        // Linear interpolation
+        let x0 = self.x[left_idx];
+        let x1 = self.x[right_idx];
+        let y0 = self.y[left_idx];
+        let y1 = self.y[right_idx];
+
+        if (x1 - x0).abs() < 1e-10 {
+            y0
+        } else {
+            y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+        }
+    }
 }

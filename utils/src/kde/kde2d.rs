@@ -4,7 +4,7 @@
 
 use crate::common::{gaussian_kernel, interquartile_range, standard_deviation};
 use crate::kde::{KdeError, KdeResult};
-use ndarray::{Array2, s};
+use ndarray::Array2;
 use realfft::RealFftPlanner;
 use realfft::num_complex::Complex;
 
@@ -261,8 +261,8 @@ fn kde2d_fft(
 
     // Step 3: 2D FFT convolution
     // Use next power of 2 for efficient FFT
-    let fft_size_x = (2 * nx).next_power_of_two();
-    let fft_size_y = (2 * ny).next_power_of_two();
+    let _fft_size_x = (2 * nx).next_power_of_two();
+    let _fft_size_y = (2 * ny).next_power_of_two();
 
     // For 2D FFT, we'll use a simpler approach: compute 1D FFTs along each dimension
     // This is less optimal than true 2D FFT but simpler to implement
