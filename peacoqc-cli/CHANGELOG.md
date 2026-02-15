@@ -5,7 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Chore
+
+ - <csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/> update dependencies and align workspace configurations
+   - Updated various dependencies in Cargo.toml files across multiple crates to their latest versions for improved functionality and compatibility.
+   - Changed several dependencies to use workspace references for consistency and to reduce duplication.
+   - Notable updates include polars to version 0.53.0, faer to version 0.24, and ndarray-linalg to version 0.18.1.
+   - Adjusted dev-dependencies to utilize workspace settings for better management.
+ - <csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/> clean up unused imports and variables
+   - Remove unused imports in clustering and gating modules
+   - Fix unreachable code warning in DBSCAN
+   - Remove unused mut keywords
+   - Clean up warnings for better code quality
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 6 commits contributed to the release over the course of 24 calendar days.
+ - 27 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
+    - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))
+    - Merge pull request #10 from jrmoynihan/gpu-acceleration ([`69363eb`](https://github.com/jrmoynihan/flow/commit/69363eb3a664b1aa6cd0be9b980ec08fc03b7955))
+    - Release flow-fcs v0.2.0, safety bump 4 crates ([`cd26a89`](https://github.com/jrmoynihan/flow/commit/cd26a8970fc25dbe70c1cc9ac342b367613bcda6))
+    - Adjusting changelogs prior to release of flow-fcs v0.1.6 ([`7fb88db`](https://github.com/jrmoynihan/flow/commit/7fb88db9ede05b317a03d367cea18a3b8b73c5a1))
+    - Release flow-fcs v0.1.5, flow-gates v0.1.2 ([`4106abc`](https://github.com/jrmoynihan/flow/commit/4106abc5ae2d35328ec470daf9b0a9a549ebd6ba))
+</details>
+
 ## 0.1.2 (2026-01-18)
+
+<csr-id-2c1548bfe1da6db1af12ecb1a753cdcfca862045/>
+<csr-id-339d07ac60343b172cd5962310abbc7899fdc770/>
+<csr-id-d3aa6cdc5a806703131a3ffac63506142f052da9/>
+<csr-id-29aae1db8364d6a04f55bc62edb0680eeeb58e4e/>
+<csr-id-8d232b2838f65aa621a81031183d4c954d787543/>
+<csr-id-4649c7af16150d05880ddab4e732e9dee374d01b/>
 
 ### Chore
 
@@ -35,30 +81,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
+<csr-id-d262a619dbf3ed9a147a9a2e6b2fa0a729991b1f/>
+<csr-id-de047ef593ff1b1061b5843e439c3990f142bc2b/>
+
  - <csr-id-12c86f21a3f572f3403cb1d187fd43ac673c38e3/> improve flag interface and implement FCS writing
    - Replace --remove-margins/--no-remove-margins with --keep-margins flag
-   - Replace --remove-doublets/--no-remove-doublets with --keep-doublets flag
-   - Default behavior: margins and doublets are removed (matches R recommendations)
-   - Implement FCS file writing using flow-fcs write_fcs_file
-   - Update documentation with examples for FCS output
-   - Feature parity with R PeacoQC save_fcs=TRUE option
- - <csr-id-d262a619dbf3ed9a147a9a2e6b2fa0a729991b1f/> add QC plot generation functionality
-   Add comprehensive QC plot generation for visualizing PeacoQC results.
- - <csr-id-de047ef593ff1b1061b5843e439c3990f142bc2b/> add export flags for QC results
-   Add CLI flags to export QC results in multiple formats:
-   - --export-csv: Export boolean CSV (0/1 values)
-   - --export-csv-numeric: Export numeric CSV (2000/6000 values)
-   - --export-json: Export JSON metadata
-   - --csv-column-name: Custom column name for CSV exports
-   
-   Exports are automatically named when outputting to directories.
-   Updated CLI README with export format documentation and examples.
+- Replace --remove-doublets/--no-remove-doublets with --keep-doublets flag
+- Default behavior: margins and doublets are removed (matches R recommendations)
+- Implement FCS file writing using flow-fcs write_fcs_file
+- Update documentation with examples for FCS output
+- Feature parity with R PeacoQC save_fcs=TRUE option
+- --export-csv: Export boolean CSV (0/1 values)
+- --export-csv-numeric: Export numeric CSV (2000/6000 values)
+- --export-json: Export JSON metadata
+- --csv-column-name: Custom column name for CSV exports
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 17 commits contributed to the release over the course of 3 calendar days.
+ - 18 commits contributed to the release over the course of 3 calendar days.
  - 4 days passed between releases.
  - 11 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -70,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release peacoqc-rs v0.1.3, peacoqc-cli v0.1.2 ([`572393e`](https://github.com/jrmoynihan/flow/commit/572393e435342b438c398b2c51b680af50da1b68))
     - Release flow-fcs v0.1.4, peacoqc-rs v0.1.2 ([`140a59a`](https://github.com/jrmoynihan/flow/commit/140a59af3c1ca751672e66c9cc69708f45ac8453))
     - Standardize formatting in Cargo.toml ([`2c1548b`](https://github.com/jrmoynihan/flow/commit/2c1548bfe1da6db1af12ecb1a753cdcfca862045))
     - Release flow-fcs v0.1.3, peacoqc-rs v0.1.2 ([`f08823c`](https://github.com/jrmoynihan/flow/commit/f08823cabcae5223efe4250471dd75ea7fcaa936))
@@ -88,6 +131,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines. ([`76d800d`](https://github.com/jrmoynihan/flow/commit/76d800d1b9a5b40c8f4628b46074320bd9e51630))
     - Update peacoqc-cli README.md to enhance clarity and provide links to `peacoqc-rs` and `flow-fcs` libraries, and improve attribution formatting for the original authors. ([`8b64eee`](https://github.com/jrmoynihan/flow/commit/8b64eee4f91acabc724c60ae1f3d380fcac4af92))
 </details>
+
+<csr-unknown>
+ add QC plot generation functionalityAdd comprehensive QC plot generation for visualizing PeacoQC results. add export flags for QC resultsAdd CLI flags to export QC results in multiple formats:Exports are automatically named when outputting to directories.Updated CLI README with export format documentation and examples.<csr-unknown/>
 
 ## 0.1.1 (2026-01-14)
 
