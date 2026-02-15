@@ -4,8 +4,9 @@
 //! runs both implementations, and compares the results.
 
 use anyhow::Result;
+use faer_ext::IntoNdarray;
 use flow_fcs::Fcs;
-use ndarray::{Array1, Array2};
+use ndarray::Array2;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -66,10 +67,10 @@ fn export_data_to_csv(data: &Array2<f64>, path: &PathBuf, col_names: &[String]) 
     Ok(())
 }
 
-fn export_vector_to_csv(vector: &Array1<f64>, path: &PathBuf, name: &str) -> Result<()> {
+fn export_vector_to_csv(vector: &[f64], path: &PathBuf, name: &str) -> Result<()> {
     let mut file = File::create(path)?;
     writeln!(file, "{}", name)?;
-    for &value in vector.iter() {
+    for &value in vector {
         writeln!(file, "{:.10e}", value)?;
     }
     Ok(())
@@ -223,26 +224,36 @@ fn main() -> Result<()> {
         unstained_data.ncols()
     );
 
-    // Run Rust TRU-OLS preprocessing
+    // Run Rust TRU-OLS preprocessing (convert Array2 to faer views)
     println!("\n⚙️  Running Rust TRU-OLS preprocessing...");
-    let cutoffs = CutoffCalculator::calculate(&mixing_matrix, &unstained_data, 0.995)?;
+    use faer_ext::IntoFaer;
+    let mixing_faer = mixing_matrix.view().into_faer();
+    let unstained_faer = unstained_data.view().into_faer();
+    let cutoffs = CutoffCalculator::calculate(mixing_faer, unstained_faer, 0.995)?;
     let nonspecific =
-        NonspecificObservation::calculate(&mixing_matrix, &unstained_data, autofluorescence_idx)?;
+        NonspecificObservation::calculate(mixing_faer, unstained_faer, autofluorescence_idx)?;
 
-    println!("  Cutoffs calculated: {} values", cutoffs.cutoffs().len());
+    println!("  Cutoffs calculated: {} values", cutoffs.cutoffs().nrows());
     println!(
         "  Nonspecific observation: {} detectors",
-        nonspecific.observation().len()
+        nonspecific.observation().nrows()
     );
 
-    // Run Rust TRU-OLS unmixing
+    // Run Rust TRU-OLS unmixing (convert Array2 to Mat for TruOls, use view for unmix)
     println!("\n🔄 Running Rust TRU-OLS unmixing...");
-    let tru_ols = TruOls::new(
-        mixing_matrix.clone(),
-        unstained_data.clone(),
-        autofluorescence_idx,
-    )?;
-    let rust_unmixed = tru_ols.unmix(&stained_data)?;
+    let mixing_mat = faer::Mat::from_fn(
+        mixing_matrix.nrows(),
+        mixing_matrix.ncols(),
+        |i, j| mixing_matrix[(i, j)],
+    );
+    let unstained_mat = faer::Mat::from_fn(
+        unstained_data.nrows(),
+        unstained_data.ncols(),
+        |i, j| unstained_data[(i, j)],
+    );
+    let tru_ols = TruOls::new(mixing_mat, unstained_mat, autofluorescence_idx)?;
+    let stained_faer = stained_data.view().into_faer();
+    let rust_unmixed = tru_ols.unmix(stained_faer)?;
 
     println!(
         "  Unmixed: {} events × {} endmembers",
@@ -275,22 +286,23 @@ fn main() -> Result<()> {
 
     // Export Rust results
     let rust_cutoffs_path = output_dir.join("rust_cutoffs.csv");
-    export_vector_to_csv(cutoffs.cutoffs(), &rust_cutoffs_path, "cutoff")?;
+    let cutoffs_slice: Vec<f64> =
+        (0..cutoffs.cutoffs().nrows()).map(|i| cutoffs.cutoffs()[i]).collect();
+    export_vector_to_csv(&cutoffs_slice, &rust_cutoffs_path, "cutoff")?;
     println!("  ✓ Rust cutoffs: {}", rust_cutoffs_path.display());
 
     let rust_nonspecific_path = output_dir.join("rust_nonspecific.csv");
-    export_vector_to_csv(
-        nonspecific.observation(),
-        &rust_nonspecific_path,
-        "nonspecific",
-    )?;
+    let nonspecific_slice: Vec<f64> =
+        (0..nonspecific.observation().nrows()).map(|i| nonspecific.observation()[i]).collect();
+    export_vector_to_csv(&nonspecific_slice, &rust_nonspecific_path, "nonspecific")?;
     println!(
         "  ✓ Rust nonspecific observation: {}",
         rust_nonspecific_path.display()
     );
 
     let rust_unmixed_path = output_dir.join("rust_unmixed.csv");
-    export_data_to_csv(&rust_unmixed, &rust_unmixed_path, &endmember_names)?;
+    let rust_unmixed_ndarray = rust_unmixed.as_ref().into_ndarray().to_owned();
+    export_data_to_csv(&rust_unmixed_ndarray, &rust_unmixed_path, &endmember_names)?;
     println!(
         "  ✓ Rust unmixed abundances: {}",
         rust_unmixed_path.display()
@@ -396,11 +408,13 @@ fn read_csv_header(path: &PathBuf) -> Result<Vec<String>> {
 }
 
 fn extract_detector_data(fcs: &Fcs, detector_names: &[String]) -> Result<Array2<f64>> {
+    use faer_ext::IntoNdarray;
     use flow_tru_ols::fcs_integration::extract_detector_data;
 
     let detector_refs: Vec<&str> = detector_names.iter().map(|s| s.as_str()).collect();
     extract_detector_data(fcs, &detector_refs)
         .map_err(|e| anyhow::anyhow!("Failed to extract detector data: {}", e))
+        .map(|m| m.as_ref().into_ndarray().to_owned())
 }
 
 fn generate_mixing_matrix_from_controls(
@@ -452,7 +466,7 @@ fn generate_mixing_matrix_from_controls(
     };
 
     // Call the function to create the mixing matrix
-    let (matrix, detector_names_from_func) = create_mixing_matrix_from_single_stains(
+    let (matrix, detector_names_from_func, _) = create_mixing_matrix_from_single_stains(
         controls_dir,
         unstained_fcs,
         &detector_names,
