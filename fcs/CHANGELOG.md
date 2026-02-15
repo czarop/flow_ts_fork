@@ -5,6 +5,96 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.1 (2026-02-15)
+
+<csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
+<csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
+<csr-id-b8128fcd93659ca86ee2f1d8dc43eed25616c9f1/>
+<csr-id-c4e6b792b31e293d865ebba6a3c58c5e8dde9bd8/>
+<csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/>
+
+### Chore
+
+ - <csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/> update dependencies and align workspace configurations
+   - Updated various dependencies in Cargo.toml files across multiple crates to their latest versions for improved functionality and compatibility.
+   - Changed several dependencies to use workspace references for consistency and to reduce duplication.
+   - Notable updates include polars to version 0.53.0, faer to version 0.24, and ndarray-linalg to version 0.18.1.
+   - Adjusted dev-dependencies to utilize workspace settings for better management.
+ - <csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/> clean up unused imports and variables
+   - Remove unused imports in clustering and gating modules
+   - Fix unreachable code warning in DBSCAN
+   - Remove unused mut keywords
+   - Clean up warnings for better code quality
+
+### Chore
+
+ - <csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/> update changelogs prior to release
+
+### New Features
+
+ - <csr-id-f494ea2ab401071aab661a0ce691cef547ebde75/> improve metadata, file handling, and FCS write
+   - Extend metadata and keyword parsing
+
+### Bug Fixes
+
+ - <csr-id-43fc966c577feccbd92c9d95fefc101add697d97/> categorize $PnDATATYPE as ByteKeyword per FCS 3.2 spec
+   According to FCS 3.2 specification, $PnDATATYPE uses the same character format
+   as $DATATYPE ("F", "D", "I", "A"), not numeric codes. Move PnDATATYPE
+   from IntegerKeyword to ByteKeyword enum to match the specification.
+ - <csr-id-c860514ecd21eaa9a724a5d9baec4977b90b0d46/> parse $PnR keyword with float values
+   Some cytometers output float values for the $PnR (parameter range) keyword
+   instead of integers (e.g., "1.1" instead of "1"). Update parsing to handle
+   both float and integer formats by attempting float parsing first, then falling
+   back to integer parsing.
+   
+   Adds tests for float parsing of $PnR with both small and large parameter
+   numbers (P5R, P61R).
+
+### Refactor
+
+ - <csr-id-b8128fcd93659ca86ee2f1d8dc43eed25616c9f1/> update DataFrame creation and series replacement to align with polars 0.51 -> 0.53 breaking change
+   - Modified DataFrame creation to include the number of events as a parameter for better clarity.
+   - Updated series replacement calls to ensure proper type conversion with `.into()` for consistency across the codebase.
+   - Adjusted test cases to reflect changes in DataFrame initialization.
+ - <csr-id-c4e6b792b31e293d865ebba6a3c58c5e8dde9bd8/> replace ndarray with faer for matrix operations
+   - Use faer Mat/MatRef for invert_matrix, batch_matvec, compensation
+   - get_spillover_matrix returns Option<(Mat<f32>, Vec<String>)>
+   - apply_compensation, apply_spectral_unmixing take MatRef<f32>
+   - Add optional blas feature for ndarray-linalg
+   - Update tests and benchmarks to faer mat! macro
+   - Update README and doc examples to faer
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 10 commits contributed to the release over the course of 24 calendar days.
+ - 24 days passed between releases.
+ - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
+    - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
+    - Update DataFrame creation and series replacement to align with polars 0.51 -> 0.53 breaking change ([`b8128fc`](https://github.com/jrmoynihan/flow/commit/b8128fcd93659ca86ee2f1d8dc43eed25616c9f1))
+    - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
+    - Replace ndarray with faer for matrix operations ([`c4e6b79`](https://github.com/jrmoynihan/flow/commit/c4e6b792b31e293d865ebba6a3c58c5e8dde9bd8))
+    - Improve metadata, file handling, and FCS write ([`f494ea2`](https://github.com/jrmoynihan/flow/commit/f494ea2ab401071aab661a0ce691cef547ebde75))
+    - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))
+    - Categorize $PnDATATYPE as ByteKeyword per FCS 3.2 spec ([`43fc966`](https://github.com/jrmoynihan/flow/commit/43fc966c577feccbd92c9d95fefc101add697d97))
+    - Parse $PnR keyword with float values ([`c860514`](https://github.com/jrmoynihan/flow/commit/c860514ecd21eaa9a724a5d9baec4977b90b0d46))
+    - Merge pull request #10 from jrmoynihan/gpu-acceleration ([`69363eb`](https://github.com/jrmoynihan/flow/commit/69363eb3a664b1aa6cd0be9b980ec08fc03b7955))
+</details>
+
+<csr-unknown>
+Improve file access and transform handlingEnhance FCS write supportAdd test_unmixed_fcs example<csr-unknown/>
+
 ## 0.2.0 (2026-01-21)
 
 <csr-id-fec1c6d2c50730d98771b7cdc101bad5071baf29/>
@@ -36,7 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 8 commits contributed to the release.
+ - 9 commits contributed to the release.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -47,6 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.2.0, flow-plots v0.2.0 ([`3620154`](https://github.com/jrmoynihan/flow/commit/3620154c694500bb2ff2edbdf0848076287d77d3))
     - Release flow-fcs v0.2.0 ([`f2fc722`](https://github.com/jrmoynihan/flow/commit/f2fc72250da69b63cacdea28f561db60732c0a39))
     - Release flow-fcs v0.2.0, safety bump 4 crates ([`cd26a89`](https://github.com/jrmoynihan/flow/commit/cd26a8970fc25dbe70c1cc9ac342b367613bcda6))
     - Remove GPU acceleration implementation ([`2d26604`](https://github.com/jrmoynihan/flow/commit/2d2660406806bdb259dbf66fefa3576fa1a611f3))
@@ -78,7 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Updated benchmarks to use new `MatrixOps` API
 
 <csr-unknown>
-GPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysis<csr-unknown/>
+GPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysis<csr-unknown/>
 <csr-unknown/>
 
 ## 0.1.5 (2026-01-21)

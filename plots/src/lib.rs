@@ -41,12 +41,16 @@ pub mod helpers;
 pub mod options;
 pub mod plots;
 pub mod render;
+pub mod signal_heatmap;
 
 // Re-export commonly used types
 pub use colormap::ColorMaps;
-pub use options::{AxisOptions, BasePlotOptions, DensityPlotOptions, PlotOptions};
-pub use plots::{DensityPlot, Plot, PlotType};
+pub use options::{
+    AxisOptions, BasePlotOptions, DensityPlotOptions, PlotOptions, SpectralSignaturePlotOptions,
+};
+pub use plots::{DensityPlot, Plot, PlotType, SpectralSignaturePlot};
 pub use render::{ProgressCallback, ProgressInfo, RenderConfig};
+pub use signal_heatmap::{generate_normalized_spectral_signature_plot, generate_signal_heatmap};
 
 // Type aliases
 pub type PlotBytes = Vec<u8>;

@@ -83,12 +83,12 @@ impl Transformable for TransformType {
                 let m_ln10 = positive_decades * ln_10;
                 let sinh_m_ln10 = m_ln10.sinh();
                 let a_ln10 = negative_decades * ln_10;
-                
+
                 // Handle division by zero and very small values
                 if *top_of_scale == 0.0 {
                     return *value;
                 }
-                
+
                 let scaled_x = value * sinh_m_ln10 / top_of_scale;
                 scaled_x.asinh() + a_ln10
             }
@@ -102,12 +102,12 @@ impl Transformable for TransformType {
                     "🔧 [INVERSE_TRANSFORM] Arcsinh inverse: value={}, cofactor={}",
                     value, cofactor
                 );
-                let sinh_result = value.sinh();
-                eprintln!("🔧 [INVERSE_TRANSFORM] sinh({}) = {}", value, sinh_result);
-                let final_result = sinh_result * cofactor;
+                let final_result = (*value).sinh() * *cofactor;
                 eprintln!(
                     "🔧 [INVERSE_TRANSFORM] final result: {} * {} = {}",
-                    sinh_result, cofactor, final_result
+                    value.sinh(),
+                    cofactor,
+                    final_result
                 );
                 final_result
             }
@@ -123,10 +123,10 @@ impl Transformable for TransformType {
                 let m_ln10 = positive_decades * ln_10;
                 let sinh_m_ln10 = m_ln10.sinh();
                 let a_ln10 = negative_decades * ln_10;
-                
+
                 let y_minus_a = value - a_ln10;
                 let sinh_y_minus_a = y_minus_a.sinh();
-                
+
                 top_of_scale * sinh_y_minus_a / sinh_m_ln10
             }
         }

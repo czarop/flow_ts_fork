@@ -15,34 +15,34 @@ keywords=[
 categories=["science", "algorithms"]
 
 [features]
-default =["flow-fcs"]
+default =["flow-fcs", "gpu"]
 flow-fcs=["dep:flow-fcs", "dep:polars"]
 gpu = ["dep:burn"]
 cubecl = ["dep:cubecl", "dep:bytemuck", "gpu"]
 
 [dependencies]
-flow-fcs            ={ path="../fcs", version= "^0.2.0", optional=true }
+flow-fcs            ={ path="../fcs", version= "^0.2.1", optional=true }
 polars              ={ workspace=true, optional=true }
 anyhow.workspace    =true
 thiserror.workspace =true
 rand.workspace      =true
 rayon.workspace     =true
-plotters            ="0.3.7"
-image              ="0.25.9"
+plotters = { workspace = true }
+image = { workspace = true }
 serde.workspace     =true
 serde_json.workspace=true
 tracing.workspace   =true
 realfft             ="3.5.0" # FFT-based KDE for performance
 csaps               ="0.3" # Cubic smoothing splines (matches R's smooth.spline)
-ndarray             ="0.17.2" # Required by csaps for array types (must match csaps version)
+ndarray             ={ workspace = true } # Required by csaps for array types
 burn                ={ version = "0.20", optional = true, features = ["wgpu"] }
 cubecl              ={ version = "0.9", optional = true }
 bytemuck            ={ workspace = true, optional = true }
 
 [dev-dependencies]
-approx   ="0.5"
-criterion="0.8.1"
-tempfile ="3.10"
+approx = { workspace = true }
+criterion = { workspace = true }
+tempfile = { workspace = true }
 
 [[bench]]
 name   ="peacoqc_bench"

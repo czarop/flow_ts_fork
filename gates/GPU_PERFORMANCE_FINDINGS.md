@@ -13,7 +13,7 @@ After extensive benchmarking and implementation attempts, **GPU acceleration is 
 The most complete GPU implementation used cubeCL kernels with proper ray-casting algorithm:
 
 | Batch Size | CPU Time | GPU Time | Speedup | GPU Slower By |
-|------------|----------|----------|---------|---------------|
+| ---------- | -------- | -------- | ------- | ------------- |
 | 100        | 35.8 µs  | 351.0 µs | 0.10x   | **9.8x**      |
 | 1,000      | 59.5 µs  | 364.9 µs | 0.16x   | **6.1x**      |
 | 10,000     | 110.8 µs | 1.19 ms  | 0.09x   | **10.7x**     |
@@ -24,6 +24,7 @@ The most complete GPU implementation used cubeCL kernels with proper ray-casting
 | 1,000,000  | 3.03 ms  | 5.68 ms  | 0.53x   | **1.9x**      |
 
 **Key Findings:**
+
 - GPU is **2-10x slower** than CPU across ALL batch sizes
 - Even at 1M events (largest tested), GPU is still **1.9x slower**
 - Performance gap does NOT close with larger batches
@@ -34,34 +35,38 @@ The most complete GPU implementation used cubeCL kernels with proper ray-casting
 For the typical workflow range:
 
 | Event Count | CPU Time | GPU Time | GPU Slower By | Worthwhile? |
-|-------------|----------|----------|---------------|-------------|
-| 50K         | 210.5 µs | 1.69 ms  | **8.0x**      | ❌ No       |
-| 100K        | 351.2 µs | 1.69 ms  | **4.8x**      | ❌ No       |
-| 250K        | 795.6 µs | 1.69 ms  | **2.1x**      | ❌ No       |
-| 500K        | 1.21 ms  | 3.12 ms  | **2.6x**      | ❌ No       |
+| ----------- | -------- | -------- | ------------- | ----------- |
+| 50K         | 210.5 µs | 1.69 ms  | **8.0x**      | ❌ No        |
+| 100K        | 351.2 µs | 1.69 ms  | **4.8x**      | ❌ No        |
+| 250K        | 795.6 µs | 1.69 ms  | **2.1x**      | ❌ No        |
+| 500K        | 1.21 ms  | 3.12 ms  | **2.6x**      | ❌ No        |
 
 **Conclusion**: GPU is **NOT worthwhile** at any realistic batch size for flow cytometry.
 
 ## Why GPU is Slower
 
 ### 1. Data Transfer Overhead
+
 - Uploading points and polygon to GPU memory
 - Downloading results back to CPU
 - For small batches, transfer time exceeds compute time
 - Even at 1M events, transfer overhead is significant
 
 ### 2. WGPU Backend Overhead
+
 - WebGPU abstraction layer adds substantial overhead
 - Cross-platform compatibility comes at performance cost
 - Native CUDA/Metal might be faster, but WGPU is the practical choice for portability
 
 ### 3. Kernel Launch Overhead
+
 - Pipeline creation and kernel dispatch
 - CPU-GPU synchronization
 - Small batches don't amortize these fixed costs
 - Even large batches show significant overhead
 
 ### 4. Algorithm Characteristics
+
 - Ray-casting algorithm has conditional logic (XOR behavior)
 - Per-point-per-edge comparisons don't map well to GPU parallelism
 - CPU implementation with Rayon parallelization is highly optimized
@@ -70,11 +75,13 @@ For the typical workflow range:
 ## Implementation History
 
 ### Attempt 1: Burn Tensor Operations (No Actual GPU Compute)
+
 - **Result**: GPU 6-15x slower
 - **Issue**: Transferred data to GPU but immediately converted back to CPU
 - **Status**: Abandoned - poor implementation
 
 ### Attempt 2: cubeCL Kernels (Proper GPU Implementation)
+
 - **Result**: GPU 2-10x slower (even with proper GPU compute)
 - **Status**: Complete and correct, but not worthwhile
 - **Conclusion**: Overhead dominates even with proper GPU kernels
@@ -83,9 +90,9 @@ For the typical workflow range:
 
 The CPU implementation is highly optimized:
 
-| Batch Size | CPU Time | Throughput |
-|------------|----------|------------|
-| 100        | 35.8 µs  | 2.80 Melem/s |
+| Batch Size | CPU Time | Throughput    |
+| ---------- | -------- | ------------- |
+| 100        | 35.8 µs  | 2.80 Melem/s  |
 | 1,000      | 59.5 µs  | 16.80 Melem/s |
 | 10,000     | 110.8 µs | 90.27 Melem/s |
 | 50,000     | 210.5 µs | 237.5 Melem/s |
@@ -95,6 +102,7 @@ The CPU implementation is highly optimized:
 | 1,000,000  | 3.03 ms  | 329.6 Melem/s |
 
 **Characteristics:**
+
 - Excellent scaling with batch size
 - Rayon parallelization provides good CPU utilization
 - Memory access patterns are cache-friendly
@@ -103,6 +111,7 @@ The CPU implementation is highly optimized:
 ## Correctness
 
 ✅ **All GPU implementations produce correct results**
+
 - GPU results match CPU exactly (all tests pass)
 - No data corruption or calculation errors
 - Proper handling of edge cases
@@ -116,12 +125,14 @@ The GPU implementations are **functionally correct** but **not performant**.
 **Action**: Update GPU functions to delegate directly to CPU implementation.
 
 **Rationale**:
+
 - CPU is 2-10x faster at all batch sizes
 - Avoids unnecessary GPU overhead
 - Simplifies codebase
 - Reduces dependencies (can make GPU features optional)
 
 **Implementation**:
+
 ```rust
 pub fn filter_by_polygon_batch_gpu(
     points: &[(f32, f32)],
@@ -135,11 +146,13 @@ pub fn filter_by_polygon_batch_gpu(
 ### 2. Keep GPU Code for Future Reference (Optional)
 
 **Option A**: Remove GPU code entirely
+
 - Simplifies codebase
 - Removes dependencies
 - Cleaner API
 
 **Option B**: Keep GPU code but disabled by default
+
 - Preserves implementation for future reference
 - Can be re-enabled if hardware/backends improve
 - Adds maintenance burden

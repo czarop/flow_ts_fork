@@ -5,7 +5,102 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.0 (2026-02-15)
+
+<csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
+<csr-id-e62b423812b0ce71a2b355a60da926fd588cbf0a/>
+<csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
+<csr-id-ef08072701d707a79303fb5ffcb14127d3d22930/>
+<csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/>
+
+### Chore
+
+ - <csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/> update dependencies and align workspace configurations
+   - Updated various dependencies in Cargo.toml files across multiple crates to their latest versions for improved functionality and compatibility.
+   - Changed several dependencies to use workspace references for consistency and to reduce duplication.
+   - Notable updates include polars to version 0.53.0, faer to version 0.24, and ndarray-linalg to version 0.18.1.
+   - Adjusted dev-dependencies to utilize workspace settings for better management.
+ - <csr-id-e62b423812b0ce71a2b355a60da926fd588cbf0a/> use workspace ndarray dependency
+   Replace ndarray 0.17 with workspace ndarray 0.16 for consistency
+ - <csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/> clean up unused imports and variables
+   - Remove unused imports in clustering and gating modules
+   - Fix unreachable code warning in DBSCAN
+   - Remove unused mut keywords
+   - Clean up warnings for better code quality
+ - <csr-id-ef08072701d707a79303fb5ffcb14127d3d22930/> update benchmarks to use current APIs
+   - Replace deprecated criterion::black_box with std::hint::black_box
+   - Update rand API: thread_rng() -> rng(), gen_range() -> random_range()
+   - Fix csaps compatibility by converting ndarray to slices
+
+### Chore
+
+ - <csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/> update changelogs prior to release
+
+### Documentation
+
+ - <csr-id-5fba05b5e2747e3cfdda979dabb4ddde2bb384e1/> consolidate GPU performance documentation
+   - Move GPU performance results from GPU_PERFORMANCE.md to DEV_NOTES.md
+
+### New Features
+
+<csr-id-6e66d118e5c249b95ba7262d1b2f5ee8393bf3cf/>
+
+ - <csr-id-6a911f32c2ae53a4cc4e956e6ce4efc6df49aa66/> remove GPU thresholds, always use GPU when available
+   - Remove GPU_THRESHOLD, GPU_FFT_THRESHOLD, GPU_MATRIX_THRESHOLD constants
+
+### Bug Fixes
+
+ - <csr-id-75937c28e6df8843143cb9222cea163894b2f0a0/> fix integration regression tests
+   - Add missing PeacoQCData trait import
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 14 commits contributed to the release over the course of 24 calendar days.
+ - 27 days passed between releases.
+ - 9 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
+    - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
+    - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
+    - Use workspace ndarray dependency ([`e62b423`](https://github.com/jrmoynihan/flow/commit/e62b423812b0ce71a2b355a60da926fd588cbf0a))
+    - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))
+    - Merge pull request #10 from jrmoynihan/gpu-acceleration ([`69363eb`](https://github.com/jrmoynihan/flow/commit/69363eb3a664b1aa6cd0be9b980ec08fc03b7955))
+    - Release flow-fcs v0.2.0, safety bump 4 crates ([`cd26a89`](https://github.com/jrmoynihan/flow/commit/cd26a8970fc25dbe70c1cc9ac342b367613bcda6))
+    - Adjusting changelogs prior to release of flow-fcs v0.1.6 ([`7fb88db`](https://github.com/jrmoynihan/flow/commit/7fb88db9ede05b317a03d367cea18a3b8b73c5a1))
+    - Release flow-fcs v0.1.5, flow-gates v0.1.2 ([`4106abc`](https://github.com/jrmoynihan/flow/commit/4106abc5ae2d35328ec470daf9b0a9a549ebd6ba))
+    - Update benchmarks to use current APIs ([`ef08072`](https://github.com/jrmoynihan/flow/commit/ef08072701d707a79303fb5ffcb14127d3d22930))
+    - Fix integration regression tests ([`75937c2`](https://github.com/jrmoynihan/flow/commit/75937c28e6df8843143cb9222cea163894b2f0a0))
+    - Consolidate GPU performance documentation ([`5fba05b`](https://github.com/jrmoynihan/flow/commit/5fba05b5e2747e3cfdda979dabb4ddde2bb384e1))
+    - Remove GPU thresholds, always use GPU when available ([`6a911f3`](https://github.com/jrmoynihan/flow/commit/6a911f32c2ae53a4cc4e956e6ce4efc6df49aa66))
+    - Add GPU acceleration for KDE and feature matrix operations ([`6e66d11`](https://github.com/jrmoynihan/flow/commit/6e66d118e5c249b95ba7262d1b2f5ee8393bf3cf))
+</details>
+
+<csr-unknown>
+Update README.md to reference DEV_NOTES.md for GPU detailsDocument which operations use GPU and their benefitsDocument what was tried and not used (for future reference)Remove standalone GPU_PERFORMANCE.md fileAlways use GPU acceleration when available (no size-based checks)Batched operations provide speedup even for smaller datasets (50K+ events)Update KDE and feature matrix code to always attempt GPU pathAdd GPU module with WGPU backend via burn frameworkImplement GPU-accelerated FFT-based KDE with complex multiplicationAdd batched GPU operations for multi-channel processingAdd GPU feature matrix building for isolation treeAdd cubeCL custom kernel support (optional feature)Add GPU correctness testsAdd GPU benchmarks for performance analysisFix Fcs::open() calls to use string slice instead of PathBuf referenceFix preprocess_fcs() call to use correct function signatureRemove unused variable warning<csr-unknown/>
+
 ## 0.1.3 (2026-01-18)
+
+<csr-id-339d07ac60343b172cd5962310abbc7899fdc770/>
+<csr-id-d3aa6cdc5a806703131a3ffac63506142f052da9/>
+<csr-id-8d232b2838f65aa621a81031183d4c954d787543/>
+<csr-id-ccd3cb1557065cd0c1ba4637c35d937bac39c9f6/>
+<csr-id-1b41cd165c4cd315e9759b437e6b4e2a2839af99/>
+<csr-id-4649c7af16150d05880ddab4e732e9dee374d01b/>
+<csr-id-c91cd7fd5ad0b9c912c5ca05ff7540655a37d304/>
+<csr-id-be95b5180e4ffe4826bcb9a3833295d35a9b7ced/>
+<csr-id-6da76b758d02b9da1abcd3052323f81992dc3fdd/>
+<csr-id-5bd48e4049f6afc1539dc0a23d41d0d0f98ee6f7/>
+<csr-id-005a1cc9bd0bef0c9354d1f16b1fa077828359a3/>
 
 ### Chore
 
@@ -32,24 +127,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+<csr-id-2721f1f10fe2edd01034e4bd5340dd9cc6fe6b2e/>
+<csr-id-76d800d1b9a5b40c8f4628b46074320bd9e51630/>
+
  - <csr-id-c6e843a730bc3352229c02a60be3b167e9f2d14d/> md formatting on dev notes
  - <csr-id-06a15cc61b34171896102c8de48c275fb811e78d/> consolidate and clean up documentation
    - Create DEV_NOTES.md consolidating technical implementation details
-   - Update QUICK_START.md with cleaner examples
-   - Update README.md with improved documentation
-   - Add .gitignore entry for test artifacts
- - <csr-id-2721f1f10fe2edd01034e4bd5340dd9cc6fe6b2e/> add export formats documentation
-   Add comprehensive documentation for export formats:
-   - Boolean CSV format description and use cases
-   - Numeric CSV format (R-compatible) description
-   - JSON metadata format with example structure
-   - Custom column name examples
-   - Integration notes for downstream tools (pandas, R, SQL)
-   
-   Includes code examples for each export format.
- - <csr-id-76d800d1b9a5b40c8f4628b46074320bd9e51630/> Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines.
 
 ### New Features
+
+<csr-id-1164c5de5cd34a0806cf2b89bd87f51e905b8aed/>
+<csr-id-9bfc1e2f00f85a894ae962a8a1b7bbe0bb019b10/>
 
  - <csr-id-d262a619dbf3ed9a147a9a2e6b2fa0a729991b1f/> add QC plot generation functionality
    Add comprehensive QC plot generation for visualizing PeacoQC results.
@@ -58,30 +146,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    for significant performance improvements.
    
    - Add realfft dependency for efficient FFT operations
-   - Implement FFT-based convolution for KDE computation
-   - Update benchmarks to reflect FFT implementation
-   - Update performance analysis documentation
-   
-   Performance improvements:
-   - 30-87x faster for typical use cases (1k-50k events)
-   - Better scaling for larger datasets
-   - No accuracy loss - all tests pass
-   
-   Benchmarks show ~48x speedup for default bin size (1k events),
-   reducing KDE time from ~1.4ms to ~29µs per bin.
- - <csr-id-1164c5de5cd34a0806cf2b89bd87f51e905b8aed/> add convenience export methods to PeacoQCResult
-   Add methods to PeacoQCResult for easier export:
-   - export_csv_boolean() and export_csv_boolean_with_name()
-   - export_csv_numeric() and export_csv_numeric_with_name()
-   - export_json_metadata()
-   
-   These methods wrap the export functions and provide a more
-   ergonomic API for users.
- - <csr-id-9bfc1e2f00f85a894ae962a8a1b7bbe0bb019b10/> add export module for QC results
-   Add export functionality to support multiple output formats:
-   - Boolean CSV (0/1 values) for general use
-   - Numeric CSV (2000/6000 values) for R compatibility
-   - JSON metadata with comprehensive QC metrics
 
 ### Bug Fixes
 
@@ -121,7 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 26 commits contributed to the release over the course of 3 calendar days.
+ - 27 commits contributed to the release over the course of 3 calendar days.
  - 4 days passed between releases.
  - 20 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -133,6 +197,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release peacoqc-rs v0.1.3, peacoqc-cli v0.1.2 ([`572393e`](https://github.com/jrmoynihan/flow/commit/572393e435342b438c398b2c51b680af50da1b68))
     - Remove paper pdf for release ([`c91cd7f`](https://github.com/jrmoynihan/flow/commit/c91cd7fd5ad0b9c912c5ca05ff7540655a37d304))
     - Release flow-fcs v0.1.4, peacoqc-rs v0.1.2 ([`140a59a`](https://github.com/jrmoynihan/flow/commit/140a59af3c1ca751672e66c9cc69708f45ac8453))
     - Clean up unused imports and improve code readability ([`6da76b7`](https://github.com/jrmoynihan/flow/commit/6da76b758d02b9da1abcd3052323f81992dc3fdd))

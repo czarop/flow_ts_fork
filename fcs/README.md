@@ -102,13 +102,10 @@ let transformed = fcs.apply_default_arcsinh_transform()?;
 let compensated = fcs.apply_file_compensation()?;
 
 // Apply custom compensation matrix
-use ndarray::Array2;
-let comp_matrix = Array2::from_shape_vec((2, 2), vec![
-    1.0, 0.1,
-    0.05, 1.0,
-])?;
+use faer::mat;
+let comp_matrix = mat![[1.0, 0.1], [0.05, 1.0]];
 let channels = vec!["FL1-A", "FL2-A"];
-let compensated = fcs.apply_compensation(&comp_matrix, &channels)?;
+let compensated = fcs.apply_compensation(comp_matrix.as_ref(), &channels)?;
 ```
 
 ### Working with Metadata
@@ -212,10 +209,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - Built with [Polars](https://www.pola.rs/) for high-performance data operations
-- Uses [ndarray](https://github.com/rust-ndarray/ndarray) for matrix operations
+- Uses [faer](https://github.com/sarah-ek/faer) for pure-Rust linear algebra (compensation, unmixing)
 - Inspired by the need for fast, type-safe FCS file handling in Rust
 
 ## Related Projects
 
 - [Polars](https://www.pola.rs/): Fast DataFrame library
-- [ndarray](https://github.com/rust-ndarray/ndarray): N-dimensional array library
+- [faer](https://github.com/sarah-ek/faer): Pure-Rust linear algebra library

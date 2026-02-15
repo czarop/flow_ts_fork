@@ -25,7 +25,7 @@
 use crate::{
     Fcs,
     byteorder::ByteOrder,
-    keyword::{IntegerKeyword, Keyword},
+    keyword::{ByteKeyword, IntegerKeyword, Keyword, StringableKeyword},
     metadata::Metadata,
     version::Version,
 };
@@ -278,7 +278,7 @@ pub fn concatenate_events(files: Vec<Fcs>, path: impl AsRef<Path>) -> Result<Fcs
     let concatenated_df = dfs
         .into_iter()
         .reduce(|acc, df| acc.vstack(&df).unwrap_or(acc))
-        .unwrap();
+        .ok_or_else(|| anyhow!("No files to concatenate"))?;
 
     // Create new Fcs using first file as template
     let mut new_fcs = files[0].clone();
@@ -355,7 +355,7 @@ pub fn add_column(
     let mut new_df = df.clone();
     let new_series = Series::new(column_name.into(), values);
     new_df
-        .with_column(new_series)
+        .with_column(new_series.into())
         .map_err(|e| anyhow!("Failed to add column: {}", e))?;
 
     // Update Fcs struct
@@ -446,6 +446,7 @@ fn serialize_metadata(
     };
 
     // Required keywords (order matters for FCS compatibility)
+    // Write these first, then metadata keywords will be added (some may overwrite these)
     add_keyword("BEGINANALYSIS", "0");
     add_keyword("ENDANALYSIS", "0");
     add_keyword("BEGINSTEXT", "0");
@@ -453,12 +454,56 @@ fn serialize_metadata(
     add_keyword("BEGINDATA", &data_start.to_string());
     add_keyword("ENDDATA", &data_end.to_string());
 
-    // Serialize all keywords from metadata
+    // Ensure required keywords are written (use metadata values if present, otherwise defaults)
+    let byteord_value = metadata
+        .keywords
+        .get("$BYTEORD")
+        .and_then(|k| match k {
+            Keyword::Byte(ByteKeyword::BYTEORD(bo)) => Some(bo.to_keyword_str()),
+            _ => None,
+        })
+        .unwrap_or("1,2,3,4");
+    add_keyword("BYTEORD", byteord_value);
+
+    let datatype_value = metadata
+        .keywords
+        .get("$DATATYPE")
+        .and_then(|k| match k {
+            Keyword::Byte(ByteKeyword::DATATYPE(dt)) => Some(dt.to_keyword_str()),
+            _ => None,
+        })
+        .unwrap_or("F");
+    add_keyword("DATATYPE", datatype_value);
+
+    let mode_value = metadata
+        .keywords
+        .get("$MODE")
+        .and_then(|k| match k {
+            Keyword::String(sk) => Some(sk.get_str().to_string()),
+            _ => None,
+        })
+        .unwrap_or_else(|| "L".to_string());
+    add_keyword("MODE", &mode_value);
+
+    add_keyword("PAR", &n_params.to_string());
+    add_keyword("TOT", &n_events.to_string());
+
+    let nextdata_value = metadata
+        .keywords
+        .get("$NEXTDATA")
+        .and_then(|k| match k {
+            Keyword::String(sk) => Some(sk.get_str().to_string()),
+            _ => None,
+        })
+        .unwrap_or_else(|| "0".to_string());
+    add_keyword("NEXTDATA", &nextdata_value);
+
+    // Serialize all other keywords from metadata
     let mut sorted_keys: Vec<_> = metadata.keywords.keys().collect();
     sorted_keys.sort();
 
     for key in sorted_keys {
-        // Skip keywords we've already added
+        // Skip keywords we've already written
         if matches!(
             key.as_str(),
             "$BEGINANALYSIS"
@@ -467,11 +512,20 @@ fn serialize_metadata(
                 | "$ENDSTEXT"
                 | "$BEGINDATA"
                 | "$ENDDATA"
+                | "$BYTEORD"
+                | "$DATATYPE"
+                | "$MODE"
+                | "$PAR"
+                | "$TOT"
+                | "$NEXTDATA"
         ) {
             continue;
         }
 
-        let keyword = metadata.keywords.get(key).unwrap();
+        let keyword = metadata
+            .keywords
+            .get(key)
+            .ok_or_else(|| anyhow!("Keyword '{}' not found in metadata", key))?;
         let value_str = match keyword {
             Keyword::Int(int_kw) => match int_kw {
                 IntegerKeyword::TOT(_) => {
@@ -482,18 +536,53 @@ fn serialize_metadata(
                     // Use actual parameter count
                     n_params.to_string()
                 }
-                _ => int_kw.to_string(),
+                _ => int_kw.get_str().to_string(),
             },
-            Keyword::String(str_kw) => str_kw.to_string(),
+            Keyword::String(str_kw) => str_kw.get_str().to_string(),
             Keyword::Float(float_kw) => float_kw.to_string(),
-            Keyword::Byte(byte_kw) => byte_kw.to_string(),
-            Keyword::Mixed(mixed_kw) => mixed_kw.to_string(),
+            Keyword::Byte(byte_kw) => byte_kw.get_str().to_string(),
+            Keyword::Mixed(mixed_kw) => {
+                // Serialize mixed keywords in FCS format (not Debug format)
+                use crate::keyword::MixedKeyword;
+                match mixed_kw {
+                    MixedKeyword::PnE(f1, f2) => format!("{},{}", f1, f2),
+                    MixedKeyword::PnL(wavelengths) => {
+                        format!("({})", wavelengths.iter().map(|w| w.to_string()).collect::<Vec<_>>().join(","))
+                    }
+                    MixedKeyword::PnD(scale_type, lower, upper) => {
+                        format!("({},{},{})", scale_type, lower, upper)
+                    }
+                    MixedKeyword::PnCalibration(f1, s) => {
+                        format!("{}/{}", f1, s)
+                    }
+                    MixedKeyword::RnW(widths) => {
+                        format!("({})", widths.iter().map(|w| w.to_string()).collect::<Vec<_>>().join(","))
+                    }
+                    MixedKeyword::SPILLOVER { n_parameters, parameter_names, matrix_values } => {
+                        let mut result = format!("{}", n_parameters);
+                        for name in parameter_names {
+                            result.push(',');
+                            result.push_str(name);
+                        }
+                        for val in matrix_values {
+                            result.push(',');
+                            result.push_str(&val.to_string());
+                        }
+                        result
+                    }
+                    MixedKeyword::GnE(f1, f2) => format!("{},{}", f1, f2),
+                }
+            },
         };
 
         // Remove $ prefix for serialization (it will be added back)
         let key_without_prefix = key.strip_prefix('$').unwrap_or(key);
         add_keyword(key_without_prefix, &value_str);
     }
+
+    // Add trailing delimiter after the last value to properly terminate the text segment
+    // The parser expects the text segment to end with a delimiter after the last value
+    text_segment.push(delimiter);
 
     Ok(text_segment)
 }

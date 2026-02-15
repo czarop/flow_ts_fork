@@ -15,11 +15,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 // External crate imports
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use byteorder::{BigEndian as BE, ByteOrder as BO, LittleEndian as LE};
 use itertools::{Itertools, MinMaxResult};
 use memmap3::{Mmap, MmapOptions};
-use ndarray::Array2;
+use faer::Mat;
 use polars::prelude::*;
 use rayon::prelude::*;
 
@@ -162,20 +162,31 @@ impl Fcs {
         use tracing::debug;
 
         // Attempt to open the file path
-        let file_access = AccessWrapper::new(path).expect("Should be able make new access wrapper");
+        let file_access =
+            AccessWrapper::new(path).with_context(|| format!("Failed to open file: {}", path))?;
 
         // Validate the file extension
-        Self::validate_fcs_extension(&file_access.path)
-            .expect("Should have a valid file extension");
+        Self::validate_fcs_extension(&file_access.path).with_context(|| {
+            format!("Invalid file extension for: {}", file_access.path.display())
+        })?;
 
         // Create header and metadata structs from a memory map of the file
-        let header = Header::from_mmap(&file_access.mmap)
-            .expect("Should be able to create header from mmap");
+        let header = Header::from_mmap(&file_access.mmap).with_context(|| {
+            format!(
+                "Failed to parse header from file: {}",
+                file_access.path.display()
+            )
+        })?;
         let mut metadata = Metadata::from_mmap(&file_access.mmap, &header);
 
         metadata
             .validate_text_segment_keywords(&header)
-            .expect("Should have valid text segment keywords");
+            .with_context(|| {
+                format!(
+                    "Failed to validate text segment keywords in file: {}",
+                    file_access.path.display()
+                )
+            })?;
         // metadata.validate_number_of_parameters()?;
         metadata.validate_guid();
 
@@ -185,11 +196,24 @@ impl Fcs {
             debug!("FCS file $TOT keyword: {} events", tot);
         }
 
+        let parameters = Self::generate_parameter_map(&metadata).map_err(|e| {
+            let diagnostic = Self::format_diagnostic_info(&header, &metadata, &file_access.path);
+            anyhow!("Failed to generate parameter map: {}\n\n{}", e, diagnostic)
+        })?;
+
+        let data_frame = Self::store_raw_data_as_dataframe(&header, &file_access.mmap, &metadata)
+            .map_err(|e| {
+            let diagnostic = Self::format_diagnostic_info(&header, &metadata, &file_access.path);
+            anyhow!(
+                "Failed to store raw data as DataFrame: {}\n\n{}",
+                e,
+                diagnostic
+            )
+        })?;
+
         let fcs = Self {
-            parameters: Self::generate_parameter_map(&metadata)
-                .expect("Should be able to generate parameter map"),
-            data_frame: Self::store_raw_data_as_dataframe(&header, &file_access.mmap, &metadata)
-                .expect("Should be able to store raw data as DataFrame"),
+            parameters,
+            data_frame,
             file_access,
             header,
             metadata,
@@ -256,7 +280,7 @@ impl Fcs {
     /// Reads raw data from FCS file and stores it as a Polars DataFrame
     /// Returns columnar data optimized for parameter-wise access patterns
     ///
-    /// This function provides significant performance benefits over ndarray:
+    /// This function provides significant performance benefits over row-based array storage:
     /// - 2-5x faster data filtering and transformations
     /// - Native columnar storage (optimal for FCS parameter access patterns)
     /// - Zero-copy operations via Apache Arrow
@@ -328,20 +352,20 @@ impl Fcs {
 
         let number_of_parameters = metadata
             .get_number_of_parameters()
-            .expect("Should be able to retrieve the number of parameters");
+            .context("Failed to retrieve the number of parameters from metadata")?;
         let number_of_events = metadata
             .get_number_of_events()
-            .expect("Should be able to retrieve the number of events");
+            .context("Failed to retrieve the number of events from metadata")?;
 
         // Calculate bytes per event by summing $PnB / 8 for each parameter
         // This is more accurate than using $DATATYPE which only provides a default
         let bytes_per_event = metadata
             .calculate_bytes_per_event()
-            .expect("Should be able to calculate bytes per event");
+            .context("Failed to calculate bytes per event")?;
 
         let byte_order = metadata
             .get_byte_order()
-            .expect("Should be able to get the byte order");
+            .context("Failed to get the byte order from metadata")?;
 
         // Validate data size
         let expected_total_bytes = number_of_events * bytes_per_event;
@@ -360,35 +384,40 @@ impl Fcs {
             .map(|param_num| {
                 metadata
                     .get_bytes_per_parameter(param_num)
-                    .expect("Should be able to get bytes per parameter")
+                    .with_context(|| {
+                        format!(
+                            "Failed to get bytes per parameter for parameter {}",
+                            param_num
+                        )
+                    })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         let data_types: Vec<FcsDataType> = (1..=*number_of_parameters)
             .map(|param_num| {
                 metadata
                     .get_data_type_for_channel(param_num)
-                    .expect("Should be able to get data type for channel")
+                    .with_context(|| format!("Failed to get data type for channel {}", param_num))
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         // Fast path: Check if all parameters are uniform (same bytes, same data type)
         // This allows us to use bytemuck zero-copy optimization
         let uniform_bytes = bytes_per_parameter.first().copied();
         let uniform_data_type = data_types.first().copied();
-        let is_uniform = uniform_bytes.is_some()
-            && uniform_data_type.is_some()
-            && bytes_per_parameter
-                .iter()
-                .all(|&b| b == uniform_bytes.unwrap())
-            && data_types
-                .iter()
-                .all(|&dt| dt == uniform_data_type.unwrap());
+        let is_uniform = match (uniform_bytes, uniform_data_type) {
+            (Some(bytes), Some(dt)) => {
+                bytes_per_parameter.iter().all(|&b| b == bytes)
+                    && data_types.iter().all(|&dt_val| dt_val == dt)
+            }
+            _ => false,
+        };
 
         let f32_values: Vec<f32> = if is_uniform {
             // Fast path: All parameters have same size and type - use bytemuck for zero-copy
-            let bytes_per_param = uniform_bytes.unwrap();
-            let data_type = uniform_data_type.unwrap();
+            let bytes_per_param = uniform_bytes.ok_or_else(|| anyhow!("No uniform bytes found"))?;
+            let data_type =
+                uniform_data_type.ok_or_else(|| anyhow!("No uniform data type found"))?;
 
             match (data_type, bytes_per_param) {
                 (FcsDataType::F, 4) => {
@@ -498,8 +527,8 @@ impl Fcs {
             columns.push(series);
         }
 
-        // Create DataFrame from columns
-        let df = DataFrame::new(columns).map_err(|e| {
+        // Create DataFrame from columns (height = number of events)
+        let df = DataFrame::new(*number_of_events, columns).map_err(|e| {
             anyhow!(
                 "Failed to create DataFrame from {} columns: {}",
                 number_of_parameters,
@@ -914,7 +943,11 @@ impl Fcs {
         match events.iter().minmax() {
             MinMaxResult::NoElements => Err(anyhow!("No elements found")),
             MinMaxResult::OneElement(e) => Err(anyhow!("Only one element found: {:?}", e)),
-            MinMaxResult::MinMax(min, max) => Ok((min.unwrap(), max.unwrap())),
+            MinMaxResult::MinMax(min, max) => {
+                let min_val = min.ok_or_else(|| anyhow!("Min value is None"))?;
+                let max_val = max.ok_or_else(|| anyhow!("Max value is None"))?;
+                Ok((min_val, max_val))
+            }
         }
     }
 
@@ -926,11 +959,115 @@ impl Fcs {
     /// - the number of parameters cannot be found in the metadata,
     /// - the parameter name cannot be found in the metadata,
     /// - the parameter cannot be built (using the Builder pattern)
+    /// Format diagnostic information about FCS file state for error messages
+    fn format_diagnostic_info(header: &Header, metadata: &Metadata, path: &Path) -> String {
+        let mut lines = Vec::new();
+
+        lines.push("=== FCS File Diagnostic Information ===".to_string());
+        lines.push(format!("File path: {}", path.display()));
+        lines.push(format!("FCS Version: {}", header.version));
+        lines.push(format!(
+            "Text segment: {}..={}",
+            header.text_offset.start(),
+            header.text_offset.end()
+        ));
+        lines.push(format!(
+            "Data segment: {}..={}",
+            header.data_offset.start(),
+            header.data_offset.end()
+        ));
+        lines.push(format!(
+            "Analysis segment: {}..={}",
+            header.analysis_offset.start(),
+            header.analysis_offset.end()
+        ));
+        lines.push(format!(
+            "Delimiter: '{}' (0x{:02x})",
+            metadata.delimiter, metadata.delimiter as u8
+        ));
+
+        // Get number of parameters
+        let n_params = metadata
+            .get_number_of_parameters()
+            .map(|n| format!("{}", n))
+            .unwrap_or_else(|e| format!("Error: {}", e));
+        lines.push(format!("Number of parameters ($PAR): {}", n_params));
+
+        // Get number of events
+        let n_events = metadata
+            .get_number_of_events()
+            .map(|n| format!("{}", n))
+            .unwrap_or_else(|e| format!("Error: {}", e));
+        lines.push(format!("Number of events ($TOT): {}", n_events));
+
+        // List all parameter keywords
+        lines.push("\n=== Parameter Keywords ===".to_string());
+        let number_of_parameters = metadata.get_number_of_parameters().ok().copied();
+        if let Some(n_params) = number_of_parameters {
+            for param_num in 1..=n_params {
+                let pn_keywords = [
+                    format!("$P{}N", param_num),
+                    format!("$P{}S", param_num),
+                    format!("$P{}B", param_num),
+                    format!("$P{}E", param_num),
+                    format!("$P{}R", param_num),
+                ];
+
+                let mut found_keywords = Vec::new();
+                for key in &pn_keywords {
+                    if let Some(kw) = metadata.keywords.get(key) {
+                        let value = match kw {
+                            crate::keyword::Keyword::String(sk) => sk.get_str().to_string(),
+                            crate::keyword::Keyword::Int(ik) => ik.get_usize().to_string(),
+                            crate::keyword::Keyword::Float(fk) => fk.to_string(),
+                            crate::keyword::Keyword::Byte(bk) => bk.get_str().to_string(),
+                            crate::keyword::Keyword::Mixed(mk) => mk.to_string(),
+                        };
+                        found_keywords.push(format!("  {} = {}", key, value));
+                    } else {
+                        found_keywords.push(format!("  {} = <MISSING>", key));
+                    }
+                }
+                lines.push(format!("Parameter {}:", param_num));
+                lines.extend(found_keywords);
+            }
+        } else {
+            lines.push("  Could not determine number of parameters".to_string());
+        }
+
+        // List all keywords sorted
+        lines.push("\n=== All Keywords (sorted) ===".to_string());
+        let mut sorted_keys: Vec<_> = metadata.keywords.keys().collect();
+        sorted_keys.sort();
+        for key in sorted_keys {
+            let kw = match metadata.keywords.get(key) {
+                Some(kw) => kw,
+                None => continue, // Skip missing keywords in diagnostic output
+            };
+            let value = match kw {
+                crate::keyword::Keyword::String(sk) => sk.get_str().to_string(),
+                crate::keyword::Keyword::Int(ik) => ik.get_usize().to_string(),
+                crate::keyword::Keyword::Float(fk) => fk.to_string(),
+                crate::keyword::Keyword::Byte(bk) => bk.get_str().to_string(),
+                crate::keyword::Keyword::Mixed(mk) => mk.to_string(),
+            };
+            lines.push(format!("  {} = {}", key, value));
+        }
+
+        lines.join("\n")
+    }
+
     pub fn generate_parameter_map(metadata: &Metadata) -> Result<ParameterMap> {
         let mut map = ParameterMap::default();
         let number_of_parameters = metadata.get_number_of_parameters()?;
         for parameter_number in 1..=*number_of_parameters {
-            let channel_name = metadata.get_parameter_channel_name(parameter_number)?;
+            let channel_name = metadata.get_parameter_channel_name(parameter_number)
+                .map_err(|e| anyhow!(
+                    "Failed to get channel name for parameter {}: {}\n\nHint: Check that $P{}N keyword exists in metadata.",
+                    parameter_number,
+                    e,
+                    parameter_number
+                ))?;
 
             // Use label name or fallback to the parameter name
             let label_name = match metadata.get_parameter_label(parameter_number) {
@@ -1114,28 +1251,32 @@ impl Fcs {
             .collect_with_engine(Engine::Streaming)?;
         let min = stats
             .column("min")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'min' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'min' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No min found"))?;
+            .ok_or_else(|| anyhow!("No min value found"))?;
         let max = stats
             .column("max")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'max' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'max' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No max found"))?;
+            .ok_or_else(|| anyhow!("No max value found"))?;
         let mean = stats
             .column("mean")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'mean' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'mean' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No mean found"))?;
+            .ok_or_else(|| anyhow!("No mean value found"))?;
         let std = stats
             .column("std")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'std' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'std' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No std deviation found"))?;
+            .ok_or_else(|| anyhow!("No std deviation value found"))?;
 
         Ok((min, max, mean, std))
     }
@@ -1187,7 +1328,7 @@ impl Fcs {
         // Replace the column in DataFrame
         let mut new_df = df;
         new_df
-            .replace(parameter_name, new_series)
+            .replace(parameter_name, new_series.into())
             .map_err(|e| anyhow!("Failed to replace column: {}", e))?;
 
         Ok(Arc::new(new_df))
@@ -1226,7 +1367,7 @@ impl Fcs {
                 .collect();
 
             let new_series = Series::new(param_name.into(), transformed);
-            df.replace(param_name, new_series)
+            df.replace(param_name, new_series.into())
                 .map_err(|e| anyhow!("Failed to replace column {}: {}", param_name, e))?;
         }
 
@@ -1299,7 +1440,7 @@ impl Fcs {
                 .collect();
 
             let new_series = Series::new(param_name.into(), transformed);
-            df.replace(param_name, new_series)
+            df.replace(param_name, new_series.into())
                 .map_err(|e| anyhow!("Failed to replace column {}: {}", param_name, e))?;
         }
 
@@ -1317,7 +1458,7 @@ impl Fcs {
     ///
     /// # Errors
     /// Will return `Err` if spillover keyword is malformed
-    pub fn get_spillover_matrix(&self) -> Result<Option<(Array2<f32>, Vec<String>)>> {
+    pub fn get_spillover_matrix(&self) -> Result<Option<(Mat<f32>, Vec<String>)>> {
         use crate::keyword::{Keyword, MixedKeyword};
 
         // Try to get compensation matrix from $SPILLOVER (FCS 3.1+), $SPILL (unofficial/custom), or $COMP (FCS 3.0)
@@ -1386,17 +1527,11 @@ impl Fcs {
                                     }
 
                                     if matrix_values.len() == expected_matrix_size {
-                                        let matrix = Array2::from_shape_vec(
-                                            (n_parameters, n_parameters),
-                                            matrix_values,
-                                        )
-                                        .map_err(|e| {
-                                            anyhow!(
-                                                "Failed to create compensation matrix from {}: {}",
-                                                keyword_name,
-                                                e
-                                            )
-                                        })?;
+                                        let matrix = Mat::from_fn(
+                                            n_parameters,
+                                            n_parameters,
+                                            |i, j| matrix_values[i * n_parameters + j],
+                                        );
                                         return Ok(Some((matrix, parameter_names)));
                                     }
                                 }
@@ -1431,10 +1566,9 @@ impl Fcs {
             ));
         }
 
-        // Create Array2 from matrix values
-        // FCS spillover is stored row-major order
-        let matrix = Array2::from_shape_vec((n_params, n_params), matrix_values)
-            .map_err(|e| anyhow!("Failed to create compensation matrix from SPILLOVER: {}", e))?;
+        // Create Mat from matrix values (FCS spillover is stored row-major)
+        let matrix =
+            Mat::from_fn(n_params, n_params, |i, j| matrix_values[i * n_params + j]);
 
         Ok(Some((matrix, param_names)))
     }
@@ -1459,7 +1593,7 @@ impl Fcs {
 
         let channel_refs: Vec<&str> = channel_names.iter().map(|s| s.as_str()).collect();
 
-        self.apply_compensation(&comp_matrix, &channel_refs)
+        self.apply_compensation(comp_matrix.as_ref(), &channel_refs)
     }
 
     /// OPTIMIZED: Get compensated data for specific parameters only (lazy/partial compensation)
@@ -1499,7 +1633,7 @@ impl Fcs {
             for i in 0..comp_matrix.nrows() {
                 for j in 0..comp_matrix.ncols() {
                     let expected = if i == j { 1.0 } else { 0.0 };
-                    if (comp_matrix[[i, j]] - expected).abs() > 1e-6 {
+                    if (comp_matrix[(i, j)] - expected).abs() > 1e-6 {
                         is_id = false;
                         break;
                     }
@@ -1523,8 +1657,15 @@ impl Fcs {
         }
 
         // OPTIMIZATION 2: Analyze sparsity
-        let total_elements = comp_matrix.len();
-        let non_zero_count = comp_matrix.iter().filter(|&&x| x.abs() > 1e-6).count();
+        let total_elements = comp_matrix.nrows() * comp_matrix.ncols();
+        let mut non_zero_count = 0;
+        for i in 0..comp_matrix.nrows() {
+            for j in 0..comp_matrix.ncols() {
+                if comp_matrix[(i, j)].abs() > 1e-6 {
+                    non_zero_count += 1;
+                }
+            }
+        }
         let sparsity = 1.0 - (non_zero_count as f64 / total_elements as f64);
         let is_sparse = sparsity > 0.8;
 
@@ -1562,7 +1703,7 @@ impl Fcs {
             // Add channels with non-zero spillover
             if is_sparse {
                 for col_idx in 0..comp_matrix.ncols() {
-                    if comp_matrix[[row_idx, col_idx]].abs() > 1e-6 {
+                    if comp_matrix[(row_idx, col_idx)].abs() > 1e-6 {
                         involved_indices.insert(col_idx);
                     }
                 }
@@ -1592,39 +1733,29 @@ impl Fcs {
         }
 
         // Extract sub-matrix for involved channels
-        let sub_matrix = {
-            let mut sub = Array2::<f32>::zeros((involved_vec.len(), involved_vec.len()));
-            for (i, &orig_i) in involved_vec.iter().enumerate() {
-                for (j, &orig_j) in involved_vec.iter().enumerate() {
-                    sub[[i, j]] = comp_matrix[[orig_i, orig_j]];
-                }
-            }
-            sub
-        };
+        let sub_matrix = Mat::from_fn(involved_vec.len(), involved_vec.len(), |i, j| {
+            comp_matrix[(involved_vec[i], involved_vec[j])]
+        });
 
         // Use CPU compensation (benchmarked: GPU was slower due to transfer overhead)
-        // Invert sub-matrix
-        use ndarray_linalg::Inverse;
-        let comp_inv = sub_matrix
-            .inv()
+        // Invert sub-matrix using faer (pure Rust, no system BLAS)
+        let comp_inv = crate::matrix::MatrixOps::invert_matrix(sub_matrix.as_ref())
             .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
 
         // Compensate ONLY the involved channels
         use rayon::prelude::*;
-        let compensated_data: Vec<Vec<f32>> = (0..involved_vec.len())
+        let n_involved = involved_vec.len();
+        let compensated_data: Vec<Vec<f32>> = (0..n_involved)
             .into_par_iter()
             .map(|i| {
-                let row = comp_inv.row(i);
                 let mut result = vec![0.0; n_events];
-
                 for event_idx in 0..n_events {
                     let mut sum = 0.0;
-                    for (j, &coeff) in row.iter().enumerate() {
-                        sum += coeff * channel_data[j][event_idx];
+                    for j in 0..n_involved {
+                        sum += comp_inv[(i, j)] * channel_data[j][event_idx];
                     }
                     result[event_idx] = sum;
                 }
-
                 result
             })
             .collect();
@@ -1654,26 +1785,28 @@ impl Fcs {
     /// # Example
     /// ```ignore
     /// // Create a 3x3 compensation matrix
-    /// let comp_matrix = Array2::from_shape_vec((3, 3), vec![
-    ///     1.0, 0.1, 0.05,  // FL1-A compensation
-    ///     0.2, 1.0, 0.1,   // FL2-A compensation
-    ///     0.1, 0.15, 1.0,  // FL3-A compensation
-    /// ]).unwrap();
+    /// use faer::mat;
+    /// let comp_matrix = mat![
+    ///     [1.0, 0.1, 0.05],  // FL1-A compensation
+    ///     [0.2, 1.0, 0.1],   // FL2-A compensation
+    ///     [0.1, 0.15, 1.0],  // FL3-A compensation
+    /// ];
     /// let channels = vec!["FL1-A", "FL2-A", "FL3-A"];
-    /// let compensated = fcs.apply_compensation(&comp_matrix, &channels)?;
+    /// let compensated = fcs.apply_compensation(comp_matrix.as_ref(), &channels)?;
     /// ```
     pub fn apply_compensation(
         &self,
-        compensation_matrix: &Array2<f32>,
+        compensation_matrix: faer::MatRef<'_, f32>,
         channel_names: &[&str],
     ) -> Result<EventDataFrame> {
+        let comp = compensation_matrix;
         // Verify matrix dimensions match channel names
         let n_channels = channel_names.len();
-        if compensation_matrix.nrows() != n_channels || compensation_matrix.ncols() != n_channels {
+        if comp.nrows() != n_channels || comp.ncols() != n_channels {
             return Err(anyhow!(
                 "Compensation matrix dimensions ({}, {}) don't match number of channels ({})",
-                compensation_matrix.nrows(),
-                compensation_matrix.ncols(),
+                comp.nrows(),
+                comp.ncols(),
                 n_channels
             ));
         }
@@ -1689,28 +1822,25 @@ impl Fcs {
 
         // Use CPU compensation (benchmarked: GPU was slower due to transfer overhead)
         // Apply compensation: compensated = original * inverse(compensation_matrix)
-        // For efficiency, we pre-compute the inverse
-        use ndarray_linalg::Inverse;
-        let comp_inv = compensation_matrix
-            .inv()
-            .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
+        // For efficiency, we pre-compute the inverse using faer (pure Rust, no system BLAS)
+        let comp_inv =
+            crate::matrix::MatrixOps::invert_matrix(comp).map_err(|e| {
+                anyhow!("Failed to invert compensation matrix: {:?}", e)
+            })?;
 
         // Perform matrix multiplication for each event
         use rayon::prelude::*;
         let compensated_data: Vec<Vec<f32>> = (0..n_channels)
             .into_par_iter()
             .map(|i| {
-                let row = comp_inv.row(i);
                 let mut result = vec![0.0; n_events];
-
                 for event_idx in 0..n_events {
                     let mut sum = 0.0;
-                    for (j, &coeff) in row.iter().enumerate() {
-                        sum += coeff * channel_data[j][event_idx];
+                    for j in 0..n_channels {
+                        sum += comp_inv[(i, j)] * channel_data[j][event_idx];
                     }
                     result[event_idx] = sum;
                 }
-
                 result
             })
             .collect();
@@ -1720,76 +1850,100 @@ impl Fcs {
 
         for (i, &channel_name) in channel_names.iter().enumerate() {
             let new_series = Series::new(channel_name.into(), compensated_data[i].clone());
-            df.replace(channel_name, new_series)
+            df.replace(channel_name, new_series.into())
                 .map_err(|e| anyhow!("Failed to replace column {}: {}", channel_name, e))?;
         }
 
         Ok(Arc::new(df))
     }
 
-    /// Apply spectral unmixing (similar to compensation but for spectral flow cytometry)
-    /// Uses a good default cofactor of 200 for transformation before/after unmixing
+    /// Apply spectral unmixing (matrix solve only, no compensation or transformation)
+    ///
+    /// This method performs unmixing by solving: observation = mixing_matrix × abundances
+    /// Does NOT apply compensation or transformations - these should be done separately.
+    ///
+    /// For overdetermined systems (more detectors than endmembers), uses least squares.
     ///
     /// # Arguments
-    /// * `unmixing_matrix` - Matrix describing spectral signatures of fluorophores
-    /// * `channel_names` - Names of spectral channels
-    /// * `cofactor` - Cofactor for arcsinh transformation (default: 200)
+    /// * `unmixing_matrix` - Matrix describing spectral signatures of fluorophores (detectors × endmembers)
+    /// * `detector_names` - Names of detector channels (must match matrix rows)
+    /// * `endmember_names` - Optional names for endmembers (columns). If None, uses "Endmember1", "Endmember2", etc.
     ///
     /// # Returns
-    /// New DataFrame with unmixed and transformed fluorescence values
+    /// New DataFrame with unmixed endmember abundances (columns named by endmember names or indices)
+    ///
+    /// # Errors
+    /// Returns error if detector names don't match matrix dimensions or data cannot be extracted
     pub fn apply_spectral_unmixing(
         &self,
-        unmixing_matrix: &Array2<f32>,
-        channel_names: &[&str],
-        cofactor: Option<f32>,
+        unmixing_matrix: faer::MatRef<'_, f32>,
+        detector_names: &[&str],
+        endmember_names: Option<&[&str]>,
     ) -> Result<EventDataFrame> {
-        let cofactor = cofactor.unwrap_or(200.0);
+        use faer::linalg::solvers::{Qr, SolveLstsq};
 
-        // First, inverse-transform the data (go back to linear scale)
-        let mut df = (*self.data_frame).clone();
-        let transform = TransformType::Arcsinh { cofactor };
-
-        use rayon::prelude::*;
-        for &channel_name in channel_names {
-            let col = df
-                .column(channel_name)
-                .map_err(|e| anyhow!("Parameter {} not found: {}", channel_name, e))?;
-
-            let series = col.as_materialized_series();
-            let ca = series
-                .f32()
-                .map_err(|e| anyhow!("Parameter {} is not f32: {}", channel_name, e))?;
-
-            // Inverse arcsinh using TransformType implementation
-            let linear: Vec<f32> = ca
-                .cont_slice()
-                .map_err(|e| anyhow!("Data not contiguous: {}", e))?
-                .par_iter()
-                .map(|&y| transform.inverse_transform(&y))
-                .collect();
-
-            let new_series = Series::new(channel_name.into(), linear);
-            df.replace(channel_name, new_series)
-                .map_err(|e| anyhow!("Failed to replace column: {}", e))?;
+        // Verify matrix dimensions match detector names
+        let n_detectors = detector_names.len();
+        if unmixing_matrix.nrows() != n_detectors {
+            return Err(anyhow!(
+                "Unmixing matrix rows ({}) don't match number of detectors ({})",
+                unmixing_matrix.nrows(),
+                n_detectors
+            ));
         }
 
-        // Apply unmixing matrix (same as compensation)
-        let df_with_linear = Arc::new(df);
-        let fcs_temp = Fcs {
-            data_frame: df_with_linear,
-            ..self.clone()
-        };
-        let unmixed = fcs_temp.apply_compensation(unmixing_matrix, channel_names)?;
+        let n_endmembers = unmixing_matrix.ncols();
+        let n_events = self.get_event_count_from_dataframe();
 
-        // Re-apply arcsinh transformation
-        let fcs_unmixed = Fcs {
-            data_frame: unmixed,
-            ..self.clone()
-        };
+        // Extract data for detectors
+        let mut detector_data: Vec<Vec<f32>> = Vec::with_capacity(n_detectors);
+        for &detector_name in detector_names {
+            let data = self.get_parameter_events_slice(detector_name)?;
+            detector_data.push(data.to_vec());
+        }
 
-        let params_with_cofactor: Vec<(&str, f32)> =
-            channel_names.iter().map(|&name| (name, cofactor)).collect();
+        // Observations matrix: events × detectors
+        let observations =
+            Mat::from_fn(n_events, n_detectors, |event_idx, detector_idx| {
+                detector_data[detector_idx][event_idx]
+            });
 
-        fcs_unmixed.apply_arcsinh_transforms(&params_with_cofactor)
+        // Perform unmixing: for each event, solve: observation = unmixing_matrix × abundances
+        // For overdetermined systems (n_detectors > n_endmembers), use QR least squares (faer)
+        let qr = Qr::new(unmixing_matrix);
+
+        let mut unmixed_data: Vec<Vec<f32>> = Vec::with_capacity(n_events);
+        for event_idx in 0..n_events {
+            let b_col =
+                Mat::from_fn(n_detectors, 1, |i, _| observations[(event_idx, i)]);
+            let x_faer = qr.solve_lstsq(b_col.as_ref());
+            let abundances: Vec<f32> =
+                (0..n_endmembers).map(|i| x_faer[(i, 0)]).collect();
+            unmixed_data.push(abundances);
+        }
+
+        // Create DataFrame with endmember abundances
+        let mut columns: Vec<Column> = Vec::with_capacity(n_endmembers);
+        for endmember_idx in 0..n_endmembers {
+            let values: Vec<f32> = unmixed_data
+                .iter()
+                .map(|abundances| abundances[endmember_idx])
+                .collect();
+
+            // Use provided endmember name if available, otherwise use generic "Endmember{i}" format
+            let column_name = if let Some(names) = endmember_names {
+                names[endmember_idx].to_string()
+            } else {
+                format!("Endmember{}", endmember_idx + 1)
+            };
+
+            let series = Column::new(column_name.into(), values);
+            columns.push(series);
+        }
+
+        let df = DataFrame::new(n_events, columns)
+            .map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
+
+        Ok(Arc::new(df))
     }
 }

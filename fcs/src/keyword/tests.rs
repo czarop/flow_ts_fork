@@ -1,4 +1,5 @@
 use super::*;
+use crate::datatype::FcsDataType;
 
 #[cfg(test)]
 mod fixed_keywords {
@@ -131,6 +132,26 @@ mod parameter_keywords {
     }
 
     #[test]
+    fn test_parse_p5r_float() {
+        // Some cytometers output floats for $PnR (e.g., "1.1")
+        let result = match_and_parse_keyword("$P5R", "1.1");
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Int(IntegerKeyword::PnR(1))
+        ));
+    }
+
+    #[test]
+    fn test_parse_p61r_float() {
+        // Test with larger parameter number and float value
+        let result = match_and_parse_keyword("$P61R", "1.1");
+        assert!(matches!(
+            result,
+            KeywordCreationResult::Int(IntegerKeyword::PnR(1))
+        ));
+    }
+
+    #[test]
     fn test_parse_p123n_large_param_number() {
         let result = match_and_parse_keyword("$P123N", "LargeParam");
         if let KeywordCreationResult::String(StringKeyword::PnN(name)) = result {
@@ -169,7 +190,7 @@ mod parameter_keywords {
         let result = match_and_parse_keyword("$P23DISPLAY", "4");
         assert!(matches!(
             result,
-            KeywordCreationResult::Int(IntegerKeyword::PnDisplay(4))
+            KeywordCreationResult::String(StringKeyword::PnDISPLAY(s)) if s.as_ref() == "4"
         ));
     }
 
@@ -178,7 +199,7 @@ mod parameter_keywords {
         let result = match_and_parse_keyword("$P1Display", "2");
         assert!(matches!(
             result,
-            KeywordCreationResult::Int(IntegerKeyword::PnDisplay(2))
+            KeywordCreationResult::String(StringKeyword::PnDISPLAY(s)) if s.as_ref() == "2"
         ));
     }
 
@@ -187,7 +208,7 @@ mod parameter_keywords {
         let result = match_and_parse_keyword("$P5display", "1");
         assert!(matches!(
             result,
-            KeywordCreationResult::Int(IntegerKeyword::PnDisplay(1))
+            KeywordCreationResult::String(StringKeyword::PnDISPLAY(s)) if s.as_ref() == "1"
         ));
     }
 
@@ -209,6 +230,55 @@ mod parameter_keywords {
         } else {
             panic!("Expected P20Type keyword");
         }
+    }
+
+    #[test]
+    fn test_parse_p1datatype_character_f() {
+        // FCS 3.2 spec: $PnDATATYPE uses character format like $DATATYPE
+        let result = match_and_parse_keyword("$P1DATATYPE", "F");
+        if let KeywordCreationResult::Byte(ByteKeyword::PnDATATYPE(data_type)) = result {
+            assert_eq!(data_type, FcsDataType::F);
+        } else {
+            panic!("Expected P1DATATYPE as ByteKeyword");
+        }
+    }
+
+    #[test]
+    fn test_parse_p61datatype_character_f() {
+        // Test with larger parameter number
+        let result = match_and_parse_keyword("$P61DATATYPE", "F");
+        if let KeywordCreationResult::Byte(ByteKeyword::PnDATATYPE(data_type)) = result {
+            assert_eq!(data_type, FcsDataType::F);
+        } else {
+            panic!("Expected P61DATATYPE as ByteKeyword");
+        }
+    }
+
+    #[test]
+    fn test_parse_p2datatype_character_d() {
+        let result = match_and_parse_keyword("$P2DATATYPE", "D");
+        if let KeywordCreationResult::Byte(ByteKeyword::PnDATATYPE(data_type)) = result {
+            assert_eq!(data_type, FcsDataType::D);
+        } else {
+            panic!("Expected P2DATATYPE as ByteKeyword");
+        }
+    }
+
+    #[test]
+    fn test_parse_p3datatype_character_i() {
+        let result = match_and_parse_keyword("$P3DATATYPE", "I");
+        if let KeywordCreationResult::Byte(ByteKeyword::PnDATATYPE(data_type)) = result {
+            assert_eq!(data_type, FcsDataType::I);
+        } else {
+            panic!("Expected P3DATATYPE as ByteKeyword");
+        }
+    }
+
+    #[test]
+    fn test_parse_p4datatype_invalid() {
+        // Invalid values should return UnableToParse
+        let result = match_and_parse_keyword("$P4DATATYPE", "X");
+        assert!(matches!(result, KeywordCreationResult::UnableToParse));
     }
 }
 

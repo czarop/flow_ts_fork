@@ -284,7 +284,7 @@ fn write_vertex(writer: &mut Writer<Cursor<Vec<u8>>>, node: &GateNode) -> Result
 /// ```
 pub fn gatingml_to_gates(xml: &str) -> Result<Vec<Gate>> {
     let (gating_ns, _data_ns) = detect_version(xml);
-    let is_v2 = gating_ns.contains("v2.0");
+    let _is_v2 = gating_ns.contains("v2.0");
 
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(true);

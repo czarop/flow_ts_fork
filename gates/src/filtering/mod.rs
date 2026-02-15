@@ -434,7 +434,7 @@ impl EventIndex {
     }
 
     /// Build a geo::Polygon from gate nodes
-    fn build_geo_polygon(&self, gate: &Gate) -> Option<GeoPolygon<f32>> {
+    fn _build_geo_polygon(&self, gate: &Gate) -> Option<GeoPolygon<f32>> {
         if let GateGeometry::Polygon { nodes, closed } = &gate.geometry {
             if !closed || nodes.len() < 3 {
                 return None;

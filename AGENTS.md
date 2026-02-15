@@ -1,4 +1,19 @@
-# SvelteKit Overview
+# flow-crates Agent Guidelines
+
+## Release Workflow
+
+For pull requests, merge branches, and crate releases, use the **rust-release-workflow** skill. Key steps:
+
+1. **Dry-run first**: `cargo smart-release <crate-name> --update-crates-index` or `cargo run -p <pkg> dry-release`
+2. **Polish changelogs**: `cargo changelog --write <crate-name>` then edit by hand
+3. **Update READMEs** with new versions
+4. **Execute** only after review: add `--execute` to the smart-release command
+
+Pre-1.0 version policy: minor for large features, patch for all other changes (no strict semver for breaking changes). See `.cursor/rules/release-versioning.mdc`.
+
+---
+
+## SvelteKit Overview
 
 You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
 

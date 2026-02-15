@@ -184,12 +184,22 @@ pub fn parse_parameter_keywords(key: &str, value: &str) -> Option<KeywordCreatio
             }
         }
         // Range for parameter n → [`IntegerKeyword::PnR`]
-        "R" => Some(
-            trimmed_value
-                .parse::<usize>()
-                .map(|range| KeywordCreationResult::Int(IntegerKeyword::PnR(range)))
-                .unwrap_or(KeywordCreationResult::UnableToParse),
-        ),
+        // Some cytometers output floats (e.g., "1.1"), so try float first, then integer
+        "R" => {
+            // Try parsing as float first (for cases like "1.1")
+            if let Some(range_float) = parse_float_with_comma_decimal(trimmed_value) {
+                // Convert float to usize (rounding)
+                Some(KeywordCreationResult::Int(IntegerKeyword::PnR(range_float as usize)))
+            } else {
+                // Fall back to integer parsing
+                Some(
+                    trimmed_value
+                        .parse::<usize>()
+                        .map(|range| KeywordCreationResult::Int(IntegerKeyword::PnR(range)))
+                        .unwrap_or(KeywordCreationResult::UnableToParse),
+                )
+            }
+        },
         // Number of bits reserved for parameter n → [`IntegerKeyword::PnB`]
         "B" => Some(
             trimmed_value
@@ -220,15 +230,12 @@ pub fn parse_parameter_keywords(key: &str, value: &str) -> Option<KeywordCreatio
                 .map(|wl| KeywordCreationResult::Mixed(MixedKeyword::PnL(wl)))
                 .map_or(Some(KeywordCreationResult::UnableToParse), Some)
         }
-        // Transformation to apply when displaying the data → [`IntegerKeyword::PnDisplay`]
-        "DISPLAY" => Some(
-            trimmed_value
-                .parse::<usize>()
-                .map(|display_scale| {
-                    KeywordCreationResult::Int(IntegerKeyword::PnDisplay(display_scale))
-                })
-                .unwrap_or(KeywordCreationResult::UnableToParse),
-        ),
+        // Transformation to apply when displaying the data → [`StringKeyword::PnDISPLAY`]
+        // Note: Some FCS files use numeric values (stored as PnDisplay), others use string values like "LOG"/"LIN"
+        // We parse as string for maximum compatibility
+        "DISPLAY" => Some(KeywordCreationResult::String(StringKeyword::PnDISPLAY(
+            Arc::from(trimmed_value),
+        ))),
         // Short name for parameter n → [`StringKeyword::PnN`]
         "N" => Some(KeywordCreationResult::String(StringKeyword::PnN(
             Arc::from(trimmed_value),
@@ -265,11 +272,13 @@ pub fn parse_parameter_keywords(key: &str, value: &str) -> Option<KeywordCreatio
         "D" => parse_pnd(trimmed_value)
             .map(KeywordCreationResult::Mixed)
             .map_or(Some(KeywordCreationResult::UnableToParse), Some),
-        // Data type for parameter n, overriding default $DATATYPE (FCS 3.2+) → [`IntegerKeyword::PnDATATYPE`]
+        // Data type for parameter n, overriding default $DATATYPE (FCS 3.2+) → [`ByteKeyword::PnDATATYPE`]
+        // According to FCS 3.2 spec, $PnDATATYPE uses the same character format as $DATATYPE ("F", "D", "I", "A")
         "DATATYPE" => Some(
-            trimmed_value
-                .parse::<usize>()
-                .map(|n| KeywordCreationResult::Int(IntegerKeyword::PnDATATYPE(n)))
+            FcsDataType::from_keyword_str(trimmed_value)
+                .map(|data_type| {
+                    KeywordCreationResult::Byte(ByteKeyword::PnDATATYPE(data_type))
+                })
                 .unwrap_or(KeywordCreationResult::UnableToParse),
         ),
         _ => {

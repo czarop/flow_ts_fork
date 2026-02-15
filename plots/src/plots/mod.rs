@@ -1,7 +1,9 @@
 pub mod density;
+pub mod spectral;
 pub mod traits;
 
 pub use density::DensityPlot;
+pub use spectral::SpectralSignaturePlot;
 pub use traits::Plot;
 
 /// Plot type enumeration

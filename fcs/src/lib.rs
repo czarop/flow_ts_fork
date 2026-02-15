@@ -1,5 +1,3 @@
-#![feature(ascii_char)]
-
 use std::path::PathBuf;
 
 pub use byteorder::ByteOrder;
