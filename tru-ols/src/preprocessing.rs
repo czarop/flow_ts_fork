@@ -4,14 +4,12 @@
 //! cutoff thresholds and calculate the nonspecific observation.
 
 use crate::error::TruOlsError;
-use ndarray::{Array1, Array2};
-use ndarray_linalg::Solve;
+use faer::{Col, ColRef, Mat, MatRef};
 
 /// Solve a linear system Ax = b, using least squares for overdetermined systems.
 ///
-/// For overdetermined systems (nrows > ncols), uses least squares via normal equations:
-/// (A^T A) x = A^T b, which gives a square system that can be solved with LU decomposition.
-/// For square systems, uses regular LU decomposition.
+/// For overdetermined systems (nrows > ncols), uses QR-based least squares.
+/// For square systems, uses LU decomposition.
 ///
 /// # Arguments
 /// * `a` - Coefficient matrix (nrows × ncols)
@@ -20,36 +18,53 @@ use ndarray_linalg::Solve;
 /// # Returns
 /// Solution vector x (length = ncols)
 pub(crate) fn solve_linear_system(
-    a: &Array2<f64>,
-    b: &Array1<f64>,
-) -> Result<Array1<f64>, ndarray_linalg::error::LinalgError> {
+    a: MatRef<'_, f64>,
+    b: ColRef<'_, f64>,
+) -> Result<Col<f64>, TruOlsError> {
     let nrows = a.nrows();
     let ncols = a.ncols();
 
-    if nrows > ncols {
-        // Overdetermined system: use least squares via normal equations
-        // Solve: (A^T A) x = A^T b
-        let at = a.t();
-        let ata = at.dot(a); // ncols × ncols
-        let atb = at.dot(b); // ncols × 1
+    if nrows < ncols {
+        return Err(TruOlsError::LinearAlgebra(
+            "Underdetermined systems are not supported".to_string(),
+        ));
+    }
 
-        // Now solve the square system: (A^T A) x = A^T b
-        ata.solve(&atb)
-    } else if nrows == ncols {
-        // Square system: use regular solve
-        a.solve(b)
-    } else {
-        // Underdetermined system: not supported
-        Err(ndarray_linalg::error::LinalgError::NotSquare {
-            rows: nrows as i32,
-            cols: ncols as i32,
-        })
+    #[cfg(feature = "blas")]
+    {
+        use faer_ext::IntoNdarray;
+        use ndarray_linalg::LeastSquaresSvd;
+
+        let a_ndarray = a.into_ndarray().to_owned();
+        let b_ndarray = ndarray::Array1::from_vec(b.as_slice().to_vec());
+        let x = a_ndarray
+            .least_squares(&b_ndarray)
+            .map_err(|e| TruOlsError::LinearAlgebra(format!("BLAS solve failed: {}", e)))?;
+        Ok(Col::from_fn(ncols, |i| x.solution[i]))
+    }
+
+    #[cfg(not(feature = "blas"))]
+    {
+        use faer::linalg::solvers::{PartialPivLu, Qr};
+        use faer::prelude::{Solve, SolveLstsq};
+
+        let b_col = Mat::from_fn(nrows, 1, |i, _| b[i]);
+
+        let x_faer = if nrows > ncols {
+            let qr = Qr::new(a);
+            qr.solve_lstsq(b_col.as_ref())
+        } else {
+            let lu = PartialPivLu::new(a);
+            lu.solve(b_col.as_ref())
+        };
+
+        Ok(Col::from_fn(ncols, |i| x_faer[(i, 0)]))
     }
 }
 
 /// Calculates cutoff thresholds for each endmember based on unstained control data.
 pub struct CutoffCalculator {
-    cutoffs: Array1<f64>,
+    cutoffs: Col<f64>,
 }
 
 impl CutoffCalculator {
@@ -63,8 +78,8 @@ impl CutoffCalculator {
     /// # Returns
     /// Vector of cutoff values, one per endmember
     pub fn calculate(
-        mixing_matrix: &Array2<f64>,
-        unstained_control: &Array2<f64>,
+        mixing_matrix: MatRef<'_, f64>,
+        unstained_control: MatRef<'_, f64>,
         percentile: f64,
     ) -> Result<Self, TruOlsError> {
         if !(0.0..=1.0).contains(&percentile) {
@@ -89,13 +104,14 @@ impl CutoffCalculator {
         }
 
         // Unmix each event in the unstained control
-        // Use least squares for overdetermined systems (n_detectors > n_endmembers)
         let mut unmixed_abundances: Vec<Vec<f64>> = Vec::with_capacity(n_events);
         for event_idx in 0..n_events {
-            let observation = unstained_control.row(event_idx);
-            let abundances = solve_linear_system(mixing_matrix, &observation.to_owned())
+            let observation = Col::from_fn(n_detectors, |i| unstained_control[(event_idx, i)]);
+            let abundances = solve_linear_system(mixing_matrix, observation.as_ref())
                 .map_err(|e| TruOlsError::LinearAlgebra(format!("Failed to solve: {}", e)))?;
-            unmixed_abundances.push(abundances.to_vec());
+            unmixed_abundances.push(
+                (0..abundances.nrows()).map(|i| abundances[i]).collect(),
+            );
         }
 
         // Calculate percentile for each endmember
@@ -113,7 +129,7 @@ impl CutoffCalculator {
         }
 
         Ok(Self {
-            cutoffs: Array1::from(cutoffs),
+            cutoffs: Col::from_fn(n_endmembers, |i| cutoffs[i]),
         })
     }
 
@@ -123,14 +139,14 @@ impl CutoffCalculator {
     }
 
     /// Get all cutoff values.
-    pub fn cutoffs(&self) -> &Array1<f64> {
+    pub fn cutoffs(&self) -> &Col<f64> {
         &self.cutoffs
     }
 }
 
 /// Calculates the nonspecific observation from unstained control data.
 pub struct NonspecificObservation {
-    observation: Array1<f64>,
+    observation: Col<f64>,
 }
 
 impl NonspecificObservation {
@@ -144,8 +160,8 @@ impl NonspecificObservation {
     /// * `unstained_control` - Unstained control observations (events × detectors)
     /// * `autofluorescence_idx` - Index of the autofluorescence endmember (excluded from mean)
     pub fn calculate(
-        mixing_matrix: &Array2<f64>,
-        unstained_control: &Array2<f64>,
+        mixing_matrix: MatRef<'_, f64>,
+        unstained_control: MatRef<'_, f64>,
         autofluorescence_idx: usize,
     ) -> Result<Self, TruOlsError> {
         let n_detectors = mixing_matrix.nrows();
@@ -170,14 +186,14 @@ impl NonspecificObservation {
         }
 
         // Unmix each event and calculate mean abundances (excluding autofluorescence)
-        // Use least squares for overdetermined systems (n_detectors > n_endmembers)
-        let mut mean_abundances = Array1::<f64>::zeros(n_endmembers);
+        let mut mean_abundances = vec![0.0; n_endmembers];
         for event_idx in 0..n_events {
-            let observation = unstained_control.row(event_idx);
-            let abundances = solve_linear_system(mixing_matrix, &observation.to_owned())
+            let observation = Col::from_fn(n_detectors, |i| unstained_control[(event_idx, i)]);
+            let abundances = solve_linear_system(mixing_matrix, observation.as_ref())
                 .map_err(|e| TruOlsError::LinearAlgebra(format!("Failed to solve: {}", e)))?;
 
-            for (idx, &abundance) in abundances.iter().enumerate() {
+            for idx in 0..abundances.nrows() {
+                let abundance = abundances[idx];
                 if idx != autofluorescence_idx {
                     mean_abundances[idx] += abundance;
                 }
@@ -185,17 +201,23 @@ impl NonspecificObservation {
         }
 
         // Calculate mean (excluding autofluorescence)
-        mean_abundances /= n_events as f64;
+        for i in 0..n_endmembers {
+            mean_abundances[i] /= n_events as f64;
+        }
         mean_abundances[autofluorescence_idx] = 0.0; // Ensure AF is zero
 
-        // Calculate nonspecific observation: M · mean_abundances
-        let observation = mixing_matrix.dot(&mean_abundances);
+        let mean_col = Col::from_fn(n_endmembers, |i| mean_abundances[i]);
 
-        Ok(Self { observation })
+        // Calculate nonspecific observation: M · mean_abundances
+        let observation = &mixing_matrix * &mean_col;
+
+        Ok(Self {
+            observation: Col::from_fn(n_detectors, |i| observation[i]),
+        })
     }
 
     /// Get the nonspecific observation vector.
-    pub fn observation(&self) -> &Array1<f64> {
+    pub fn observation(&self) -> &Col<f64> {
         &self.observation
     }
 }
@@ -203,25 +225,28 @@ impl NonspecificObservation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::array;
+    use faer::mat;
 
     #[test]
     fn test_cutoff_calculation() {
         // Simple 2x2 mixing matrix
-        let mixing_matrix = array![[1.0, 0.1], [0.1, 1.0]];
+        let mixing_matrix = mat![[1.0, 0.1], [0.1, 1.0]];
         // Two unstained events
-        let unstained = array![[0.0, 0.0], [0.1, 0.1]];
+        let unstained = mat![[0.0, 0.0], [0.1, 0.1]];
 
-        let calculator = CutoffCalculator::calculate(&mixing_matrix, &unstained, 0.995).unwrap();
-        assert_eq!(calculator.cutoffs().len(), 2);
+        let calculator =
+            CutoffCalculator::calculate(mixing_matrix.as_ref(), unstained.as_ref(), 0.995).unwrap();
+        assert_eq!(calculator.cutoffs().nrows(), 2);
     }
 
     #[test]
     fn test_nonspecific_observation() {
-        let mixing_matrix = array![[1.0, 0.1], [0.1, 1.0]];
-        let unstained = array![[0.0, 0.0], [0.1, 0.1]];
+        let mixing_matrix = mat![[1.0, 0.1], [0.1, 1.0]];
+        let unstained = mat![[0.0, 0.0], [0.1, 0.1]];
 
-        let nonspecific = NonspecificObservation::calculate(&mixing_matrix, &unstained, 0).unwrap();
-        assert_eq!(nonspecific.observation().len(), 2);
+        let nonspecific =
+            NonspecificObservation::calculate(mixing_matrix.as_ref(), unstained.as_ref(), 0)
+                .unwrap();
+        assert_eq!(nonspecific.observation().nrows(), 2);
     }
 }

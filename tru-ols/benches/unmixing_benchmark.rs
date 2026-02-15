@@ -1,39 +1,33 @@
 //! Performance benchmarks for TRU-OLS unmixing
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use faer::Mat;
 use flow_tru_ols::TruOls;
-use ndarray::{Array2, array};
 use rand::Rng;
 
-fn generate_test_data(n_events: usize, n_detectors: usize, n_endmembers: usize) -> (Array2<f64>, Array2<f64>, Array2<f64>) {
-    let mut rng = rand::thread_rng();
-    
+fn generate_test_data(
+    n_events: usize,
+    n_detectors: usize,
+    n_endmembers: usize,
+) -> (Mat<f64>, Mat<f64>, Mat<f64>) {
+    let mut rng = rand::rng();
+
     // Generate mixing matrix
-    let mut mixing_matrix = Array2::<f64>::zeros((n_detectors, n_endmembers));
-    for i in 0..n_detectors {
-        for j in 0..n_endmembers {
-            if i == j {
-                mixing_matrix[(i, j)] = 0.8 + rng.gen_range(0.0..0.2);
-            } else {
-                mixing_matrix[(i, j)] = rng.gen_range(0.0..0.1);
-            }
+    let mixing_matrix = Mat::from_fn(n_detectors, n_endmembers, |i, j| {
+        if i == j {
+            0.8 + rng.random_range(0.0..0.2)
+        } else {
+            rng.random_range(0.0..0.1)
         }
-    }
-    
+    });
+
     // Generate unstained control
-    let mut unstained = Array2::<f64>::zeros((1000, n_detectors));
-    for val in unstained.iter_mut() {
-        *val = rng.gen_range(-0.1..0.1);
-    }
-    
+    let unstained = Mat::from_fn(1000, n_detectors, |_, _| rng.random_range(-0.1..0.1));
+
     // Generate test observations
-    let mut observations = Array2::<f64>::zeros((n_events, n_detectors));
-    for i in 0..n_events {
-        for j in 0..n_detectors {
-            observations[(i, j)] = rng.gen_range(0.0..100.0);
-        }
-    }
-    
+    let observations =
+        Mat::from_fn(n_events, n_detectors, |_, _| rng.random_range(0.0..100.0));
+
     (mixing_matrix, unstained, observations)
 }
 
@@ -49,9 +43,7 @@ fn benchmark_unmixing(c: &mut Criterion) {
             BenchmarkId::from_parameter(n_events),
             &observations,
             |b, obs| {
-                b.iter(|| {
-                    tru_ols.unmix(black_box(obs)).unwrap()
-                });
+                b.iter(|| tru_ols.unmix(black_box(obs.as_ref())).unwrap());
             },
         );
     }
@@ -88,9 +80,7 @@ fn benchmark_parallel_vs_sequential(c: &mut Criterion) {
     let tru_ols = TruOls::new(mixing_matrix, unstained, 0).unwrap();
     
     group.bench_function("unmix_large_dataset", |b| {
-        b.iter(|| {
-            tru_ols.unmix(black_box(&observations)).unwrap()
-        });
+        b.iter(|| tru_ols.unmix(black_box(observations.as_ref())).unwrap());
     });
     
     group.finish();

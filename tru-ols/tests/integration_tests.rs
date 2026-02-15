@@ -2,9 +2,8 @@
 
 #[cfg(feature = "flow-fcs")]
 mod tests {
-    use flow_tru_ols::fcs_integration::extract_detector_data;
     use flow_fcs::Fcs;
-    use ndarray::Array2;
+    use flow_tru_ols::fcs_integration::extract_detector_data;
 
     #[test]
     fn test_extract_detector_data_basic() {

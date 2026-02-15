@@ -12,7 +12,7 @@ use flow_plots::options::BasePlotOptions;
 #[cfg(all(feature = "flow-fcs", feature = "plotting"))]
 use flow_plots::{DensityPlot, DensityPlotOptions, Plot, PlotBytes};
 #[cfg(all(feature = "flow-fcs", feature = "plotting"))]
-use ndarray::Array2;
+use faer::MatRef;
 
 /// Plot comparison between OLS and TRU-OLS unmixed data.
 ///
@@ -82,7 +82,7 @@ pub fn plot_unmixed_comparison(
 /// Plot bytes containing the distribution plot
 #[cfg(all(feature = "flow-fcs", feature = "plotting"))]
 pub fn plot_abundance_distribution(
-    unmixed_data: &Array2<f64>,
+    unmixed_data: MatRef<'_, f64>,
     endmember_names: &[&str],
     endmember_idx: usize,
 ) -> Result<PlotBytes, TruOlsError> {

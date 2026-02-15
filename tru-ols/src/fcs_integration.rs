@@ -8,12 +8,12 @@ use crate::error::TruOlsError;
 #[cfg(feature = "flow-fcs")]
 use crate::unmixing::{TruOls, UnmixingStrategy};
 #[cfg(feature = "flow-fcs")]
-use flow_fcs::{EventDataFrame, Fcs};
+use faer::Mat;
 #[cfg(feature = "flow-fcs")]
-use ndarray::Array2;
+use flow_fcs::Fcs;
 #[cfg(feature = "flow-fcs")]
 
-/// Extract detector data from Fcs DataFrame and convert to Array2<f64>.
+/// Extract detector data from Fcs DataFrame and convert to Mat<f64>.
 ///
 /// This function extracts detector channel data from an Fcs struct and converts
 /// it from f32 to f64 for use with TRU-OLS algorithm.
@@ -28,10 +28,7 @@ use ndarray::Array2;
 /// # Errors
 /// Returns error if any detector name is not found or data cannot be extracted
 #[cfg(feature = "flow-fcs")]
-pub fn extract_detector_data(
-    fcs: &Fcs,
-    detector_names: &[&str],
-) -> Result<Array2<f64>, TruOlsError> {
+pub fn extract_detector_data(fcs: &Fcs, detector_names: &[&str]) -> Result<Mat<f64>, TruOlsError> {
     let n_events = fcs.get_event_count_from_dataframe();
     let n_detectors = detector_names.len();
 
@@ -53,13 +50,10 @@ pub fn extract_detector_data(
         detector_data.push(f64_vec);
     }
 
-    // Build Array2 from column vectors (transpose to get events × detectors)
-    let mut result = Array2::<f64>::zeros((n_events, n_detectors));
-    for (detector_idx, data) in detector_data.iter().enumerate() {
-        for (event_idx, &value) in data.iter().enumerate() {
-            result[(event_idx, detector_idx)] = value;
-        }
-    }
+    // Build Mat from column vectors (transpose to get events × detectors)
+    let result = Mat::from_fn(n_events, n_detectors, |event_idx, detector_idx| {
+        detector_data[detector_idx][event_idx]
+    });
 
     Ok(result)
 }
@@ -95,7 +89,7 @@ pub trait TruOlsUnmixing {
     fn apply_tru_ols_unmixing(
         &self,
         unstained_control: &Fcs,
-        mixing_matrix: Array2<f64>,
+        mixing_matrix: Mat<f64>,
         detector_names: &[&str],
         endmember_names: &[&str],
         autofluorescence_name: &str,
@@ -113,7 +107,7 @@ impl TruOlsUnmixing for Fcs {
     fn apply_tru_ols_unmixing(
         &self,
         unstained_control: &Fcs,
-        mixing_matrix: Array2<f64>,
+        mixing_matrix: Mat<f64>,
         detector_names: &[&str],
         endmember_names: &[&str],
         autofluorescence_name: &str,
@@ -131,7 +125,7 @@ impl TruOlsUnmixing for Fcs {
             .zip(detector_names.iter())
             .map(|(&em, &det)| (em, det))
             .collect();
-        use flow_fcs::keyword::{Keyword, KeywordCreationResult, match_and_parse_keyword};
+        use flow_fcs::keyword::Keyword;
         use polars::prelude::Column;
         use std::sync::Arc;
 
@@ -198,7 +192,7 @@ impl TruOlsUnmixing for Fcs {
         }
 
         // Perform unmixing
-        let unmixed_abundances = tru_ols.unmix(&stained_data)?;
+        let unmixed_abundances = tru_ols.unmix(stained_data.as_ref())?;
 
         // Create a new FCS struct with fresh parameters
         let mut output_fcs = self.clone();
@@ -576,10 +570,10 @@ impl TruOlsUnmixing for Fcs {
 #[cfg(feature = "flow-fcs")]
 mod tests {
     use super::*;
+    use faer::mat;
     use flow_fcs::{
         Header, Metadata, Parameter, TransformType, file::AccessWrapper, parameter::ParameterMap,
     };
-    use ndarray::array;
     use polars::{frame::DataFrame, prelude::Column};
     use std::sync::Arc;
 
@@ -650,7 +644,7 @@ mod tests {
         assert_eq!(data.nrows(), 5, "Should have 5 events");
         assert_eq!(data.ncols(), 3, "Should have 3 detectors");
 
-        // Check first event values
+        // Check first event values (Mat is row, col)
         assert!(
             (data[(0, 0)] - 100.0).abs() < 1e-6,
             "First detector, first event should be 100.0"
@@ -788,7 +782,7 @@ mod tests {
 
         // Create a simple mixing matrix: 3 detectors × 2 endmembers
         // Identity-like matrix for simplicity
-        let mixing_matrix = array![[0.9, 0.1], [0.1, 0.9], [0.05, 0.05]];
+        let mixing_matrix = mat![[0.9, 0.1], [0.1, 0.9], [0.05, 0.05]];
 
         let detector_names = &["FL1-A", "FL2-A", "FL3-A"];
         let endmember_names = &["Dye1", "Autofluorescence"];
@@ -802,6 +796,9 @@ mod tests {
             endmember_names,
             autofluorescence,
             None, // Use default strategy
+            &empty_pn,
+            &empty_pn,
+            &empty_pn,
             &empty_pn,
             &empty_pn,
         );
@@ -824,8 +821,8 @@ mod tests {
             .map(|s: &String| s.to_string())
             .collect();
         assert!(
-            col_names.contains(&"Unmixed_FL1-A".to_string()),
-            "Should have Unmixed_FL1-A column"
+            col_names.contains(&"Unmixed_Dye1".to_string()),
+            "Should have Unmixed_Dye1 column"
         );
         assert!(
             col_names.contains(&"Unmixed_Autofluorescence".to_string()),
@@ -839,7 +836,7 @@ mod tests {
         let unstained_fcs = create_test_fcs().expect("Failed to create unstained FCS");
 
         // Create mixing matrix with wrong dimensions
-        let mixing_matrix = array![[0.9, 0.1], [0.1, 0.9]]; // 2×2 matrix, but we have 3 detectors
+        let mixing_matrix = mat![[0.9, 0.1], [0.1, 0.9]]; // 2×2 matrix, but we have 3 detectors
 
         let detector_names = &["FL1-A", "FL2-A", "FL3-A"]; // 3 detectors
         let endmember_names = &["Dye1", "Autofluorescence"];
@@ -853,6 +850,9 @@ mod tests {
             endmember_names,
             autofluorescence,
             None,
+            &empty_pn,
+            &empty_pn,
+            &empty_pn,
             &empty_pn,
             &empty_pn,
         );
@@ -872,7 +872,7 @@ mod tests {
         let stained_fcs = create_test_fcs().expect("Failed to create stained FCS");
         let unstained_fcs = create_test_fcs().expect("Failed to create unstained FCS");
 
-        let mixing_matrix = array![[0.9, 0.1], [0.1, 0.9], [0.05, 0.05]];
+        let mixing_matrix = mat![[0.9, 0.1], [0.1, 0.9], [0.05, 0.05]];
 
         let detector_names = &["FL1-A", "FL2-A", "FL3-A"];
         let endmember_names = &["Dye1", "Dye2"]; // No Autofluorescence!
@@ -886,6 +886,9 @@ mod tests {
             endmember_names,
             autofluorescence,
             None,
+            &empty_pn,
+            &empty_pn,
+            &empty_pn,
             &empty_pn,
             &empty_pn,
         );
@@ -956,15 +959,15 @@ mod tests {
         );
         params.insert(
             "FL1-A".into(),
-            Parameter::new(&4, "FL1-A", "FL1-A", &TransformType::Linear),
+            Parameter::new(&4, "FL1-A", "Dye1", &TransformType::Linear),
         );
         params.insert(
             "FL2-A".into(),
-            Parameter::new(&5, "FL2-A", "FL2-A", &TransformType::Linear),
+            Parameter::new(&5, "FL2-A", "Dye2", &TransformType::Linear),
         );
         params.insert(
             "FL3-A".into(),
-            Parameter::new(&6, "FL3-A", "FL3-A", &TransformType::Linear),
+            Parameter::new(&6, "FL3-A", "Dye3", &TransformType::Linear),
         );
 
         let stained_fcs = Fcs {
@@ -979,7 +982,7 @@ mod tests {
         let unstained_fcs = stained_fcs.clone();
 
         // Create mixing matrix for 3 detectors × 2 endmembers
-        let mixing_matrix = array![[0.9, 0.1], [0.1, 0.9], [0.05, 0.05]];
+        let mixing_matrix = mat![[0.9, 0.1], [0.1, 0.9], [0.05, 0.05]];
 
         let detector_names = &["FL1-A", "FL2-A", "FL3-A"];
         let endmember_names = &["Dye1", "Autofluorescence"];
@@ -993,6 +996,9 @@ mod tests {
             endmember_names,
             autofluorescence,
             None,
+            &empty_pn,
+            &empty_pn,
+            &empty_pn,
             &empty_pn,
             &empty_pn,
         );
@@ -1023,8 +1029,8 @@ mod tests {
 
         // Verify unmixed columns exist
         assert!(
-            col_names.contains(&"Unmixed_FL1-A".to_string()),
-            "Output should contain Unmixed_FL1-A"
+            col_names.contains(&"Unmixed_Dye1".to_string()),
+            "Output should contain Unmixed_Dye1"
         );
         assert!(
             col_names.contains(&"Unmixed_Autofluorescence".to_string()),

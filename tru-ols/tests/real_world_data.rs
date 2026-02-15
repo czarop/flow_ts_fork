@@ -4,9 +4,8 @@
 
 #[cfg(feature = "flow-fcs")]
 mod tests {
-    use flow_tru_ols::{TruOls, UnmixingStrategy};
     use flow_fcs::Fcs;
-    use ndarray::Array2;
+    use flow_tru_ols::{TruOls, UnmixingStrategy};
 
     #[test]
     #[ignore] // Requires sample FCS files

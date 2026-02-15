@@ -14,18 +14,27 @@
 //!
 //! ```no_run
 //! use flow_tru_ols::{TruOls, UnmixingStrategy};
-//! use ndarray::Array2;
+//! use faer::mat;
 //!
-//! // Create a TRU-OLS instance
-//! let mut tru_ols = TruOls::new(mixing_matrix, unstained_control);
+//! // Mixing matrix (detectors × endmembers), unstained control (events × detectors)
+//! let mixing_matrix = mat![
+//!     [0.9, 0.1],
+//!     [0.1, 0.9],
+//!     [0.05, 0.05],
+//! ];
+//! let unstained_control = mat![[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+//! let dataset = mat![[100.0, 50.0, 10.0], [200.0, 150.0, 20.0]];
+//!
+//! // Create a TRU-OLS instance (autofluorescence is endmember index 1)
+//! let mut tru_ols = TruOls::new(mixing_matrix, unstained_control.clone(), 1)?;
 //!
 //! // Configure the algorithm
-//! tru_ols.set_cutoff_percentile(0.995); // 99.5th percentile
+//! tru_ols.set_cutoff_percentile(0.995, unstained_control.as_ref())?;
 //! tru_ols.set_strategy(UnmixingStrategy::Zero);
 //!
 //! // Unmix a dataset
-//! let unmixed = tru_ols.unmix(&dataset)?;
-//! # Ok::<(), anyhow::Error>(())
+//! let unmixed = tru_ols.unmix(dataset.as_ref())?;
+//! # Ok::<(), flow_tru_ols::TruOlsError>(())
 //! ```
 
 pub mod error;
