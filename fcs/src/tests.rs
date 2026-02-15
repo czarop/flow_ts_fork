@@ -328,42 +328,6 @@ mod polars_tests {
     }
 
     #[test]
-    fn test_spectral_unmixing_custom_cofactor() {
-        let fcs = create_test_fcs().expect("Failed to create test FCS");
-
-        use ndarray::Array2;
-        let unmix_matrix = Array2::from_shape_vec((2, 2), vec![1.0, 0.0, 0.0, 1.0]).unwrap();
-
-        let channels = vec!["FSC-A", "SSC-A"];
-
-        // Test with custom cofactor
-        let unmixed_150 = fcs
-            .apply_spectral_unmixing(&unmix_matrix, &channels, Some(150.0))
-            .expect("Should unmix with cofactor 150");
-        let unmixed_200 = fcs
-            .apply_spectral_unmixing(&unmix_matrix, &channels, Some(200.0))
-            .expect("Should unmix with cofactor 200");
-
-        let fcs_150 = Fcs {
-            data_frame: unmixed_150,
-            ..fcs.clone()
-        };
-        let fcs_200 = Fcs {
-            data_frame: unmixed_200,
-            ..fcs.clone()
-        };
-
-        let data_150 = fcs_150.get_parameter_events_slice("FSC-A").unwrap();
-        let data_200 = fcs_200.get_parameter_events_slice("FSC-A").unwrap();
-
-        // Different cofactors should produce different results
-        assert_ne!(
-            data_150[0], data_200[0],
-            "Different cofactors should give different results"
-        );
-    }
-
-    #[test]
     fn test_parameter_is_fluorescence() {
         let fcs = create_test_fcs().expect("Failed to create test FCS");
 

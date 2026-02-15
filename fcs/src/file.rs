@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 // External crate imports
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use byteorder::{BigEndian as BE, ByteOrder as BO, LittleEndian as LE};
 use itertools::{Itertools, MinMaxResult};
 use memmap3::{Mmap, MmapOptions};
@@ -162,20 +162,31 @@ impl Fcs {
         use tracing::debug;
 
         // Attempt to open the file path
-        let file_access = AccessWrapper::new(path).expect("Should be able make new access wrapper");
+        let file_access =
+            AccessWrapper::new(path).with_context(|| format!("Failed to open file: {}", path))?;
 
         // Validate the file extension
-        Self::validate_fcs_extension(&file_access.path)
-            .expect("Should have a valid file extension");
+        Self::validate_fcs_extension(&file_access.path).with_context(|| {
+            format!("Invalid file extension for: {}", file_access.path.display())
+        })?;
 
         // Create header and metadata structs from a memory map of the file
-        let header = Header::from_mmap(&file_access.mmap)
-            .expect("Should be able to create header from mmap");
+        let header = Header::from_mmap(&file_access.mmap).with_context(|| {
+            format!(
+                "Failed to parse header from file: {}",
+                file_access.path.display()
+            )
+        })?;
         let mut metadata = Metadata::from_mmap(&file_access.mmap, &header);
 
         metadata
             .validate_text_segment_keywords(&header)
-            .expect("Should have valid text segment keywords");
+            .with_context(|| {
+                format!(
+                    "Failed to validate text segment keywords in file: {}",
+                    file_access.path.display()
+                )
+            })?;
         // metadata.validate_number_of_parameters()?;
         metadata.validate_guid();
 
@@ -185,11 +196,24 @@ impl Fcs {
             debug!("FCS file $TOT keyword: {} events", tot);
         }
 
+        let parameters = Self::generate_parameter_map(&metadata).map_err(|e| {
+            let diagnostic = Self::format_diagnostic_info(&header, &metadata, &file_access.path);
+            anyhow!("Failed to generate parameter map: {}\n\n{}", e, diagnostic)
+        })?;
+
+        let data_frame = Self::store_raw_data_as_dataframe(&header, &file_access.mmap, &metadata)
+            .map_err(|e| {
+            let diagnostic = Self::format_diagnostic_info(&header, &metadata, &file_access.path);
+            anyhow!(
+                "Failed to store raw data as DataFrame: {}\n\n{}",
+                e,
+                diagnostic
+            )
+        })?;
+
         let fcs = Self {
-            parameters: Self::generate_parameter_map(&metadata)
-                .expect("Should be able to generate parameter map"),
-            data_frame: Self::store_raw_data_as_dataframe(&header, &file_access.mmap, &metadata)
-                .expect("Should be able to store raw data as DataFrame"),
+            parameters,
+            data_frame,
             file_access,
             header,
             metadata,
@@ -328,20 +352,20 @@ impl Fcs {
 
         let number_of_parameters = metadata
             .get_number_of_parameters()
-            .expect("Should be able to retrieve the number of parameters");
+            .context("Failed to retrieve the number of parameters from metadata")?;
         let number_of_events = metadata
             .get_number_of_events()
-            .expect("Should be able to retrieve the number of events");
+            .context("Failed to retrieve the number of events from metadata")?;
 
         // Calculate bytes per event by summing $PnB / 8 for each parameter
         // This is more accurate than using $DATATYPE which only provides a default
         let bytes_per_event = metadata
             .calculate_bytes_per_event()
-            .expect("Should be able to calculate bytes per event");
+            .context("Failed to calculate bytes per event")?;
 
         let byte_order = metadata
             .get_byte_order()
-            .expect("Should be able to get the byte order");
+            .context("Failed to get the byte order from metadata")?;
 
         // Validate data size
         let expected_total_bytes = number_of_events * bytes_per_event;
@@ -360,35 +384,40 @@ impl Fcs {
             .map(|param_num| {
                 metadata
                     .get_bytes_per_parameter(param_num)
-                    .expect("Should be able to get bytes per parameter")
+                    .with_context(|| {
+                        format!(
+                            "Failed to get bytes per parameter for parameter {}",
+                            param_num
+                        )
+                    })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         let data_types: Vec<FcsDataType> = (1..=*number_of_parameters)
             .map(|param_num| {
                 metadata
                     .get_data_type_for_channel(param_num)
-                    .expect("Should be able to get data type for channel")
+                    .with_context(|| format!("Failed to get data type for channel {}", param_num))
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         // Fast path: Check if all parameters are uniform (same bytes, same data type)
         // This allows us to use bytemuck zero-copy optimization
         let uniform_bytes = bytes_per_parameter.first().copied();
         let uniform_data_type = data_types.first().copied();
-        let is_uniform = uniform_bytes.is_some()
-            && uniform_data_type.is_some()
-            && bytes_per_parameter
-                .iter()
-                .all(|&b| b == uniform_bytes.unwrap())
-            && data_types
-                .iter()
-                .all(|&dt| dt == uniform_data_type.unwrap());
+        let is_uniform = match (uniform_bytes, uniform_data_type) {
+            (Some(bytes), Some(dt)) => {
+                bytes_per_parameter.iter().all(|&b| b == bytes)
+                    && data_types.iter().all(|&dt_val| dt_val == dt)
+            }
+            _ => false,
+        };
 
         let f32_values: Vec<f32> = if is_uniform {
             // Fast path: All parameters have same size and type - use bytemuck for zero-copy
-            let bytes_per_param = uniform_bytes.unwrap();
-            let data_type = uniform_data_type.unwrap();
+            let bytes_per_param = uniform_bytes.ok_or_else(|| anyhow!("No uniform bytes found"))?;
+            let data_type =
+                uniform_data_type.ok_or_else(|| anyhow!("No uniform data type found"))?;
 
             match (data_type, bytes_per_param) {
                 (FcsDataType::F, 4) => {
@@ -914,7 +943,11 @@ impl Fcs {
         match events.iter().minmax() {
             MinMaxResult::NoElements => Err(anyhow!("No elements found")),
             MinMaxResult::OneElement(e) => Err(anyhow!("Only one element found: {:?}", e)),
-            MinMaxResult::MinMax(min, max) => Ok((min.unwrap(), max.unwrap())),
+            MinMaxResult::MinMax(min, max) => {
+                let min_val = min.ok_or_else(|| anyhow!("Min value is None"))?;
+                let max_val = max.ok_or_else(|| anyhow!("Max value is None"))?;
+                Ok((min_val, max_val))
+            }
         }
     }
 
@@ -926,11 +959,115 @@ impl Fcs {
     /// - the number of parameters cannot be found in the metadata,
     /// - the parameter name cannot be found in the metadata,
     /// - the parameter cannot be built (using the Builder pattern)
+    /// Format diagnostic information about FCS file state for error messages
+    fn format_diagnostic_info(header: &Header, metadata: &Metadata, path: &Path) -> String {
+        let mut lines = Vec::new();
+
+        lines.push("=== FCS File Diagnostic Information ===".to_string());
+        lines.push(format!("File path: {}", path.display()));
+        lines.push(format!("FCS Version: {}", header.version));
+        lines.push(format!(
+            "Text segment: {}..={}",
+            header.text_offset.start(),
+            header.text_offset.end()
+        ));
+        lines.push(format!(
+            "Data segment: {}..={}",
+            header.data_offset.start(),
+            header.data_offset.end()
+        ));
+        lines.push(format!(
+            "Analysis segment: {}..={}",
+            header.analysis_offset.start(),
+            header.analysis_offset.end()
+        ));
+        lines.push(format!(
+            "Delimiter: '{}' (0x{:02x})",
+            metadata.delimiter, metadata.delimiter as u8
+        ));
+
+        // Get number of parameters
+        let n_params = metadata
+            .get_number_of_parameters()
+            .map(|n| format!("{}", n))
+            .unwrap_or_else(|e| format!("Error: {}", e));
+        lines.push(format!("Number of parameters ($PAR): {}", n_params));
+
+        // Get number of events
+        let n_events = metadata
+            .get_number_of_events()
+            .map(|n| format!("{}", n))
+            .unwrap_or_else(|e| format!("Error: {}", e));
+        lines.push(format!("Number of events ($TOT): {}", n_events));
+
+        // List all parameter keywords
+        lines.push("\n=== Parameter Keywords ===".to_string());
+        let number_of_parameters = metadata.get_number_of_parameters().ok().copied();
+        if let Some(n_params) = number_of_parameters {
+            for param_num in 1..=n_params {
+                let pn_keywords = [
+                    format!("$P{}N", param_num),
+                    format!("$P{}S", param_num),
+                    format!("$P{}B", param_num),
+                    format!("$P{}E", param_num),
+                    format!("$P{}R", param_num),
+                ];
+
+                let mut found_keywords = Vec::new();
+                for key in &pn_keywords {
+                    if let Some(kw) = metadata.keywords.get(key) {
+                        let value = match kw {
+                            crate::keyword::Keyword::String(sk) => sk.get_str().to_string(),
+                            crate::keyword::Keyword::Int(ik) => ik.get_usize().to_string(),
+                            crate::keyword::Keyword::Float(fk) => fk.to_string(),
+                            crate::keyword::Keyword::Byte(bk) => bk.get_str().to_string(),
+                            crate::keyword::Keyword::Mixed(mk) => mk.to_string(),
+                        };
+                        found_keywords.push(format!("  {} = {}", key, value));
+                    } else {
+                        found_keywords.push(format!("  {} = <MISSING>", key));
+                    }
+                }
+                lines.push(format!("Parameter {}:", param_num));
+                lines.extend(found_keywords);
+            }
+        } else {
+            lines.push("  Could not determine number of parameters".to_string());
+        }
+
+        // List all keywords sorted
+        lines.push("\n=== All Keywords (sorted) ===".to_string());
+        let mut sorted_keys: Vec<_> = metadata.keywords.keys().collect();
+        sorted_keys.sort();
+        for key in sorted_keys {
+            let kw = match metadata.keywords.get(key) {
+                Some(kw) => kw,
+                None => continue, // Skip missing keywords in diagnostic output
+            };
+            let value = match kw {
+                crate::keyword::Keyword::String(sk) => sk.get_str().to_string(),
+                crate::keyword::Keyword::Int(ik) => ik.get_usize().to_string(),
+                crate::keyword::Keyword::Float(fk) => fk.to_string(),
+                crate::keyword::Keyword::Byte(bk) => bk.get_str().to_string(),
+                crate::keyword::Keyword::Mixed(mk) => mk.to_string(),
+            };
+            lines.push(format!("  {} = {}", key, value));
+        }
+
+        lines.join("\n")
+    }
+
     pub fn generate_parameter_map(metadata: &Metadata) -> Result<ParameterMap> {
         let mut map = ParameterMap::default();
         let number_of_parameters = metadata.get_number_of_parameters()?;
         for parameter_number in 1..=*number_of_parameters {
-            let channel_name = metadata.get_parameter_channel_name(parameter_number)?;
+            let channel_name = metadata.get_parameter_channel_name(parameter_number)
+                .map_err(|e| anyhow!(
+                    "Failed to get channel name for parameter {}: {}\n\nHint: Check that $P{}N keyword exists in metadata.",
+                    parameter_number,
+                    e,
+                    parameter_number
+                ))?;
 
             // Use label name or fallback to the parameter name
             let label_name = match metadata.get_parameter_label(parameter_number) {
@@ -1114,28 +1251,32 @@ impl Fcs {
             .collect_with_engine(Engine::Streaming)?;
         let min = stats
             .column("min")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'min' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'min' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No min found"))?;
+            .ok_or_else(|| anyhow!("No min value found"))?;
         let max = stats
             .column("max")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'max' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'max' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No max found"))?;
+            .ok_or_else(|| anyhow!("No max value found"))?;
         let mean = stats
             .column("mean")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'mean' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'mean' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No mean found"))?;
+            .ok_or_else(|| anyhow!("No mean value found"))?;
         let std = stats
             .column("std")
-            .unwrap()
-            .f32()?
+            .map_err(|e| anyhow!("Column 'std' not found in statistics: {}", e))?
+            .f32()
+            .map_err(|e| anyhow!("Column 'std' is not f32 type: {}", e))?
             .get(0)
-            .ok_or(anyhow!("No std deviation found"))?;
+            .ok_or_else(|| anyhow!("No std deviation value found"))?;
 
         Ok((min, max, mean, std))
     }
@@ -1732,12 +1873,15 @@ impl Fcs {
     /// This method performs unmixing by solving: observation = mixing_matrix × abundances
     /// Does NOT apply compensation or transformations - these should be done separately.
     ///
+    /// For overdetermined systems (more detectors than endmembers), uses least squares.
+    ///
     /// # Arguments
     /// * `unmixing_matrix` - Matrix describing spectral signatures of fluorophores (detectors × endmembers)
     /// * `detector_names` - Names of detector channels (must match matrix rows)
+    /// * `endmember_names` - Optional names for endmembers (columns). If None, uses "Endmember1", "Endmember2", etc.
     ///
     /// # Returns
-    /// New DataFrame with unmixed endmember abundances (columns named by endmember indices)
+    /// New DataFrame with unmixed endmember abundances (columns named by endmember names or indices)
     ///
     /// # Errors
     /// Returns error if detector names don't match matrix dimensions or data cannot be extracted
@@ -1745,8 +1889,9 @@ impl Fcs {
         &self,
         unmixing_matrix: &Array2<f32>,
         detector_names: &[&str],
+        endmember_names: Option<&[&str]>,
     ) -> Result<EventDataFrame> {
-        use ndarray_linalg::Solve;
+        use ndarray_linalg::LeastSquaresSvd;
 
         // Verify matrix dimensions match detector names
         let n_detectors = detector_names.len();
@@ -1778,15 +1923,17 @@ impl Fcs {
         }
 
         // Perform unmixing: for each event, solve: observation = unmixing_matrix × abundances
-        // This is: abundances = unmixing_matrix^(-1) × observation
-        // But we use solve() which is more numerically stable
+        // For overdetermined systems (n_detectors > n_endmembers), use least squares
         let mut unmixed_data: Vec<Vec<f32>> = Vec::with_capacity(n_events);
 
         for event_idx in 0..n_events {
             let observation = observations.row(event_idx);
             let abundances = unmixing_matrix
-                .solve(&observation.to_owned())
-                .map_err(|e| anyhow!("Failed to solve unmixing for event {}: {:?}", event_idx, e))?;
+                .least_squares(&observation.to_owned())
+                .map_err(|e| {
+                    anyhow!("Failed to solve unmixing for event {}: {:?}", event_idx, e)
+                })?
+                .solution;
             unmixed_data.push(abundances.to_vec());
         }
 
@@ -1797,12 +1944,20 @@ impl Fcs {
                 .iter()
                 .map(|abundances| abundances[endmember_idx])
                 .collect();
-            let series = Column::new(format!("Endmember{}", endmember_idx + 1).into(), values);
+            
+            // Use provided endmember name if available, otherwise use generic "Endmember{i}" format
+            let column_name = if let Some(names) = endmember_names {
+                names[endmember_idx].to_string()
+            } else {
+                format!("Endmember{}", endmember_idx + 1)
+            };
+            
+            let series = Column::new(column_name.into(), values);
             columns.push(series);
         }
 
-        let df = DataFrame::new(columns)
-            .map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
+        let df =
+            DataFrame::new(columns).map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
 
         Ok(Arc::new(df))
     }

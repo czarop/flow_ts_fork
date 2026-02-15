@@ -32,13 +32,15 @@ impl FcsDataType {
         }
     }
 
-    /// Returns the keyword string representation of the data type
+    /// Convert to the keyword string representation of the data type
+    /// # Returns
+    /// The single letter as expected by FCS file format (I, F, D, A)
     pub fn to_keyword_str(&self) -> &str {
         match self {
-            Self::I => "I (unsigned binary integer)",
-            Self::F => "F (single-precision floating point)",
-            Self::D => "D (double-precision floating point)",
-            Self::A => "A (ASCII-encoded string)",
+            Self::I => "I",
+            Self::F => "F",
+            Self::D => "D",
+            Self::A => "A",
         }
     }
 

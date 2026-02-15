@@ -63,14 +63,12 @@ impl Metadata {
     /// Uses memchr for fast delimiter finding (5-10x faster than byte-by-byte iteration)
     #[must_use]
     pub fn from_mmap(mmap: &Mmap, header: &Header) -> Self {
-        let text_start = header.text_offset.start();
-
         // Read the first byte of the text segment to determine the delimiter:
-        let delimiter = mmap[*text_start];
+        let delimiter = mmap[*header.text_offset.start()];
 
-        // Determine the number of bytes to read, excluding the delimiter:
-        let text_end = header.text_offset.end();
-        let text_slice = &mmap[(*text_start + 1)..*text_end];
+        // Read the text content
+        // header.text_offset is RangeInclusive, so we use it directly but SKIP the first byte, which is the delimiter (used above)
+        let text_slice = &mmap[(*header.text_offset.start() + 1)..=*header.text_offset.end()];
 
         // Extract keyword value pairs using memchr for fast delimiter finding
         let mut keywords: KeywordMap = FxHashMap::default();
@@ -140,6 +138,61 @@ impl Metadata {
             prev_pos = pos + 1;
         }
 
+        // Handle the segment after the last delimiter (if any)
+        if prev_pos < text_slice.len() {
+            let segment = &text_slice[prev_pos..];
+            let text = std::str::from_utf8(segment).unwrap_or_default();
+
+            if !text.is_empty() {
+                if is_keyword {
+                    // This is a keyword without a value - shouldn't happen in valid FCS files
+                    eprintln!(
+                        "Warning: Keyword '{}' at end of text segment has no value \n {:?}",
+                        text, header
+                    );
+                } else {
+                    // This is a value - store the keyword-value pair
+                    if !current_key.is_empty() {
+                        let normalized_key: String = if current_key.starts_with('$') {
+                            current_key.clone()
+                        } else {
+                            format!("${}", current_key)
+                        };
+
+                        match match_and_parse_keyword(&current_key, text) {
+                            KeywordCreationResult::Int(int_keyword) => {
+                                keywords.insert(normalized_key.clone(), Keyword::Int(int_keyword));
+                            }
+                            KeywordCreationResult::Float(float_keyword) => {
+                                keywords
+                                    .insert(normalized_key.clone(), Keyword::Float(float_keyword));
+                            }
+                            KeywordCreationResult::String(string_keyword) => {
+                                keywords.insert(
+                                    normalized_key.clone(),
+                                    Keyword::String(string_keyword),
+                                );
+                            }
+                            KeywordCreationResult::Byte(byte_keyword) => {
+                                keywords
+                                    .insert(normalized_key.clone(), Keyword::Byte(byte_keyword));
+                            }
+                            KeywordCreationResult::Mixed(mixed_keyword) => {
+                                keywords
+                                    .insert(normalized_key.clone(), Keyword::Mixed(mixed_keyword));
+                            }
+                            KeywordCreationResult::UnableToParse => {
+                                eprintln!(
+                                    "Unable to parse keyword: {} with value: {}",
+                                    current_key, text
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Self {
             keywords,
             delimiter: delimiter as char,
@@ -157,8 +210,11 @@ impl Metadata {
         let required_keywords = header.version.get_required_keywords();
         for keyword in required_keywords {
             if !self.keywords.contains_key(*keyword) {
-                // println!("Invalid FCS file: Missing keyword: {:#?}", self.keywords);
-                return Err(anyhow!("Invalid FCS file: Missing keyword: {}", keyword));
+                return Err(anyhow!(
+                    "Invalid FCS {:?} file: Missing keyword: {}",
+                    header.version,
+                    keyword
+                ));
             }
         }
 
@@ -191,9 +247,9 @@ impl Metadata {
                 let param_number = keyword
                     .chars()
                     .nth(1)
-                    .expect("should have a second character in {keyword}")
+                    .ok_or_else(|| anyhow!("Keyword '{}' should have a second character after '$P'", keyword))?
                     .to_digit(10)
-                    .expect("should be able to convert the character to a digit to count the parameters") as usize;
+                    .ok_or_else(|| anyhow!("Keyword '{}' should have a digit as the second character to count parameters", keyword))? as usize;
                 if param_number > *n_params {
                     return Err(anyhow!(
                         "Invalid FCS file: {} keyword value exceeds number of parameters",
@@ -523,5 +579,114 @@ impl Metadata {
 
         self.keywords
             .insert(normalized_key, Keyword::String(string_keyword));
+    }
+
+    /// Create metadata from a DataFrame and ParameterMap
+    ///
+    /// This helper function creates all required FCS metadata keywords from scratch,
+    /// including file structure keywords ($BYTEORD, $DATATYPE, $MODE, $PAR, $TOT, $NEXTDATA)
+    /// and parameter-specific keywords ($PnN, $PnS, $PnB, $PnE, $PnR) for each parameter.
+    ///
+    /// # Arguments
+    /// * `df` - The DataFrame containing event data
+    /// * `params` - The ParameterMap containing parameter metadata
+    ///
+    /// # Returns
+    /// A new Metadata struct with all required keywords populated
+    pub fn from_dataframe_and_parameters(
+        df: &polars::prelude::DataFrame,
+        params: &super::parameter::ParameterMap,
+    ) -> Result<Self> {
+        let mut metadata = Self::new();
+        let n_events = df.height();
+        let n_params = df.width();
+
+        // Required file structure keywords
+        // BYTEORD - use LittleEndian as default (1,2,3,4)
+        metadata.keywords.insert(
+            "$BYTEORD".to_string(),
+            Keyword::Byte(ByteKeyword::BYTEORD(ByteOrder::LittleEndian)),
+        );
+
+        // DATATYPE - use F (float32) as default
+        metadata.keywords.insert(
+            "$DATATYPE".to_string(),
+            Keyword::Byte(ByteKeyword::DATATYPE(FcsDataType::F)),
+        );
+
+        // MODE
+        metadata.insert_string_keyword("$MODE".to_string(), "L".to_string());
+
+        // PAR
+        metadata.keywords.insert(
+            "$PAR".to_string(),
+            Keyword::Int(IntegerKeyword::PAR(n_params)),
+        );
+
+        // TOT
+        metadata.keywords.insert(
+            "$TOT".to_string(),
+            Keyword::Int(IntegerKeyword::TOT(n_events)),
+        );
+
+        // NEXTDATA
+        metadata.insert_string_keyword("$NEXTDATA".to_string(), "0".to_string());
+
+        // Add parameter keywords ($PnN, $PnS, $PnB, $PnE, $PnR)
+        // Get column names from DataFrame in order
+        let column_names = df.get_column_names();
+        for (param_idx, param_name) in column_names.iter().enumerate() {
+            let param_num = param_idx + 1;
+
+            // Get parameter from ParameterMap if available
+            // Convert PlSmallStr to Arc<str> for ParameterMap lookup
+            let param_name_arc: Arc<str> = Arc::from(param_name.as_str());
+            if let Some(param) = params.get(&param_name_arc) {
+                // $PnN - Parameter name
+                metadata.insert_string_keyword(format!("$P{}N", param_num), param_name.to_string());
+
+                // $PnS - Parameter label (short name)
+                metadata.insert_string_keyword(
+                    format!("$P{}S", param_num),
+                    param.label_name.to_string(),
+                );
+
+                // $PnB - Bits per parameter (default: 32 for float32)
+                metadata.keywords.insert(
+                    format!("$P{}B", param_num),
+                    Keyword::Int(IntegerKeyword::PnB(32)),
+                );
+
+                // $PnE - Amplification (default: 0,0)
+                metadata.insert_string_keyword(format!("$P{}E", param_num), "0,0".to_string());
+
+                // $PnR - Range (default: 262144)
+                metadata.keywords.insert(
+                    format!("$P{}R", param_num),
+                    Keyword::Int(IntegerKeyword::PnR(262144)),
+                );
+            } else {
+                // Fallback if parameter not in ParameterMap
+                metadata.insert_string_keyword(format!("$P{}N", param_num), param_name.to_string());
+                metadata.insert_string_keyword(format!("$P{}S", param_num), param_name.to_string());
+
+                metadata.keywords.insert(
+                    format!("$P{}B", param_num),
+                    Keyword::Int(IntegerKeyword::PnB(32)),
+                );
+
+                metadata.insert_string_keyword(format!("$P{}E", param_num), "0,0".to_string());
+
+                metadata.keywords.insert(
+                    format!("$P{}R", param_num),
+                    Keyword::Int(IntegerKeyword::PnR(262144)),
+                );
+            }
+        }
+
+        // Generate GUID
+        metadata.validate_guid();
+
+        Ok(metadata)
     }
 }

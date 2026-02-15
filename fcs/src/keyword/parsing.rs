@@ -230,15 +230,12 @@ pub fn parse_parameter_keywords(key: &str, value: &str) -> Option<KeywordCreatio
                 .map(|wl| KeywordCreationResult::Mixed(MixedKeyword::PnL(wl)))
                 .map_or(Some(KeywordCreationResult::UnableToParse), Some)
         }
-        // Transformation to apply when displaying the data → [`IntegerKeyword::PnDisplay`]
-        "DISPLAY" => Some(
-            trimmed_value
-                .parse::<usize>()
-                .map(|display_scale| {
-                    KeywordCreationResult::Int(IntegerKeyword::PnDisplay(display_scale))
-                })
-                .unwrap_or(KeywordCreationResult::UnableToParse),
-        ),
+        // Transformation to apply when displaying the data → [`StringKeyword::PnDISPLAY`]
+        // Note: Some FCS files use numeric values (stored as PnDisplay), others use string values like "LOG"/"LIN"
+        // We parse as string for maximum compatibility
+        "DISPLAY" => Some(KeywordCreationResult::String(StringKeyword::PnDISPLAY(
+            Arc::from(trimmed_value),
+        ))),
         // Short name for parameter n → [`StringKeyword::PnN`]
         "N" => Some(KeywordCreationResult::String(StringKeyword::PnN(
             Arc::from(trimmed_value),

@@ -282,6 +282,9 @@ pub enum StringKeyword {
     PnF(Arc<str>),
     /// The FCS measurement signal types and evaluation features (e.g., area, height, or width) (FCS 1.0+)
     PnType(Arc<str>),
+    /// Display scale for parameter `n` - typically "LOG" for logarithmic or "LIN" for linear (FCS 1.0+)
+    /// Note: Some FCS files use this as a string, others as numeric. We store as string for flexibility.
+    PnDISPLAY(Arc<str>),
 
     /// Detector name for parameter `n` (FCS 3.2+)
     PnDET(Arc<str>),
@@ -466,6 +469,7 @@ impl StringableKeyword for StringKeyword {
             | Self::PnS(value)
             | Self::PnF(value)
             | Self::PnType(value)
+            | Self::PnDISPLAY(value)
             | Self::PnDET(value)
             | Self::PnTAG(value)
             | Self::PnANALYTE(value)
@@ -518,7 +522,7 @@ impl StringableKeyword for IntegerKeyword {
             | Self::EndText(value)
             | Self::PAR(value)
             | Self::TOT(value)
-            |             Self::PnR(value)
+            | Self::PnR(value)
             | Self::PnB(value)
             | Self::PnV(value)
             | Self::PnL(value)
