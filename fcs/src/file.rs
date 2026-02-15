@@ -527,8 +527,8 @@ impl Fcs {
             columns.push(series);
         }
 
-        // Create DataFrame from columns
-        let df = DataFrame::new(columns).map_err(|e| {
+        // Create DataFrame from columns (height = number of events)
+        let df = DataFrame::new(*number_of_events, columns).map_err(|e| {
             anyhow!(
                 "Failed to create DataFrame from {} columns: {}",
                 number_of_parameters,
@@ -1328,7 +1328,7 @@ impl Fcs {
         // Replace the column in DataFrame
         let mut new_df = df;
         new_df
-            .replace(parameter_name, new_series)
+            .replace(parameter_name, new_series.into())
             .map_err(|e| anyhow!("Failed to replace column: {}", e))?;
 
         Ok(Arc::new(new_df))
@@ -1367,7 +1367,7 @@ impl Fcs {
                 .collect();
 
             let new_series = Series::new(param_name.into(), transformed);
-            df.replace(param_name, new_series)
+            df.replace(param_name, new_series.into())
                 .map_err(|e| anyhow!("Failed to replace column {}: {}", param_name, e))?;
         }
 
@@ -1440,7 +1440,7 @@ impl Fcs {
                 .collect();
 
             let new_series = Series::new(param_name.into(), transformed);
-            df.replace(param_name, new_series)
+            df.replace(param_name, new_series.into())
                 .map_err(|e| anyhow!("Failed to replace column {}: {}", param_name, e))?;
         }
 
@@ -1850,7 +1850,7 @@ impl Fcs {
 
         for (i, &channel_name) in channel_names.iter().enumerate() {
             let new_series = Series::new(channel_name.into(), compensated_data[i].clone());
-            df.replace(channel_name, new_series)
+            df.replace(channel_name, new_series.into())
                 .map_err(|e| anyhow!("Failed to replace column {}: {}", channel_name, e))?;
         }
 
@@ -1941,8 +1941,8 @@ impl Fcs {
             columns.push(series);
         }
 
-        let df =
-            DataFrame::new(columns).map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
+        let df = DataFrame::new(n_events, columns)
+            .map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
 
         Ok(Arc::new(df))
     }

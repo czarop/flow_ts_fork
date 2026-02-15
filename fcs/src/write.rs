@@ -355,7 +355,7 @@ pub fn add_column(
     let mut new_df = df.clone();
     let new_series = Series::new(column_name.into(), values);
     new_df
-        .with_column(new_series)
+        .with_column(new_series.into())
         .map_err(|e| anyhow!("Failed to add column: {}", e))?;
 
     // Update Fcs struct

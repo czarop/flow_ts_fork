@@ -35,7 +35,7 @@ mod polars_tests {
             vec![10.0f32, 20.0, 30.0, 40.0, 50.0],
         ));
 
-        let df = DataFrame::new(columns).expect("Failed to create test DataFrame");
+        let df = DataFrame::new(5, columns).expect("Failed to create test DataFrame");
 
         // Create parameter map
         let mut params = ParameterMap::default();
