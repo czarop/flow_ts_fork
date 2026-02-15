@@ -1,51 +1,49 @@
 [package]
-name = "flow-utils"
-version = "0.1.0"
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-description = "Shared algorithms and utilities for flow cytometry crates"
-repository = "https://github.com/jrmoynihan/flow/utils"
-keywords = [
+name="flow-utils"
+version="0.1.0"
+edition.workspace=true
+authors.workspace=true
+license.workspace=true
+description="Shared algorithms and utilities for flow cytometry crates"
+repository="https://github.com/jrmoynihan/flow/utils"
+keywords=[
     "flow-cytometry",
     "algorithms",
     "kde",
     "clustering",
     "pca",
 ]
-categories = ["science", "algorithms"]
+categories=["science", "algorithms"]
 
 [features]
-default = []
-gpu = ["dep:burn", "dep:cubecl", "dep:bytemuck"]
+default=[]
+gpu    =["dep:burn", "dep:cubecl", "dep:bytemuck"]
 
 [dependencies]
-# Array operations
-# Note: linfa-clustering requires ndarray 0.16, but workspace uses 0.17
-# We'll use ndarray 0.16 for compatibility with linfa
-ndarray = "0.16"
+# Array operations (ndarray 0.16 for linfa compatibility)
+ndarray={ workspace=true }
 # Use linfa-linalg for SVD (compatible with ndarray 0.16)
-linfa-linalg = "0.2"
+linfa-linalg="0.2"
 
 # FFT for KDE
-realfft = "3.5.0"
+realfft="3.5.0"
 
 # Clustering
-linfa-clustering = "0.8"
-linfa = "0.8"
+linfa-clustering="0.8"
+linfa           ="0.8"
 
 # Error handling
-thiserror = { workspace = true }
-anyhow = { workspace = true }
+thiserror={ workspace=true }
+anyhow   ={ workspace=true }
 
 # Parallelization
-rayon = { workspace = true }
+rayon={ workspace=true }
 
 # GPU support (optional)
-burn = { version = "0.20", optional = true, features = ["wgpu"] }
-cubecl = { version = "0.9", optional = true }
-bytemuck = { workspace = true, optional = true }
+burn    ={ version="0.20", optional=true, features=["wgpu"] }
+cubecl  ={ version="0.9", optional=true }
+bytemuck={ workspace=true, optional=true }
 
 [dev-dependencies]
-approx = "0.5"
-criterion = "0.8.1"
+approx   ="0.5"
+criterion="0.8.1"
