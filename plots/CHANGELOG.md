@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.1 (2026-02-15)
+
+<csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
+<csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
 
 ### Chore
 
@@ -20,20 +23,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Remove unused mut keywords
    - Clean up warnings for better code quality
 
+### Chore
+
+ - <csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/> update changelogs prior to release
+
 ### New Features
 
  - <csr-id-adae5a601646d41300edeaa4ec0542c0a665b05f/> add spectral plots and signal heatmap
    - Add SpectralSignaturePlot and spectral plot options
-   - Add signal heatmap for spectral visualization
-   - Extend plotters backend for new plot types
+- Add signal heatmap for spectral visualization
+- Extend plotters backend for new plot types
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release over the course of 24 calendar days.
+ - 5 commits contributed to the release over the course of 24 calendar days.
  - 24 days passed between releases.
- - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -43,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Add spectral plots and signal heatmap ([`adae5a6`](https://github.com/jrmoynihan/flow/commit/adae5a601646d41300edeaa4ec0542c0a665b05f))
     - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))

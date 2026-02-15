@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.1 (2026-02-15)
+
+<csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
+<csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
+<csr-id-bea47e8ee97b86a3120b8097d0fdbe6bc9fce133/>
+<csr-id-dcf9154b305c79728dd2a9f61e4440b5a15756ea/>
 
 ### Chore
 
@@ -20,172 +25,173 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Remove unused mut keywords
    - Clean up warnings for better code quality
 
+### Chore
+
+ - <csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/> update changelogs prior to release
+
 ### Documentation
+
+<csr-id-6f6d0f59369453e3f0018b37f1377b204b023223/>
+<csr-id-f9eef00689d5c1dbda8bce37ca0d399afae19d46/>
 
  - <csr-id-69d65c959a392f16431cc98beae9c361ccfed10a/> add implementation status document
    - Document completed features and known limitations
-   - Note performance targets and achievements
-   - List future enhancements
-   - Update testing status
- - <csr-id-6f6d0f59369453e3f0018b37f1377b204b023223/> add comprehensive documentation for flow-utils and research notes
-   - Add README for flow-utils crate with usage examples
-   - Add CRATE_RESEARCH.md documenting crate evaluation and decisions
-   - Add RESEARCH_NOTES.md for automated gating algorithms and decisions
-   - Document performance vs accuracy tradeoffs
-   - Note known limitations and future work
- - <csr-id-f9eef00689d5c1dbda8bce37ca0d399afae19d46/> add README for automated gating module
-   - Document scatter gating methods and usage
-   - Document doublet detection methods and usage
-   - Document preprocessing pipeline
-   - Include algorithm details and performance notes
-   - Note known limitations (clustering API, multi-population)
+- Note performance targets and achievements
+- List future enhancements
+- Update testing status
+- Add README for flow-utils crate with usage examples
+- Add CRATE_RESEARCH.md documenting crate evaluation and decisions
+- Add RESEARCH_NOTES.md for automated gating algorithms and decisions
+- Document performance vs accuracy tradeoffs
+- Note known limitations and future work
+- Document scatter gating methods and usage
+- Document doublet detection methods and usage
+- Document preprocessing pipeline
+- Include algorithm details and performance notes
+- Note known limitations (clustering API, multi-population)
 
 ### New Features
 
+<csr-id-0e1ee96078a18b06ce5c0c8776df9892d7861ea8/>
+<csr-id-5996edc676f6a606fcd48e2ffc8ed3131f08ce0b/>
+<csr-id-547c2ae09f0f263314de70750b8c8e01b4fd4661/>
+<csr-id-c0ba8e72f6866bda5d9eec40a6f089ccc7c35107/>
+<csr-id-340977390c10a31fdf7694ac9325147f406c5b72/>
+<csr-id-6a65bd7077b2a12670c3766248b08447e92ea8b5/>
+<csr-id-43a00f6f0e4043d9b973eb8c9ae2c18ff64b780d/>
+<csr-id-c89944be9c68a1f688dfb5ee333c7562b28f90b1/>
+<csr-id-7b65fbcc9119762ee4cf64cf129c017ece95ff30/>
+<csr-id-c998c06382ec30a870452083b7366a74ced5830e/>
+<csr-id-6762e5f0d484be7e8d45363205793a50e46b0eb3/>
+
  - <csr-id-42b46207448be5ca137b0b1067ddaa1222b50ccb/> add hierarchy support and gating improvements
    - Extend hierarchy module
-   - Minor updates to scatter, filtering, gatingml
- - <csr-id-0e1ee96078a18b06ce5c0c8776df9892d7861ea8/> triple event counts and adjust distributions
-   - Triple total events: 20k -> 60k (most scenarios), 30k -> 90k (with_debris)
-   - Reduce FSC mean by 35% for single-population and with_doublets (50000 -> 32500)
-   - Narrow all distributions by ~40% for more concentration (except debris)
-   - Debris population keeps original wider distribution
-   - All plots regenerated with new parameters
- - <csr-id-5996edc676f6a606fcd48e2ffc8ed3131f08ce0b/> complete synthetic data generation with debris scenario
-   - Add generate_with_debris function to test_helpers.rs
-   - 15% debris population near origin (low FSC/SSC)
-   - All 5 scenarios now use Gaussian distributions
-   - Tests should compile and pass
- - <csr-id-547c2ae09f0f263314de70750b8c8e01b4fd4661/> complete migration to Gaussian distributions for synthetic data
-   - Replace all uniform random generation with Normal distributions
-   - Use rand_distr::Normal for realistic flow cytometry data patterns
-   - Proper correlations between FSC-A/FSC-H and SSC-A/SSC-H
-   - All scenarios now generate Poisson/Gaussian-like distributions
-   - Fixes compilation errors and improves data realism
- - <csr-id-c0ba8e72f6866bda5d9eec40a6f089ccc7c35107/> improve synthetic data generation with realistic distributions
-   - Replace uniform random blocks with Gaussian distributions using rand_distr
-   - Add proper correlations between FSC-A/FSC-H and SSC-A/SSC-H
-   - Increase event density (20k events for visualization)
-   - Add WithDebris scenario: 15% debris population near origin (low FSC/SSC)
-   - Debris population tests automated gating's ability to ignore low events
-   - All scenarios now use Poisson/Gaussian-like distributions for realism
- - <csr-id-340977390c10a31fdf7694ac9325147f406c5b72/> implement peak biasing and negative event extraction
-   Task 2.2: Peak Biasing
-   - Add peak_bias_negative for left-side biasing of negative peaks
-   - Keep peak_bias for right-side biasing of positive peaks
-   - Both configurable via CLI flags
-   
-   Task 2.3: Extract Negative Events from Controls
-   - Implement extract_negative_event_autofluorescence function
-   - Use peak detection to find negative peak (left/low peak)
-   - Calculate AF medians from negative events per endmember
-   - Support threshold-based fallback method
-   - Store negative event AF separately from universal AF
-   
-   Task 2.4: Hybrid Autofluorescence (partial)
-   - Implement autofluorescence_mode selection (universal, negative-events, hybrid)
-   - Weighted combination: α * universal + (1-α) * negative_events
-   - Fallback to universal AF if negative events insufficient
-   - Configurable af_weight (default: 0.7)
-   
-   - Fix PNG output path in visualization example
-   - Move generated plots to gates/examples/synthetic_plots/
- - <csr-id-6a65bd7077b2a12670c3766248b08447e92ea8b5/> add visualization example for synthetic test data
-   - Create example to visualize synthetic FCS scenarios using flow-plots
-   - Generate scatter plots for all 4 test scenarios
-   - Document decision to keep synthetic FCS generation in crate-specific test helpers
-   - Avoid cyclic dependency risk by not moving to flow-utils
- - <csr-id-43a00f6f0e4043d9b973eb8c9ae2c18ff64b780d/> implement clustering-based scatter gating
-   - Add K-means clustering method for scatter gating
-   - Add GMM clustering method for scatter gating
-   - Identify main population cluster/component
-   - Generate ellipse gates around main population
-   - Support multi-population detection structure
- - <csr-id-c89944be9c68a1f688dfb5ee333c7562b28f90b1/> add 2D KDE for improved density contours
-   - Implement KernelDensity2D for 2D scatter plot density estimation
-   - Use 2D FFT convolution for efficient computation
-   - Add contour extraction at density thresholds
-   - Update scatter gating to use 2D KDE for better density contours
-   - Generate polygon gates from density contours
- - <csr-id-7b65fbcc9119762ee4cf64cf129c017ece95ff30/> add doublet detection method comparison
-   - Add compare_doublet_methods for head-to-head comparison
-   - Add compare_with_peacoqc convenience function
-   - Calculate agreement matrix between methods
-   - Recommend method based on agreement and performance
-   - Supports performance vs accuracy tradeoff analysis
- - <csr-id-c998c06382ec30a870452083b7366a74ced5830e/> add enhanced doublet detection module
-   - Add DoubletGateConfig and DoubletMethod enums
-   - Implement ratio-based MAD method (peacoqc-rs compatible)
-   - Implement density-based detection using KDE
-   - Add hybrid method combining multiple approaches
-   - Support for multiple channel pairs (FSC-A/FSC-H, FSC-W/FSC-H, etc.)
-   - Note: Clustering method pending linfa API fix
- - <csr-id-6762e5f0d484be7e8d45363205793a50e46b0eb3/> add automated scatter gating module
-   - Add ScatterGateConfig and ScatterGateMethod enums
-   - Implement density contour and ellipse fit methods
-   - Add support for multi-population detection (placeholder)
-   - Integrate with flow-utils KDE for density estimation
-   - Add interactive pipeline support with user review breakpoints
-   - Note: Clustering methods pending linfa API fix
+- Minor updates to scatter, filtering, gatingml
+- Triple total events: 20k -> 60k (most scenarios), 30k -> 90k (with_debris)
+- Reduce FSC mean by 35% for single-population and with_doublets (50000 -> 32500)
+- Narrow all distributions by ~40% for more concentration (except debris)
+- Debris population keeps original wider distribution
+- All plots regenerated with new parameters
+- Add generate_with_debris function to test_helpers.rs
+- 15% debris population near origin (low FSC/SSC)
+- All 5 scenarios now use Gaussian distributions
+- Tests should compile and pass
+- Replace all uniform random generation with Normal distributions
+- Use rand_distr::Normal for realistic flow cytometry data patterns
+- Proper correlations between FSC-A/FSC-H and SSC-A/SSC-H
+- All scenarios now generate Poisson/Gaussian-like distributions
+- Fixes compilation errors and improves data realism
+- Replace uniform random blocks with Gaussian distributions using rand_distr
+- Add proper correlations between FSC-A/FSC-H and SSC-A/SSC-H
+- Increase event density (20k events for visualization)
+- Add WithDebris scenario: 15% debris population near origin (low FSC/SSC)
+- Debris population tests automated gating's ability to ignore low events
+- All scenarios now use Poisson/Gaussian-like distributions for realism
+- Add peak_bias_negative for left-side biasing of negative peaks
+- Keep peak_bias for right-side biasing of positive peaks
+- Both configurable via CLI flags
+- Implement extract_negative_event_autofluorescence function
+- Use peak detection to find negative peak (left/low peak)
+- Calculate AF medians from negative events per endmember
+- Support threshold-based fallback method
+- Store negative event AF separately from universal AF
+- Implement autofluorescence_mode selection (universal, negative-events, hybrid)
+- Weighted combination: α * universal + (1-α) * negative_events
+- Fallback to universal AF if negative events insufficient
+- Configurable af_weight (default: 0.7)
+- Fix PNG output path in visualization example
+- Move generated plots to gates/examples/synthetic_plots/
+- Create example to visualize synthetic FCS scenarios using flow-plots
+- Generate scatter plots for all 4 test scenarios
+- Document decision to keep synthetic FCS generation in crate-specific test helpers
+- Avoid cyclic dependency risk by not moving to flow-utils
+- Add K-means clustering method for scatter gating
+- Add GMM clustering method for scatter gating
+- Identify main population cluster/component
+- Generate ellipse gates around main population
+- Support multi-population detection structure
+- Implement KernelDensity2D for 2D scatter plot density estimation
+- Use 2D FFT convolution for efficient computation
+- Add contour extraction at density thresholds
+- Update scatter gating to use 2D KDE for better density contours
+- Generate polygon gates from density contours
+- Add compare_doublet_methods for head-to-head comparison
+- Add compare_with_peacoqc convenience function
+- Calculate agreement matrix between methods
+- Recommend method based on agreement and performance
+- Supports performance vs accuracy tradeoff analysis
+- Add DoubletGateConfig and DoubletMethod enums
+- Implement ratio-based MAD method (peacoqc-rs compatible)
+- Implement density-based detection using KDE
+- Add hybrid method combining multiple approaches
+- Support for multiple channel pairs (FSC-A/FSC-H, FSC-W/FSC-H, etc.)
+- Note: Clustering method pending linfa API fix
+- Add ScatterGateConfig and ScatterGateMethod enums
+- Implement density contour and ellipse fit methods
+- Add support for multi-population detection (placeholder)
+- Integrate with flow-utils KDE for density estimation
+- Add interactive pipeline support with user review breakpoints
+- Note: Clustering methods pending linfa API fix
 
 ### Bug Fixes
 
+<csr-id-3683d6a9248108834f3be9c6ae7a844d96953b7a/>
+<csr-id-a1894b8dd78f86970311dde59e0f863a685ef4ec/>
+<csr-id-28677b4de7abaccf198f2a278a38c46a2364f193/>
+<csr-id-c8d5ab0e62038fc07f17ffb89e9748c3a159007e/>
+<csr-id-6596ed9f6d7916684d38ae65f9284ae7a40a937f/>
+<csr-id-38013b28d81af8510a1065745d203bd5e2057518/>
+<csr-id-ec337c29858cd506aec01548d0e8431fa6eec9f3/>
+<csr-id-7b87699eb278bd7b7d37076aaaa730ff99fc3c53/>
+<csr-id-383b476374a707447e655b1b0c0a298e91fd2cc3/>
+<csr-id-385c0be364793819279fb9a50f38eb29bbceeab3/>
+<csr-id-d33d3616c82ffc04001363ad3f3a9b7ccef0175f/>
+<csr-id-161b1334a4a20d5fb0be80aee8134732840e9a6a/>
+
  - <csr-id-465089a6a99336556e492a02b06757fff54fbb63/> update example generation functions to use Gaussian distributions
    - Replace uniform random (rng.gen_range) with Normal distributions in all functions
-   - Update generate_single_population, generate_multi_population, generate_with_doublets, generate_noisy_data
-   - Increase main population density for with_debris (10% debris, 90% main, 30k events)
-   - All scenarios now generate realistic Gaussian/Poisson-like distributions
-   - Fixes square/rectangular distribution issue in plots
- - <csr-id-3683d6a9248108834f3be9c6ae7a844d96953b7a/> fix auto_gate parameter passing and regenerate plots
-   - Fix auto_gate dereference in function call
-   - Regenerate synthetic FCS plots with latest code
-   - All compilation errors resolved
- - <csr-id-a1894b8dd78f86970311dde59e0f863a685ef4ec/> resolve type inference issues in Gaussian distributions
-   - Add explicit f64->f32 casts for Normal distribution samples
-   - Fix ambiguous numeric type errors
-   - All generation functions now compile correctly
-   - Maintains realistic Gaussian distributions for all scenarios
- - <csr-id-28677b4de7abaccf198f2a278a38c46a2364f193/> resolve rand version mismatch and complete example
-   - Change rand from 0.9 to 0.8 to match rand_distr 0.4 requirements
-   - Fixes compilation errors in test_helpers.rs
-   - All generation functions now use Gaussian distributions correctly
- - <csr-id-c8d5ab0e62038fc07f17ffb89e9748c3a159007e/> add WithDebris scenario and complete Gaussian distribution migration
-   - Add WithDebris to TestScenario enum
-   - Implement generate_with_debris function with 15% debris near origin
-   - Update match statement to include WithDebris
-   - All generation functions now use Gaussian distributions via rand_distr
- - <csr-id-6596ed9f6d7916684d38ae65f9284ae7a40a937f/> correct flow-plots API usage in visualization example
-   - Fix width/height types (u32 instead of i32)
-   - Use correct builder pattern for axis options
-   - Import Plot trait for render method
- - <csr-id-38013b28d81af8510a1065745d203bd5e2057518/> resolve ndarray version mismatch for clustering
-   - Add fit_from_rows helper methods to KMeans and GMM
-   - Convert Array2 from ndarray 0.17 to Vec<Vec<f64>> for compatibility
-   - Resolve type mismatch between flow-gates (ndarray 0.17) and flow-utils (ndarray 0.16)
- - <csr-id-ec337c29858cd506aec01548d0e8431fa6eec9f3/> restore Gate import in doublets module
-   - Accidentally removed in cleanup, restore for compilation
- - <csr-id-7b87699eb278bd7b7d37076aaaa730ff99fc3c53/> fix final borrow checker error
-   - Extract recommended_method before moving results into return value
-   - All compilation errors resolved
- - <csr-id-383b476374a707447e655b1b0c0a298e91fd2cc3/> fix borrow checker error in comparison module
-   - Remove unnecessary clone of method_name
-   - Add check for empty methods vector
-   - All compilation errors resolved
- - <csr-id-385c0be364793819279fb9a50f38eb29bbceeab3/> fix GateHierarchy API usage
-   - GateHierarchy tracks relationships, not gates themselves
-   - Remove incorrect add_gate calls
-   - Gates are stored in result structs
-   - Hierarchy can be used to track parent-child relationships if needed
- - <csr-id-d33d3616c82ffc04001363ad3f3a9b7ccef0175f/> fix ellipse geometry creation and error handling
-   - Fix create_ellipse_geometry calls to use Vec<(f32, f32)> format
-   - Fix anyhow::Error conversion (doesn't implement StdError)
-   - Fix GateStatistics::empty access (create empty stats manually)
-   - All compilation errors resolved
- - <csr-id-161b1334a4a20d5fb0be80aee8134732840e9a6a/> fix Fcs API usage in automated gating
-   - Use get_parameter_events_slice instead of get_channel_f64
-   - Convert f32 to f64 for processing
-   - Fix error handling to use GateError::Other instead of non-existent variants
-   - All compilation errors resolved
+- Update generate_single_population, generate_multi_population, generate_with_doublets, generate_noisy_data
+- Increase main population density for with_debris (10% debris, 90% main, 30k events)
+- All scenarios now generate realistic Gaussian/Poisson-like distributions
+- Fixes square/rectangular distribution issue in plots
+- Fix auto_gate dereference in function call
+- Regenerate synthetic FCS plots with latest code
+- All compilation errors resolved
+- Add explicit f64->f32 casts for Normal distribution samples
+- Fix ambiguous numeric type errors
+- All generation functions now compile correctly
+- Maintains realistic Gaussian distributions for all scenarios
+- Change rand from 0.9 to 0.8 to match rand_distr 0.4 requirements
+- Fixes compilation errors in test_helpers.rs
+- All generation functions now use Gaussian distributions correctly
+- Add WithDebris to TestScenario enum
+- Implement generate_with_debris function with 15% debris near origin
+- Update match statement to include WithDebris
+- All generation functions now use Gaussian distributions via rand_distr
+- Fix width/height types (u32 instead of i32)
+- Use correct builder pattern for axis options
+- Import Plot trait for render method
+- Add fit_from_rows helper methods to KMeans and GMM
+- Convert Array2 from ndarray 0.17 to Vec<Vec<f64>> for compatibility
+- Resolve type mismatch between flow-gates (ndarray 0.17) and flow-utils (ndarray 0.16)
+- Accidentally removed in cleanup, restore for compilation
+- Extract recommended_method before moving results into return value
+- All compilation errors resolved
+- Remove unnecessary clone of method_name
+- Add check for empty methods vector
+- All compilation errors resolved
+- GateHierarchy tracks relationships, not gates themselves
+- Remove incorrect add_gate calls
+- Gates are stored in result structs
+- Hierarchy can be used to track parent-child relationships if needed
+- Fix create_ellipse_geometry calls to use Vec<(f32, f32)> format
+- Fix anyhow::Error conversion (doesn't implement StdError)
+- Fix GateStatistics::empty access (create empty stats manually)
+- All compilation errors resolved
+- Use get_parameter_events_slice instead of get_channel_f64
+- Convert f32 to f64 for processing
+- Fix error handling to use GateError::Other instead of non-existent variants
+- All compilation errors resolved
 
 ### Test
 
@@ -205,9 +211,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 35 commits contributed to the release over the course of 24 calendar days.
+ - 36 commits contributed to the release over the course of 24 calendar days.
  - 24 days passed between releases.
- - 32 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 33 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -217,6 +223,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Add hierarchy support and gating improvements ([`42b4620`](https://github.com/jrmoynihan/flow/commit/42b46207448be5ca137b0b1067ddaa1222b50ccb))
     - Triple event counts and adjust distributions ([`0e1ee96`](https://github.com/jrmoynihan/flow/commit/0e1ee96078a18b06ce5c0c8776df9892d7861ea8))
@@ -254,6 +261,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Adjusting changelogs prior to release of flow-fcs v0.1.6 ([`7fb88db`](https://github.com/jrmoynihan/flow/commit/7fb88db9ede05b317a03d367cea18a3b8b73c5a1))
 </details>
 
+<csr-unknown>
+ add comprehensive documentation for flow-utils and research notes add README for automated gating module triple event counts and adjust distributions complete synthetic data generation with debris scenario complete migration to Gaussian distributions for synthetic data improve synthetic data generation with realistic distributions implement peak biasing and negative event extractionTask 2.2: Peak BiasingTask 2.3: Extract Negative Events from ControlsTask 2.4: Hybrid Autofluorescence (partial) add visualization example for synthetic test data implement clustering-based scatter gating add 2D KDE for improved density contours add doublet detection method comparison add enhanced doublet detection module add automated scatter gating module fix auto_gate parameter passing and regenerate plots resolve type inference issues in Gaussian distributions resolve rand version mismatch and complete example add WithDebris scenario and complete Gaussian distribution migration correct flow-plots API usage in visualization example resolve ndarray version mismatch for clustering restore Gate import in doublets module fix final borrow checker error fix borrow checker error in comparison module fix GateHierarchy API usage fix ellipse geometry creation and error handling fix Fcs API usage in automated gating<csr-unknown/>
+
 ## 0.1.2 (2026-01-21)
 
 <csr-id-e670a9216137c9a2cedde38f3e21894f280fe516/>
@@ -272,40 +282,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    Add comprehensive error types to support new functionality.
    
    - Add HierarchyCycle error for cycle detection
-- Add InvalidBooleanOperation error for boolean gate validation
-- Add GateNotFound error for missing gate references
-- Add InvalidLink error for gate linking operations
-- Add CannotReparent error for hierarchy operations
-- Add InvalidSubtreeOperation error for subtree operations
-- Add EmptyOperands error for boolean operations
-- Add InvalidBuilderState error for builder validation
-- Add DuplicateGateId error for ID conflicts
-- Add helper constructors for all new error types
-- Add GateQuery builder with fluent API
-- Add filter_gates_by_parameters() helper
-- Add filter_gates_by_scope() helper
-- Add filter_hierarchy_by_parameters() helper
-- Support filtering by parameters, scope, and type
-- Improve documentation and examples
-- Add reparent() to move a gate to a new parent
-- Add reparent_subtree() to move entire subtrees
-- Add clone_subtree() to duplicate subtrees with new IDs
-- Add cycle detection to prevent invalid hierarchies
-- Improve error handling with specific error types
-- Add write_boolean_gate for exporting boolean gates to XML
-- Add parse_boolean_gate_v1_5 and parse_boolean_geometry_v2 for import
-- Support AND, OR, and NOT operations in GatingML
-- Replace anyhow::Result with custom GateError::Result
-- Improve error handling with custom error types
-- Add BooleanOperation enum (And, Or, Not)
-- Add Boolean variant to GateGeometry with operation and operands
-- Add GateResolver trait for resolving gate IDs to gate references
-- Implement boolean gate filtering with filter_events_boolean
-- Add filter_by_gate_with_resolver for boolean gate support
-- Update EventIndex to handle boolean gates via resolver
-- Add GateLinks with add_link, remove_link, get_links methods
-- Track which gates reference other gates
-- Support querying link counts and checking if gates are linked
 
 ### Refactor
 
@@ -363,7 +339,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add gate query builder and filtering helpersAdd fluent API for querying and filtering gates by various criteria. enhance gate hierarchy with reparenting and cloningAdd advanced hierarchy manipulation methods for reorganizing gatestructures. add boolean gate support to GatingML import/exportAdd support for serializing and deserializing boolean gates inGatingML format. add boolean gate supportAdd support for boolean gates that combine multiple gates usinglogical operations (AND, OR, NOT). add gate linking systemAdd GateLinks structure for tracking gate references and reuse.This is separate from hierarchy - links represent gate references(e.g., in boolean gates), not parent-child relationships.<csr-unknown/>
+Add InvalidBooleanOperation error for boolean gate validationAdd GateNotFound error for missing gate referencesAdd InvalidLink error for gate linking operationsAdd CannotReparent error for hierarchy operationsAdd InvalidSubtreeOperation error for subtree operationsAdd EmptyOperands error for boolean operationsAdd InvalidBuilderState error for builder validationAdd DuplicateGateId error for ID conflictsAdd helper constructors for all new error typesAdd GateQuery builder with fluent APIAdd filter_gates_by_parameters() helperAdd filter_gates_by_scope() helperAdd filter_hierarchy_by_parameters() helperSupport filtering by parameters, scope, and typeImprove documentation and examplesAdd reparent() to move a gate to a new parentAdd reparent_subtree() to move entire subtreesAdd clone_subtree() to duplicate subtrees with new IDsAdd cycle detection to prevent invalid hierarchiesImprove error handling with specific error typesAdd write_boolean_gate for exporting boolean gates to XMLAdd parse_boolean_gate_v1_5 and parse_boolean_geometry_v2 for importSupport AND, OR, and NOT operations in GatingMLReplace anyhow::Result with custom GateError::ResultImprove error handling with custom error typesAdd BooleanOperation enum (And, Or, Not)Add Boolean variant to GateGeometry with operation and operandsAdd GateResolver trait for resolving gate IDs to gate referencesImplement boolean gate filtering with filter_events_booleanAdd filter_by_gate_with_resolver for boolean gate supportUpdate EventIndex to handle boolean gates via resolverAdd GateLinks with add_link, remove_link, get_links methodsTrack which gates reference other gatesSupport querying link counts and checking if gates are linked<csr-unknown/>
 
 ## 0.1.1 (2026-01-18)
 

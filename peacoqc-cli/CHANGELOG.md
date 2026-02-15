@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2026-02-15)
+
+<csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
+<csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
 
 ### Chore
 
@@ -20,13 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Remove unused mut keywords
    - Clean up warnings for better code quality
 
+### Chore
+
+ - <csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/> update changelogs prior to release
+
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 6 commits contributed to the release over the course of 24 calendar days.
+ - 7 commits contributed to the release over the course of 24 calendar days.
  - 27 days passed between releases.
- - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -36,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))
     - Merge pull request #10 from jrmoynihan/gpu-acceleration ([`69363eb`](https://github.com/jrmoynihan/flow/commit/69363eb3a664b1aa6cd0be9b980ec08fc03b7955))
@@ -86,15 +94,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-12c86f21a3f572f3403cb1d187fd43ac673c38e3/> improve flag interface and implement FCS writing
    - Replace --remove-margins/--no-remove-margins with --keep-margins flag
-- Replace --remove-doublets/--no-remove-doublets with --keep-doublets flag
-- Default behavior: margins and doublets are removed (matches R recommendations)
-- Implement FCS file writing using flow-fcs write_fcs_file
-- Update documentation with examples for FCS output
-- Feature parity with R PeacoQC save_fcs=TRUE option
-- --export-csv: Export boolean CSV (0/1 values)
-- --export-csv-numeric: Export numeric CSV (2000/6000 values)
-- --export-json: Export JSON metadata
-- --csv-column-name: Custom column name for CSV exports
 
 ### Commit Statistics
 
@@ -133,7 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add QC plot generation functionalityAdd comprehensive QC plot generation for visualizing PeacoQC results. add export flags for QC resultsAdd CLI flags to export QC results in multiple formats:Exports are automatically named when outputting to directories.Updated CLI README with export format documentation and examples.<csr-unknown/>
+Replace –remove-doublets/–no-remove-doublets with –keep-doublets flagDefault behavior: margins and doublets are removed (matches R recommendations)Implement FCS file writing using flow-fcs write_fcs_fileUpdate documentation with examples for FCS outputFeature parity with R PeacoQC save_fcs=TRUE option–export-csv: Export boolean CSV (0/1 values)–export-csv-numeric: Export numeric CSV (2000/6000 values)–export-json: Export JSON metadata–csv-column-name: Custom column name for CSV exports<csr-unknown/>
 
 ## 0.1.1 (2026-01-14)
 

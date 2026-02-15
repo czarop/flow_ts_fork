@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2026-02-15)
+
+<csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
+<csr-id-e62b423812b0ce71a2b355a60da926fd588cbf0a/>
+<csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
+<csr-id-ef08072701d707a79303fb5ffcb14127d3d22930/>
 
 ### Chore
 
@@ -26,48 +31,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Update rand API: thread_rng() -> rng(), gen_range() -> random_range()
    - Fix csaps compatibility by converting ndarray to slices
 
+### Chore
+
+ - <csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/> update changelogs prior to release
+
 ### Documentation
 
  - <csr-id-5fba05b5e2747e3cfdda979dabb4ddde2bb384e1/> consolidate GPU performance documentation
    - Move GPU performance results from GPU_PERFORMANCE.md to DEV_NOTES.md
-   - Update README.md to reference DEV_NOTES.md for GPU details
-   - Document which operations use GPU and their benefits
-   - Document what was tried and not used (for future reference)
-   - Remove standalone GPU_PERFORMANCE.md file
+- Update README.md to reference DEV_NOTES.md for GPU details
+- Document which operations use GPU and their benefits
+- Document what was tried and not used (for future reference)
+- Remove standalone GPU_PERFORMANCE.md file
 
 ### New Features
 
+<csr-id-6e66d118e5c249b95ba7262d1b2f5ee8393bf3cf/>
+
  - <csr-id-6a911f32c2ae53a4cc4e956e6ce4efc6df49aa66/> remove GPU thresholds, always use GPU when available
    - Remove GPU_THRESHOLD, GPU_FFT_THRESHOLD, GPU_MATRIX_THRESHOLD constants
-   - Always use GPU acceleration when available (no size-based checks)
-   - Batched operations provide speedup even for smaller datasets (50K+ events)
-   - Update KDE and feature matrix code to always attempt GPU path
- - <csr-id-6e66d118e5c249b95ba7262d1b2f5ee8393bf3cf/> add GPU acceleration for KDE and feature matrix operations
-   - Add GPU module with WGPU backend via burn framework
-   - Implement GPU-accelerated FFT-based KDE with complex multiplication
-   - Add batched GPU operations for multi-channel processing
-   - Add GPU feature matrix building for isolation tree
-   - Add cubeCL custom kernel support (optional feature)
-   - Add GPU correctness tests
-   - Add GPU benchmarks for performance analysis
-   
-   GPU acceleration provides 20-32x speedup for batched multi-channel operations.
+- Always use GPU acceleration when available (no size-based checks)
+- Batched operations provide speedup even for smaller datasets (50K+ events)
+- Update KDE and feature matrix code to always attempt GPU path
+- Add GPU module with WGPU backend via burn framework
+- Implement GPU-accelerated FFT-based KDE with complex multiplication
+- Add batched GPU operations for multi-channel processing
+- Add GPU feature matrix building for isolation tree
+- Add cubeCL custom kernel support (optional feature)
+- Add GPU correctness tests
+- Add GPU benchmarks for performance analysis
 
 ### Bug Fixes
 
  - <csr-id-75937c28e6df8843143cb9222cea163894b2f0a0/> fix integration regression tests
    - Add missing PeacoQCData trait import
-   - Fix Fcs::open() calls to use string slice instead of PathBuf reference
-   - Fix preprocess_fcs() call to use correct function signature
-   - Remove unused variable warning
+- Fix Fcs::open() calls to use string slice instead of PathBuf reference
+- Fix preprocess_fcs() call to use correct function signature
+- Remove unused variable warning
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 12 commits contributed to the release over the course of 24 calendar days.
+ - 13 commits contributed to the release over the course of 24 calendar days.
  - 27 days passed between releases.
- - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 9 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -77,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Use workspace ndarray dependency ([`e62b423`](https://github.com/jrmoynihan/flow/commit/e62b423812b0ce71a2b355a60da926fd588cbf0a))
     - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))
@@ -90,6 +99,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Remove GPU thresholds, always use GPU when available ([`6a911f3`](https://github.com/jrmoynihan/flow/commit/6a911f32c2ae53a4cc4e956e6ce4efc6df49aa66))
     - Add GPU acceleration for KDE and feature matrix operations ([`6e66d11`](https://github.com/jrmoynihan/flow/commit/6e66d118e5c249b95ba7262d1b2f5ee8393bf3cf))
 </details>
+
+<csr-unknown>
+ add GPU acceleration for KDE and feature matrix operationsGPU acceleration provides 20-32x speedup for batched multi-channel operations.<csr-unknown/>
 
 ## 0.1.3 (2026-01-18)
 
@@ -136,14 +148,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-c6e843a730bc3352229c02a60be3b167e9f2d14d/> md formatting on dev notes
  - <csr-id-06a15cc61b34171896102c8de48c275fb811e78d/> consolidate and clean up documentation
    - Create DEV_NOTES.md consolidating technical implementation details
-- Update QUICK_START.md with cleaner examples
-- Update README.md with improved documentation
-- Add .gitignore entry for test artifacts
-- Boolean CSV format description and use cases
-- Numeric CSV format (R-compatible) description
-- JSON metadata format with example structure
-- Custom column name examples
-- Integration notes for downstream tools (pandas, R, SQL)
 
 ### New Features
 
@@ -157,18 +161,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    for significant performance improvements.
    
    - Add realfft dependency for efficient FFT operations
-- Implement FFT-based convolution for KDE computation
-- Update benchmarks to reflect FFT implementation
-- Update performance analysis documentation
-- 30-87x faster for typical use cases (1k-50k events)
-- Better scaling for larger datasets
-- No accuracy loss - all tests pass
-- export_csv_boolean() and export_csv_boolean_with_name()
-- export_csv_numeric() and export_csv_numeric_with_name()
-- export_json_metadata()
-- Boolean CSV (0/1 values) for general use
-- Numeric CSV (2000/6000 values) for R compatibility
-- JSON metadata with comprehensive QC metrics
 
 ### Bug Fixes
 
@@ -250,7 +242,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add export formats documentationAdd comprehensive documentation for export formats:Includes code examples for each export format. Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines.Performance improvements:Benchmarks show ~48x speedup for default bin size (1k events),reducing KDE time from ~1.4ms to ~29µs per bin. add convenience export methods to PeacoQCResultAdd methods to PeacoQCResult for easier export:These methods wrap the export functions and provide a moreergonomic API for users. add export module for QC resultsAdd export functionality to support multiple output formats:<csr-unknown/>
+Update QUICK_START.md with cleaner examplesUpdate README.md with improved documentationAdd .gitignore entry for test artifactsBoolean CSV format description and use casesNumeric CSV format (R-compatible) descriptionJSON metadata format with example structureCustom column name examplesIntegration notes for downstream tools (pandas, R, SQL)Implement FFT-based convolution for KDE computationUpdate benchmarks to reflect FFT implementationUpdate performance analysis documentation30-87x faster for typical use cases (1k-50k events)Better scaling for larger datasetsNo accuracy loss - all tests passexport_csv_boolean() and export_csv_boolean_with_name()export_csv_numeric() and export_csv_numeric_with_name()export_json_metadata()Boolean CSV (0/1 values) for general useNumeric CSV (2000/6000 values) for R compatibilityJSON metadata with comprehensive QC metrics<csr-unknown/>
 
 ## 0.1.2 (2026-01-18)
 

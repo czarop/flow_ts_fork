@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.1 (2026-02-15)
+
+<csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
+<csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
+<csr-id-b8128fcd93659ca86ee2f1d8dc43eed25616c9f1/>
+<csr-id-c4e6b792b31e293d865ebba6a3c58c5e8dde9bd8/>
 
 ### Chore
 
@@ -20,13 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Remove unused mut keywords
    - Clean up warnings for better code quality
 
+### Chore
+
+ - <csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/> update changelogs prior to release
+
 ### New Features
 
  - <csr-id-f494ea2ab401071aab661a0ce691cef547ebde75/> improve metadata, file handling, and FCS write
    - Extend metadata and keyword parsing
-   - Improve file access and transform handling
-   - Enhance FCS write support
-   - Add test_unmixed_fcs example
+- Improve file access and transform handling
+- Enhance FCS write support
+- Add test_unmixed_fcs example
 
 ### Bug Fixes
 
@@ -61,9 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 8 commits contributed to the release over the course of 24 calendar days.
+ - 9 commits contributed to the release over the course of 24 calendar days.
  - 24 days passed between releases.
- - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -73,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update DataFrame creation and series replacement to align with polars 0.51 -> 0.53 breaking change ([`b8128fc`](https://github.com/jrmoynihan/flow/commit/b8128fcd93659ca86ee2f1d8dc43eed25616c9f1))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Replace ndarray with faer for matrix operations ([`c4e6b79`](https://github.com/jrmoynihan/flow/commit/c4e6b792b31e293d865ebba6a3c58c5e8dde9bd8))
@@ -157,7 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - Updated benchmarks to use new `MatrixOps` API
 
 <csr-unknown>
-GPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysis<csr-unknown/>
+GPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysisGPU transfer overhead and kernel launch costs exceeded benefits for small-to-medium datasets (10K-1M events, 5-30 channels)CPU BLAS/LAPACK implementations are highly optimized for these matrix sizesSee GPU_BENCHMARKING.md for detailed benchmark results and analysis<csr-unknown/>
 <csr-unknown/>
 
 ## 0.1.5 (2026-01-21)
