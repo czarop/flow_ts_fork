@@ -26,8 +26,8 @@ peacoqc-rs={ path="../peacoqc-rs", version= "^0.2.0", features=[
 ] }
 anyhow.workspace=true
 serde_json.workspace=true
-clap={ version="4.5.54", features=["derive", "cargo"] }
-indicatif="0.18.3"
+clap = { workspace = true }
+indicatif = { workspace = true }
 rayon.workspace=true
 walkdir="2.5"
 tracing.workspace=true

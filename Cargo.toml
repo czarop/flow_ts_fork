@@ -28,26 +28,26 @@ publish-workspace = "cargo publish --workspace"
 [workspace.dependencies]
 # Polars for columnar data storage
 # Note: Using default-features = false to reduce bloat, but keeping dtype-full as it's needed
-polars = { version = "0.51.0", default-features = false, features = [
+polars = { version = "0.53.0", default-features = false, features = [
     "lazy",
     "ndarray",
     "dtype-full"
 ] }
 # Matrix manipulation (ndarray 0.16 for linfa/faer-ext compatibility)
-ndarray = { version = "0.16", features = [
+ndarray = { version = "0.16.1", features = [
     "matrixmultiply-threading",
     "rayon",
     "serde",
 ] }
 # Pure-Rust linear algebra (replaces ndarray-linalg; no system BLAS required)
-faer = { version = "0.23", features = ["rayon"] }
+faer = { version = "0.24", features = ["rayon"] }
 faer-ext = { version = "0.7", features = ["ndarray"] }
 
 # Parallelization
 rayon = "1.11"
 
 # Error Handling
-thiserror = "2.0.17"
+thiserror = "2.0.18"
 anyhow = "1.0.100"
 
 # Serialization
@@ -69,11 +69,27 @@ strum = "0.27.2" # For enum-like types
 strum_macros = "0.27.2" # For enum-like types
 regex = "1.11.3" # For regular expressions
 bytemuck = { version = "1.24", features = ["derive"] } # Bytemuck for zero-copy bit-cast conversions between types
-rand = "0.9.2"
+rand = "0.10.0"
+rand_distr = "0.6.0"
+ts-rs = "12.0.1"
 
-# CLI
+# CLI (indicatif used in peacoqc-cli, tru-ols-cli)
 clap = { version = "4.5.54", features = ["derive", "cargo"] }
+indicatif = "0.18.3"
 
 # Logging/Tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Dev-dependencies (benchmarks, tests)
+criterion = { version = "0.8.1", features = ["html_reports"] }
+approx = "0.5.1"
+tempfile = "3.10"
+
+# Visualization (plotters, image used in plots, peacoqc-rs, tru-ols-cli)
+plotters = "0.3.7"
+image = "0.25.9"
+
+
+# CSV (tru-ols-cli)
+csv = "1.3"

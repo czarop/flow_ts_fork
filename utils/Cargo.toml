@@ -45,5 +45,5 @@ cubecl  ={ version="0.9", optional=true }
 bytemuck={ workspace=true, optional=true }
 
 [dev-dependencies]
-approx   ="0.5"
-criterion="0.8.1"
+approx = { workspace = true }
+criterion = { workspace = true }

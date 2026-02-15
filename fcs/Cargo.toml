@@ -32,9 +32,11 @@ polars={ workspace=true, default-features=false, features=[
 faer={ workspace=true }
 faer-ext={ workspace=true }
 ndarray={ workspace=true, optional=true }
-ndarray-linalg={ version="0.17", optional=true, features=["openblas-system"] }
+ndarray-linalg={ version="0.18.1", optional=true, features=[
+    "openblas-system",
+] }
 
-ts-rs={ version="11.1.0", optional=true } # Generate TypeScript bindings for Rust types
+ts-rs = { workspace = true, optional = true }
 
 # Parallelization
 rayon={ workspace=true }
@@ -75,9 +77,9 @@ tracing={ workspace=true }
 # for details.
 
 [dev-dependencies]
-approx   ="0.5.1"                                        # For approximate comparisons
-criterion={ version="0.8.1", features=["html_reports"] }
-rand     ="0.8"                                          # For generating test data in benchmarks
+approx = { workspace = true }
+criterion = { workspace = true }
+rand = { workspace = true }
 
 [[bench]]
 name   ="dataframe_parsing"
