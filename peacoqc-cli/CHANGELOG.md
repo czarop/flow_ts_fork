@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
 <csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
+<csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/>
 
 ### Chore
 
@@ -31,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release over the course of 24 calendar days.
+ - 8 commits contributed to the release over the course of 24 calendar days.
  - 27 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -43,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
     - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))
@@ -130,9 +132,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines. ([`76d800d`](https://github.com/jrmoynihan/flow/commit/76d800d1b9a5b40c8f4628b46074320bd9e51630))
     - Update peacoqc-cli README.md to enhance clarity and provide links to `peacoqc-rs` and `flow-fcs` libraries, and improve attribution formatting for the original authors. ([`8b64eee`](https://github.com/jrmoynihan/flow/commit/8b64eee4f91acabc724c60ae1f3d380fcac4af92))
 </details>
-
-<csr-unknown>
-Replace –remove-doublets/–no-remove-doublets with –keep-doublets flagDefault behavior: margins and doublets are removed (matches R recommendations)Implement FCS file writing using flow-fcs write_fcs_fileUpdate documentation with examples for FCS outputFeature parity with R PeacoQC save_fcs=TRUE option–export-csv: Export boolean CSV (0/1 values)–export-csv-numeric: Export numeric CSV (2000/6000 values)–export-json: Export JSON metadata–csv-column-name: Custom column name for CSV exports<csr-unknown/>
 
 ## 0.1.1 (2026-01-14)
 

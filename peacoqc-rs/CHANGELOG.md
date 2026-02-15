@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-e62b423812b0ce71a2b355a60da926fd588cbf0a/>
 <csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
 <csr-id-ef08072701d707a79303fb5ffcb14127d3d22930/>
+<csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/>
 
 ### Chore
 
@@ -39,10 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-5fba05b5e2747e3cfdda979dabb4ddde2bb384e1/> consolidate GPU performance documentation
    - Move GPU performance results from GPU_PERFORMANCE.md to DEV_NOTES.md
-- Update README.md to reference DEV_NOTES.md for GPU details
-- Document which operations use GPU and their benefits
-- Document what was tried and not used (for future reference)
-- Remove standalone GPU_PERFORMANCE.md file
 
 ### New Features
 
@@ -50,30 +47,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-6a911f32c2ae53a4cc4e956e6ce4efc6df49aa66/> remove GPU thresholds, always use GPU when available
    - Remove GPU_THRESHOLD, GPU_FFT_THRESHOLD, GPU_MATRIX_THRESHOLD constants
-- Always use GPU acceleration when available (no size-based checks)
-- Batched operations provide speedup even for smaller datasets (50K+ events)
-- Update KDE and feature matrix code to always attempt GPU path
-- Add GPU module with WGPU backend via burn framework
-- Implement GPU-accelerated FFT-based KDE with complex multiplication
-- Add batched GPU operations for multi-channel processing
-- Add GPU feature matrix building for isolation tree
-- Add cubeCL custom kernel support (optional feature)
-- Add GPU correctness tests
-- Add GPU benchmarks for performance analysis
 
 ### Bug Fixes
 
  - <csr-id-75937c28e6df8843143cb9222cea163894b2f0a0/> fix integration regression tests
    - Add missing PeacoQCData trait import
-- Fix Fcs::open() calls to use string slice instead of PathBuf reference
-- Fix preprocess_fcs() call to use correct function signature
-- Remove unused variable warning
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 13 commits contributed to the release over the course of 24 calendar days.
+ - 14 commits contributed to the release over the course of 24 calendar days.
  - 27 days passed between releases.
  - 9 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -85,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
     - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Use workspace ndarray dependency ([`e62b423`](https://github.com/jrmoynihan/flow/commit/e62b423812b0ce71a2b355a60da926fd588cbf0a))
@@ -101,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add GPU acceleration for KDE and feature matrix operationsGPU acceleration provides 20-32x speedup for batched multi-channel operations.<csr-unknown/>
+Update README.md to reference DEV_NOTES.md for GPU detailsDocument which operations use GPU and their benefitsDocument what was tried and not used (for future reference)Remove standalone GPU_PERFORMANCE.md fileAlways use GPU acceleration when available (no size-based checks)Batched operations provide speedup even for smaller datasets (50K+ events)Update KDE and feature matrix code to always attempt GPU pathAdd GPU module with WGPU backend via burn frameworkImplement GPU-accelerated FFT-based KDE with complex multiplicationAdd batched GPU operations for multi-channel processingAdd GPU feature matrix building for isolation treeAdd cubeCL custom kernel support (optional feature)Add GPU correctness testsAdd GPU benchmarks for performance analysisFix Fcs::open() calls to use string slice instead of PathBuf referenceFix preprocess_fcs() call to use correct function signatureRemove unused variable warning<csr-unknown/>
 
 ## 0.1.3 (2026-01-18)
 
@@ -240,9 +225,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Update Cargo.toml files for consistency and improvements ([`4649c7a`](https://github.com/jrmoynihan/flow/commit/4649c7af16150d05880ddab4e732e9dee374d01b))
     - Update README files for peacoqc-cli and peacoqc-rs to include license information, enhance function documentation, and improve contribution guidelines. ([`76d800d`](https://github.com/jrmoynihan/flow/commit/76d800d1b9a5b40c8f4628b46074320bd9e51630))
 </details>
-
-<csr-unknown>
-Update QUICK_START.md with cleaner examplesUpdate README.md with improved documentationAdd .gitignore entry for test artifactsBoolean CSV format description and use casesNumeric CSV format (R-compatible) descriptionJSON metadata format with example structureCustom column name examplesIntegration notes for downstream tools (pandas, R, SQL)Implement FFT-based convolution for KDE computationUpdate benchmarks to reflect FFT implementationUpdate performance analysis documentation30-87x faster for typical use cases (1k-50k events)Better scaling for larger datasetsNo accuracy loss - all tests passexport_csv_boolean() and export_csv_boolean_with_name()export_csv_numeric() and export_csv_numeric_with_name()export_json_metadata()Boolean CSV (0/1 values) for general useNumeric CSV (2000/6000 values) for R compatibilityJSON metadata with comprehensive QC metrics<csr-unknown/>
 
 ## 0.1.2 (2026-01-18)
 

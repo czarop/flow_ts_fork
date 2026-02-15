@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
 <csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
 <csr-id-60d00956fa56c883b3c04e4c58bad677b27c6b24/>
+<csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/>
 
 ### Chore
 
@@ -32,19 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-292bd202b232c6f780a9cc7170cc1d53b443e05e/> add CLI reference and validation reports
    - CLI_ARGUMENTS_REFERENCE: complete argument reference for tru-ols unmix
-- COMPARISON_WITH_JULIA: Rust vs Julia comparison framework
-- PEAK_DETECTION_VALIDATION: peak detection validation report
-- VALIDATION_REPORT: algorithm validation and fixes
-- TRU-OLS vs AutoSpectral: academic comparison
-- UNMIXING_RESULTS_PLATE001: Plate_001 analysis results
 
 ### New Features
 
  - <csr-id-9c3354e3667460949ce836783ce02604c972efde/> unmixing, preprocessing, and FCS integration
    - TRU-OLS unmixing with cutoff and iterative removal
-- Preprocessing and autofluorescence handling
-- FCS integration for spectral unmixing output
-- Plotting support for unmixed results
 
 ### Refactor
 
@@ -60,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 6 commits contributed to the release over the course of 21 calendar days.
+ - 7 commits contributed to the release over the course of 21 calendar days.
  - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -71,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
     - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Replace ndarray with faer for linear algebra ([`60d0095`](https://github.com/jrmoynihan/flow/commit/60d00956fa56c883b3c04e4c58bad677b27c6b24))
@@ -78,4 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Unmixing, preprocessing, and FCS integration ([`9c3354e`](https://github.com/jrmoynihan/flow/commit/9c3354e3667460949ce836783ce02604c972efde))
     - Clean up unused imports and variables ([`c987a22`](https://github.com/jrmoynihan/flow/commit/c987a225570c2afae480800327d0072ab4b4e4ad))
 </details>
+
+<csr-unknown>
+COMPARISON_WITH_JULIA: Rust vs Julia comparison frameworkPEAK_DETECTION_VALIDATION: peak detection validation reportVALIDATION_REPORT: algorithm validation and fixesTRU-OLS vs AutoSpectral: academic comparisonUNMIXING_RESULTS_PLATE001: Plate_001 analysis resultsPreprocessing and autofluorescence handlingFCS integration for spectral unmixing outputPlotting support for unmixed results<csr-unknown/>
 

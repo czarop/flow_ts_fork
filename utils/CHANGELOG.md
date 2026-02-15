@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-126b1a9a8542ca5314763a1857d276bd1ed1d46b/>
 <csr-id-c987a225570c2afae480800327d0072ab4b4e4ad/>
 <csr-id-d03eaad90c006d26f5a5536e263d2d11f01c73ba/>
+<csr-id-089feff624625a5ddf0b1da570e4f60b6fedf09b/>
 
 ### Chore
 
@@ -35,10 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-6f6d0f59369453e3f0018b37f1377b204b023223/> add comprehensive documentation for flow-utils and research notes
    - Add README for flow-utils crate with usage examples
-- Add CRATE_RESEARCH.md documenting crate evaluation and decisions
-- Add RESEARCH_NOTES.md for automated gating algorithms and decisions
-- Document performance vs accuracy tradeoffs
-- Note known limitations and future work
 
 ### New Features
 
@@ -48,20 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-232769369212d1bd89895937a8de375d38eaff19/> extend KDE module for peak detection
    - Add KDE utilities for spectral analysis
-- Update kde2d implementation
-- Add KMeans::fit_from_rows to accept Vec<Vec<f64>>
-- Add Gmm::fit_from_rows to accept Vec<Vec<f64>>
-- Enables compatibility between ndarray 0.17 (flow-gates) and 0.16 (flow-utils)
-- Implement KernelDensity2D for 2D scatter plot density estimation
-- Use 2D FFT convolution for efficient computation
-- Add contour extraction at density thresholds
-- Update scatter gating to use 2D KDE for better density contours
-- Generate polygon gates from density contours
-- Add Kernel Density Estimation (KDE) with FFT acceleration
-- Add clustering algorithms: K-means, DBSCAN, GMM using linfa-clustering
-- Add Principal Component Analysis (PCA) using ndarray-linalg
-- Add common utilities for statistics (std dev, IQR, gaussian kernel)
-- Note: linfa API integration needs refinement (compilation errors remain)
 
 ### Bug Fixes
 
@@ -73,20 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-38013b28d81af8510a1065745d203bd5e2057518/> resolve ndarray version mismatch for clustering
    - Add fit_from_rows helper methods to KMeans and GMM
-- Convert Array2 from ndarray 0.17 to Vec<Vec<f64>> for compatibility
-- Resolve type mismatch between flow-gates (ndarray 0.17) and flow-utils (ndarray 0.16)
-- Remove references to model variable that was commented out
-- Return placeholder result until API is fixed
-- DBSCAN ValidParams doesn't satisfy ParamGuard trait bound
-- Add clear error message directing users to K-means/GMM alternatives
-- Document as known limitation for future resolution
-- Use DatasetBase::new(data, ()) instead of DatasetBase::from
-- Explicitly set targets to () for unsupervised learning
-- Fixes Array2 Records trait compatibility issue
-- Remove duplicate ok_or_else call on vt (already unwrapped)
-- SVD returns tuple with Option<U>, S, Option<Vt>
-- Fix tuple destructuring for linfa-linalg SVD result
-- Use linfa-linalg instead of ndarray-linalg for ndarray 0.16 compatibility
 
 ### Other
 
@@ -99,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 16 commits contributed to the release over the course of 21 calendar days.
+ - 17 commits contributed to the release over the course of 21 calendar days.
  - 16 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -110,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
     - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
     - Use workspace ndarray dependency ([`126b1a9`](https://github.com/jrmoynihan/flow/commit/126b1a9a8542ca5314763a1857d276bd1ed1d46b))
@@ -129,5 +99,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <csr-unknown>
- add fit_from_rows helpers for version compatibility add 2D KDE for improved density contours create flow-utils crate with KDE, clustering, and PCA modules fix DBSCAN compilation error temporarily disable DBSCAN due to linfa API limitations fix linfa DatasetBase creation for clustering fix PCA SVD result handling fix SVD result handling in PCA module<csr-unknown/>
+Add CRATE_RESEARCH.md documenting crate evaluation and decisionsAdd RESEARCH_NOTES.md for automated gating algorithms and decisionsDocument performance vs accuracy tradeoffsNote known limitations and future workUpdate kde2d implementationAdd KMeans::fit_from_rows to accept Vec<Vec<f64>>Add Gmm::fit_from_rows to accept Vec<Vec<f64>>Enables compatibility between ndarray 0.17 (flow-gates) and 0.16 (flow-utils)Implement KernelDensity2D for 2D scatter plot density estimationUse 2D FFT convolution for efficient computationAdd contour extraction at density thresholdsUpdate scatter gating to use 2D KDE for better density contoursGenerate polygon gates from density contoursAdd Kernel Density Estimation (KDE) with FFT accelerationAdd clustering algorithms: K-means, DBSCAN, GMM using linfa-clusteringAdd Principal Component Analysis (PCA) using ndarray-linalgAdd common utilities for statistics (std dev, IQR, gaussian kernel)Note: linfa API integration needs refinement (compilation errors remain)Convert Array2 from ndarray 0.17 to Vec<Vec<f64>> for compatibilityResolve type mismatch between flow-gates (ndarray 0.17) and flow-utils (ndarray 0.16)Remove references to model variable that was commented outReturn placeholder result until API is fixedDBSCAN ValidParams doesn’t satisfy ParamGuard trait boundAdd clear error message directing users to K-means/GMM alternativesDocument as known limitation for future resolutionUse DatasetBase::new(data, ()) instead of DatasetBase::fromExplicitly set targets to () for unsupervised learningFixes Array2 Records trait compatibility issueRemove duplicate ok_or_else call on vt (already unwrapped)SVD returns tuple with Option<U>, S, Option<Vt>Fix tuple destructuring for linfa-linalg SVD resultUse linfa-linalg instead of ndarray-linalg for ndarray 0.16 compatibility<csr-unknown/>
 
