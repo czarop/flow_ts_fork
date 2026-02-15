@@ -8,9 +8,9 @@ use crate::error::TruOlsError;
 #[cfg(all(feature = "flow-fcs", feature = "plotting"))]
 use flow_fcs::Fcs;
 #[cfg(all(feature = "flow-fcs", feature = "plotting"))]
-use flow_plots::{DensityPlot, DensityPlotOptions, Plot, PlotBytes};
-#[cfg(all(feature = "flow-fcs", feature = "plotting"))]
 use flow_plots::options::BasePlotOptions;
+#[cfg(all(feature = "flow-fcs", feature = "plotting"))]
+use flow_plots::{DensityPlot, DensityPlotOptions, Plot, PlotBytes};
 #[cfg(all(feature = "flow-fcs", feature = "plotting"))]
 use ndarray::Array2;
 
@@ -34,49 +34,39 @@ pub fn plot_unmixed_comparison(
     y_param: &str,
 ) -> Result<PlotBytes, TruOlsError> {
     // Get data pairs for both datasets
-    let ols_pairs = ols_data
-        .get_xy_pairs(x_param, y_param)
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to get OLS data pairs: {}",
-            e
-        )))?;
-    
-    let tru_ols_pairs = tru_ols_data
-        .get_xy_pairs(x_param, y_param)
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to get TRU-OLS data pairs: {}",
-            e
-        )))?;
-    
+    let ols_pairs = ols_data.get_xy_pairs(x_param, y_param).map_err(|e| {
+        TruOlsError::InsufficientData(format!("Failed to get OLS data pairs: {}", e))
+    })?;
+
+    let tru_ols_pairs = tru_ols_data.get_xy_pairs(x_param, y_param).map_err(|e| {
+        TruOlsError::InsufficientData(format!("Failed to get TRU-OLS data pairs: {}", e))
+    })?;
+
     // Create plot options
     let base = BasePlotOptions::new()
         .width(1600u32)
         .height(800u32)
         .build()
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to create base plot options: {}",
-            e
-        )))?;
-    let options = DensityPlotOptions::new()
-        .base(base)
-        .build()
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to create plot options: {}",
-            e
-        )))?;
-    
+        .map_err(|e| {
+            TruOlsError::InsufficientData(format!("Failed to create base plot options: {}", e))
+        })?;
+    let options = DensityPlotOptions::new().base(base).build().map_err(|e| {
+        TruOlsError::InsufficientData(format!("Failed to create plot options: {}", e))
+    })?;
+
     // Create density plot
     let plot = DensityPlot::new();
-    
+
     // For now, plot TRU-OLS data (can be extended to create side-by-side comparison)
     // Convert to the format expected by flow-plots
     let plot_data: Vec<(f32, f32)> = tru_ols_pairs;
-    
-    plot.render(plot_data, &options, &mut flow_plots::render::RenderConfig::default())
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to render plot: {}",
-            e
-        )))
+
+    plot.render(
+        plot_data,
+        &options,
+        &mut flow_plots::render::RenderConfig::default(),
+    )
+    .map_err(|e| TruOlsError::InsufficientData(format!("Failed to render plot: {}", e)))
 }
 
 /// Plot abundance distribution for a specific endmember.
@@ -102,13 +92,13 @@ pub fn plot_abundance_distribution(
             actual: endmember_idx + 1,
         });
     }
-    
+
     // Extract abundances for this endmember
     let n_events = unmixed_data.nrows();
     let abundances: Vec<f32> = (0..n_events)
         .map(|event_idx| unmixed_data[(event_idx, endmember_idx)] as f32)
         .collect();
-    
+
     // Create pairs for plotting (abundance vs index, or we could create a histogram)
     // For simplicity, create a scatter plot of abundance vs event index
     let plot_data: Vec<(f32, f32)> = abundances
@@ -116,29 +106,25 @@ pub fn plot_abundance_distribution(
         .enumerate()
         .map(|(idx, &abundance)| (idx as f32, abundance))
         .collect();
-    
+
     let base = BasePlotOptions::new()
         .width(800u32)
         .height(600u32)
         .build()
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to create base plot options: {}",
-            e
-        )))?;
-    let options = DensityPlotOptions::new()
-        .base(base)
-        .build()
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to create plot options: {}",
-            e
-        )))?;
-    
+        .map_err(|e| {
+            TruOlsError::InsufficientData(format!("Failed to create base plot options: {}", e))
+        })?;
+    let options = DensityPlotOptions::new().base(base).build().map_err(|e| {
+        TruOlsError::InsufficientData(format!("Failed to create plot options: {}", e))
+    })?;
+
     let plot = DensityPlot::new();
-    plot.render(plot_data, &options, &mut flow_plots::render::RenderConfig::default())
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to render plot: {}",
-            e
-        )))
+    plot.render(
+        plot_data,
+        &options,
+        &mut flow_plots::render::RenderConfig::default(),
+    )
+    .map_err(|e| TruOlsError::InsufficientData(format!("Failed to render plot: {}", e)))
 }
 
 /// Plot comparison between Zero and UCM strategies.
@@ -161,43 +147,33 @@ pub fn plot_ucm_comparison(
     y_param: &str,
 ) -> Result<PlotBytes, TruOlsError> {
     // Similar to plot_unmixed_comparison but for UCM vs Zero
-    let zero_pairs = zero_data
-        .get_xy_pairs(x_param, y_param)
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to get zero strategy data pairs: {}",
-            e
-        )))?;
-    
-    let ucm_pairs = ucm_data
-        .get_xy_pairs(x_param, y_param)
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to get UCM strategy data pairs: {}",
-            e
-        )))?;
-    
+    let zero_pairs = zero_data.get_xy_pairs(x_param, y_param).map_err(|e| {
+        TruOlsError::InsufficientData(format!("Failed to get zero strategy data pairs: {}", e))
+    })?;
+
+    let ucm_pairs = ucm_data.get_xy_pairs(x_param, y_param).map_err(|e| {
+        TruOlsError::InsufficientData(format!("Failed to get UCM strategy data pairs: {}", e))
+    })?;
+
     // Plot UCM data (can be extended for side-by-side comparison)
     let plot_data: Vec<(f32, f32)> = ucm_pairs;
-    
+
     let base = BasePlotOptions::new()
         .width(1600u32)
         .height(800u32)
         .build()
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to create base plot options: {}",
-            e
-        )))?;
-    let options = DensityPlotOptions::new()
-        .base(base)
-        .build()
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to create plot options: {}",
-            e
-        )))?;
-    
+        .map_err(|e| {
+            TruOlsError::InsufficientData(format!("Failed to create base plot options: {}", e))
+        })?;
+    let options = DensityPlotOptions::new().base(base).build().map_err(|e| {
+        TruOlsError::InsufficientData(format!("Failed to create plot options: {}", e))
+    })?;
+
     let plot = DensityPlot::new();
-    plot.render(plot_data, &options, &mut flow_plots::render::RenderConfig::default())
-        .map_err(|e| TruOlsError::InsufficientData(format!(
-            "Failed to render plot: {}",
-            e
-        )))
+    plot.render(
+        plot_data,
+        &options,
+        &mut flow_plots::render::RenderConfig::default(),
+    )
+    .map_err(|e| TruOlsError::InsufficientData(format!("Failed to render plot: {}", e)))
 }

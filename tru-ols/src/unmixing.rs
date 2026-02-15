@@ -4,9 +4,9 @@
 //! unmixing with iterative endmember removal.
 
 use crate::error::TruOlsError;
-use crate::preprocessing::{CutoffCalculator, NonspecificObservation};
+use crate::preprocessing::{CutoffCalculator, NonspecificObservation, solve_linear_system};
 use ndarray::{Array1, Array2, Axis};
-use ndarray_linalg::Solve;
+use rand::Rng;
 
 /// Strategy for handling irrelevant endmember abundances.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,6 +22,7 @@ pub struct TruOls {
     mixing_matrix: Array2<f64>,
     cutoffs: Array1<f64>,
     nonspecific_observation: Array1<f64>,
+    unstained_control: Array2<f64>,
     autofluorescence_idx: usize,
     strategy: UnmixingStrategy,
 }
@@ -52,6 +53,7 @@ impl TruOls {
             mixing_matrix,
             cutoffs: cutoffs.cutoffs().clone(),
             nonspecific_observation: nonspecific.observation().clone(),
+            unstained_control,
             autofluorescence_idx,
             strategy: UnmixingStrategy::Zero,
         })
@@ -65,7 +67,8 @@ impl TruOls {
         percentile: f64,
         unstained_control: &Array2<f64>,
     ) -> Result<(), TruOlsError> {
-        let cutoffs = CutoffCalculator::calculate(&self.mixing_matrix, unstained_control, percentile)?;
+        let cutoffs =
+            CutoffCalculator::calculate(&self.mixing_matrix, unstained_control, percentile)?;
         self.cutoffs = cutoffs.cutoffs().clone();
         Ok(())
     }
@@ -88,14 +91,7 @@ impl TruOls {
     pub fn unmix_event(
         &self,
         observation: &Array1<f64>,
-    ) -> Result<
-        (
-            Array1<f64>,
-            Vec<usize>,
-            Vec<(usize, f64)>,
-        ),
-        TruOlsError,
-    > {
+    ) -> Result<(Array1<f64>, Vec<usize>, Vec<(usize, f64)>), TruOlsError> {
         let n_detectors = self.mixing_matrix.nrows();
         if observation.len() != n_detectors {
             return Err(TruOlsError::DimensionMismatch {
@@ -115,9 +111,19 @@ impl TruOls {
         // Iterative unmixing with endmember removal
         loop {
             // Unmix with current matrix
-            let abundances = current_matrix
-                .solve(&adjusted_observation)
-                .map_err(|e| TruOlsError::LinearAlgebra(format!("Failed to solve: {}", e)))?;
+            // Use least squares for overdetermined systems (n_detectors > n_endmembers)
+            let abundances = solve_linear_system(&current_matrix, &adjusted_observation)
+                .map_err(|e| {
+                    let matrix_shape = format!("{}×{}", current_matrix.nrows(), current_matrix.ncols());
+                    let endmember_indices_str = current_indices.iter()
+                        .map(|&idx| idx.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    TruOlsError::LinearAlgebra(format!(
+                        "Failed to solve linear system: {}\n  Matrix shape: {} (detectors × endmembers)\n  Current endmember indices: [{}]\n  This usually indicates the mixing matrix is singular or numerically singular (linearly dependent columns).\n  Check for duplicate or highly similar spectral signatures in the mixing matrix.",
+                        e, matrix_shape, endmember_indices_str
+                    ))
+                })?;
 
             // Find irrelevant endmembers (below cutoff, excluding autofluorescence)
             let mut to_remove = Vec::new();
@@ -142,8 +148,10 @@ impl TruOls {
             }
 
             // Build list of columns to keep
-            let to_remove_local_indices: std::collections::HashSet<usize> =
-                to_remove.iter().map(|(local_idx, _, _)| *local_idx).collect();
+            let to_remove_local_indices: std::collections::HashSet<usize> = to_remove
+                .iter()
+                .map(|(local_idx, _, _)| *local_idx)
+                .collect();
             let keep_indices: Vec<usize> = (0..current_matrix.ncols())
                 .filter(|idx| !to_remove_local_indices.contains(idx))
                 .collect();
@@ -152,7 +160,10 @@ impl TruOls {
             current_matrix = current_matrix.select(Axis(1), &keep_indices);
 
             // Update indices to match
-            current_indices = keep_indices.iter().map(|&idx| current_indices[idx]).collect();
+            current_indices = keep_indices
+                .iter()
+                .map(|&idx| current_indices[idx])
+                .collect();
 
             // Safety check: ensure we don't remove all endmembers
             if current_matrix.ncols() == 0 {
@@ -187,19 +198,20 @@ impl TruOls {
         // Use parallel processing for large datasets
         // Threshold: use parallel for datasets with >10k events
         const PARALLEL_THRESHOLD: usize = 10_000;
-        
+
         if n_events > PARALLEL_THRESHOLD {
             use rayon::prelude::*;
-            
+
             // Process events in parallel
             let results: Result<Vec<_>, _> = (0..n_events)
                 .into_par_iter()
                 .map(|event_idx| {
                     let observation = dataset.row(event_idx);
-                    self.unmix_event(&observation.to_owned())
-                        .map(|(relevant_abundances, relevant_indices, _)| {
+                    self.unmix_event(&observation.to_owned()).map(
+                        |(relevant_abundances, relevant_indices, _)| {
                             (event_idx, relevant_abundances, relevant_indices)
-                        })
+                        },
+                    )
                 })
                 .collect();
 
@@ -225,19 +237,77 @@ impl TruOls {
         }
 
         // Handle irrelevant abundances according to strategy
-        // Note: UCM strategy would need unstained control data, which is not available here
-        // This is handled at a higher level in the FCS integration
         match self.strategy {
             UnmixingStrategy::Zero => {
                 // Already zero from initialization
             }
             UnmixingStrategy::UnstainedControlMapping => {
-                // UCM requires unstained control data - handled in fcs_integration
-                // For now, values remain zero
+                // Map zero/irrelevant abundances to unstained control distribution
+                self.apply_ucm_mapping(&mut result)?;
             }
         }
 
         Ok(result)
+    }
+
+    /// Apply Unstained Control Mapping (UCM) to irrelevant/zero abundances.
+    ///
+    /// For each event where an endmember abundance is zero (irrelevant), this method
+    /// samples a random event from the unstained control and projects it onto that
+    /// endmember to get a realistic noise distribution.
+    fn apply_ucm_mapping(&self, result: &mut Array2<f64>) -> Result<(), TruOlsError> {
+        let n_events = result.nrows();
+        let n_endmembers = result.ncols();
+        let n_unstained_events = self.unstained_control.nrows();
+        
+        if n_unstained_events == 0 {
+            return Err(TruOlsError::InsufficientData(
+                "No unstained control events available for UCM mapping".to_string()
+            ));
+        }
+        
+        // Create a random number generator
+        let mut rng = rand::thread_rng();
+        
+        // For each event in the result
+        for event_idx in 0..n_events {
+            // For each endmember (excluding autofluorescence)
+            for endmember_idx in 0..n_endmembers {
+                // Skip autofluorescence - it should always be positive
+                if endmember_idx == self.autofluorescence_idx {
+                    continue;
+                }
+                
+                // If abundance is zero or very small (was irrelevant), map from unstained
+                if result[(event_idx, endmember_idx)].abs() < 1e-10 {
+                    // Randomly select an unstained control event
+                    let random_unstained_idx = rng.gen_range(0..n_unstained_events);
+                    let unstained_observation = self.unstained_control.row(random_unstained_idx);
+                    
+                    // Subtract nonspecific observation
+                    let adjusted_observation = &unstained_observation.to_owned() - &self.nonspecific_observation;
+                    
+                    // Project onto this specific endmember using the mixing matrix column
+                    // This gives us what the "abundance" would be if we unmix the noise
+                    // We use a simple projection: endmember_column^T * observation / ||endmember_column||^2
+                    let endmember_signature = self.mixing_matrix.column(endmember_idx);
+                    let norm_squared: f64 = endmember_signature.iter().map(|&x| x * x).sum();
+                    
+                    if norm_squared > 0.0 {
+                        let projection: f64 = endmember_signature.iter()
+                            .zip(adjusted_observation.iter())
+                            .map(|(&sig, &obs)| sig * obs)
+                            .sum();
+                        let abundance = projection / norm_squared;
+                        
+                        // Set the mapped abundance
+                        result[(event_idx, endmember_idx)] = abundance;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
     }
 }
 
@@ -254,8 +324,7 @@ mod tests {
         let tru_ols = TruOls::new(mixing_matrix, unstained, 0).unwrap();
         let observation = array![1.0, 1.0];
 
-        let (relevant, relevant_indices, irrelevant) =
-            tru_ols.unmix_event(&observation).unwrap();
+        let (relevant, relevant_indices, irrelevant) = tru_ols.unmix_event(&observation).unwrap();
         assert!(!relevant_indices.is_empty());
     }
 }

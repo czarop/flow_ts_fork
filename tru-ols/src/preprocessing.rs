@@ -7,6 +7,46 @@ use crate::error::TruOlsError;
 use ndarray::{Array1, Array2};
 use ndarray_linalg::Solve;
 
+/// Solve a linear system Ax = b, using least squares for overdetermined systems.
+///
+/// For overdetermined systems (nrows > ncols), uses least squares via normal equations:
+/// (A^T A) x = A^T b, which gives a square system that can be solved with LU decomposition.
+/// For square systems, uses regular LU decomposition.
+///
+/// # Arguments
+/// * `a` - Coefficient matrix (nrows × ncols)
+/// * `b` - Right-hand side vector (length = nrows)
+///
+/// # Returns
+/// Solution vector x (length = ncols)
+pub(crate) fn solve_linear_system(
+    a: &Array2<f64>,
+    b: &Array1<f64>,
+) -> Result<Array1<f64>, ndarray_linalg::error::LinalgError> {
+    let nrows = a.nrows();
+    let ncols = a.ncols();
+
+    if nrows > ncols {
+        // Overdetermined system: use least squares via normal equations
+        // Solve: (A^T A) x = A^T b
+        let at = a.t();
+        let ata = at.dot(a); // ncols × ncols
+        let atb = at.dot(b); // ncols × 1
+
+        // Now solve the square system: (A^T A) x = A^T b
+        ata.solve(&atb)
+    } else if nrows == ncols {
+        // Square system: use regular solve
+        a.solve(b)
+    } else {
+        // Underdetermined system: not supported
+        Err(ndarray_linalg::error::LinalgError::NotSquare {
+            rows: nrows as i32,
+            cols: ncols as i32,
+        })
+    }
+}
+
 /// Calculates cutoff thresholds for each endmember based on unstained control data.
 pub struct CutoffCalculator {
     cutoffs: Array1<f64>,
@@ -49,11 +89,11 @@ impl CutoffCalculator {
         }
 
         // Unmix each event in the unstained control
+        // Use least squares for overdetermined systems (n_detectors > n_endmembers)
         let mut unmixed_abundances: Vec<Vec<f64>> = Vec::with_capacity(n_events);
         for event_idx in 0..n_events {
             let observation = unstained_control.row(event_idx);
-            let abundances = mixing_matrix
-                .solve(&observation.to_owned())
+            let abundances = solve_linear_system(mixing_matrix, &observation.to_owned())
                 .map_err(|e| TruOlsError::LinearAlgebra(format!("Failed to solve: {}", e)))?;
             unmixed_abundances.push(abundances.to_vec());
         }
@@ -130,11 +170,11 @@ impl NonspecificObservation {
         }
 
         // Unmix each event and calculate mean abundances (excluding autofluorescence)
+        // Use least squares for overdetermined systems (n_detectors > n_endmembers)
         let mut mean_abundances = Array1::<f64>::zeros(n_endmembers);
         for event_idx in 0..n_events {
             let observation = unstained_control.row(event_idx);
-            let abundances = mixing_matrix
-                .solve(&observation.to_owned())
+            let abundances = solve_linear_system(mixing_matrix, &observation.to_owned())
                 .map_err(|e| TruOlsError::LinearAlgebra(format!("Failed to solve: {}", e)))?;
 
             for (idx, &abundance) in abundances.iter().enumerate() {
