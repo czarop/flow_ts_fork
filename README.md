@@ -32,11 +32,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - Built with [Polars](https://www.pola.rs/) for high-performance data operations
-- Uses [ndarray](https://github.com/rust-ndarray/ndarray) for matrix operations
+- Uses [faer](https://github.com/sarah-ek/faer) for pure-Rust linear algebra (compensation, unmixing)
 - Inspired by the need for fast, type-safe FCS file handling in Rust
 
 ## Related Projects
 
 - [Polars](https://www.pola.rs/): Fast DataFrame library
-- [ndarray](https://github.com/rust-ndarray/ndarray): N-dimensional array library
+- [faer](https://github.com/sarah-ek/faer): Pure-Rust linear algebra library
 

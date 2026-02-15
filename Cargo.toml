@@ -33,14 +33,15 @@ polars = { version = "0.51.0", default-features = false, features = [
     "ndarray",
     "dtype-full"
 ] }
-# Matrix manipulation
-ndarray = { version = "0.17.2", features = [
-    "blas",
+# Matrix manipulation (ndarray 0.16 for linfa/faer-ext compatibility)
+ndarray = { version = "0.16", features = [
     "matrixmultiply-threading",
     "rayon",
     "serde",
 ] }
-ndarray-linalg = { version = "0.18.1", default-features = false, features = ["openblas-system"] }
+# Pure-Rust linear algebra (replaces ndarray-linalg; no system BLAS required)
+faer = { version = "0.23", features = ["rayon"] }
+faer-ext = { version = "0.7", features = ["ndarray"] }
 
 # Parallelization
 rayon = "1.11"
