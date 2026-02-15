@@ -190,7 +190,7 @@ mod parameter_keywords {
         let result = match_and_parse_keyword("$P23DISPLAY", "4");
         assert!(matches!(
             result,
-            KeywordCreationResult::Int(IntegerKeyword::PnDisplay(4))
+            KeywordCreationResult::String(StringKeyword::PnDISPLAY(s)) if s.as_ref() == "4"
         ));
     }
 
@@ -199,7 +199,7 @@ mod parameter_keywords {
         let result = match_and_parse_keyword("$P1Display", "2");
         assert!(matches!(
             result,
-            KeywordCreationResult::Int(IntegerKeyword::PnDisplay(2))
+            KeywordCreationResult::String(StringKeyword::PnDISPLAY(s)) if s.as_ref() == "2"
         ));
     }
 
@@ -208,7 +208,7 @@ mod parameter_keywords {
         let result = match_and_parse_keyword("$P5display", "1");
         assert!(matches!(
             result,
-            KeywordCreationResult::Int(IntegerKeyword::PnDisplay(1))
+            KeywordCreationResult::String(StringKeyword::PnDISPLAY(s)) if s.as_ref() == "1"
         ));
     }
 

@@ -29,16 +29,10 @@ polars={ workspace=true, default-features=false, features=[
     "dtype-full",
     "new_streaming",
 ] }
-# Matrix manipulation
-ndarray={ workspace=true, features=[
-    "blas",
-    "matrixmultiply-threading",
-    "rayon",
-    "serde",
-] }
-ndarray-linalg={ workspace=true, default-features=false, features=[
-    "openblas-system",
-] }
+faer={ workspace=true }
+faer-ext={ workspace=true }
+ndarray={ workspace=true, optional=true }
+ndarray-linalg={ version="0.17", optional=true, features=["openblas-system"] }
 
 ts-rs={ version="11.1.0", optional=true } # Generate TypeScript bindings for Rust types
 
@@ -84,12 +78,6 @@ tracing={ workspace=true }
 approx   ="0.5.1"                                        # For approximate comparisons
 criterion={ version="0.8.1", features=["html_reports"] }
 rand     ="0.8"                                          # For generating test data in benchmarks
-# Enable LAPACK backend for tests (OpenBLAS provides both BLAS and LAPACK)
-# Note: Requires OpenBLAS installed via Homebrew: brew install openblas
-# Set OPENBLAS_DIR environment variable: export OPENBLAS_DIR=$(brew --prefix openblas)
-ndarray-linalg={ workspace=true, features=[
-    "openblas-system",
-] }
 
 [[bench]]
 name   ="dataframe_parsing"
@@ -108,3 +96,5 @@ default=[]
 typescript=[
     "dep:ts-rs",
 ] # Enable TypeScript bindings for Rust types
+# Opt-in system BLAS (OpenBLAS) for linear algebra; default uses pure-Rust faer
+blas=["dep:ndarray-linalg", "dep:ndarray"]

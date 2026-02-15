@@ -173,8 +173,8 @@ mod polars_tests {
             "Data should be transformed"
         );
 
-        // Verify arcsinh formula: arcsinh(x / cofactor) / ln(10)
-        let expected = ((original_data[0] / 200.0).asinh()) / 10_f32.ln();
+        // Verify arcsinh formula: arcsinh(x / cofactor) (no ln(10) scaling)
+        let expected = (original_data[0] / 200.0).asinh();
         assert!(
             (transformed_data[0] - expected).abs() < 0.001,
             "Transform should match arcsinh formula"
@@ -233,11 +233,11 @@ mod polars_tests {
 
         assert_ne!(fl1_data[0], orig_fl1[0], "FL1-A should be transformed");
 
-        // Verify it used cofactor = 200
-        let expected = ((orig_fl1[0] / 200.0).asinh()) / 10_f32.ln();
+        // Verify it used default cofactor = 2000 for fluorescence
+        let expected = (orig_fl1[0] / 2000.0).asinh();
         assert!(
             (fl1_data[0] - expected).abs() < 0.001,
-            "Should use default cofactor 200"
+            "Should use default cofactor 2000"
         );
     }
 
@@ -246,19 +246,11 @@ mod polars_tests {
         let fcs = create_test_fcs().expect("Failed to create test FCS");
 
         // Create a simple 2x2 compensation matrix for FSC-A and SSC-A
-        use ndarray::Array2;
-        let comp_matrix = Array2::from_shape_vec(
-            (2, 2),
-            vec![
-                1.0, 0.1, // FSC-A compensation
-                0.05, 1.0, // SSC-A compensation
-            ],
-        )
-        .expect("Should create compensation matrix");
+        let comp_matrix = faer::mat![[1.0, 0.1], [0.05, 1.0]];
 
         let channels = vec!["FSC-A", "SSC-A"];
         let compensated = fcs
-            .apply_compensation(&comp_matrix, &channels)
+            .apply_compensation(comp_matrix.as_ref(), &channels)
             .expect("Should apply compensation");
 
         let fcs_compensated = Fcs {
@@ -287,11 +279,10 @@ mod polars_tests {
         let fcs = create_test_fcs().expect("Failed to create test FCS");
 
         // Create a 2x2 matrix but provide 3 channels (should error)
-        use ndarray::Array2;
-        let comp_matrix = Array2::from_shape_vec((2, 2), vec![1.0, 0.1, 0.05, 1.0]).unwrap();
+        let comp_matrix = faer::mat![[1.0, 0.1], [0.05, 1.0]];
 
         let channels = vec!["FSC-A", "SSC-A", "FL1-A"];
-        let result = fcs.apply_compensation(&comp_matrix, &channels);
+        let result = fcs.apply_compensation(comp_matrix.as_ref(), &channels);
 
         assert!(result.is_err(), "Should error on dimension mismatch");
         assert!(
@@ -305,12 +296,11 @@ mod polars_tests {
         let fcs = create_test_fcs().expect("Failed to create test FCS");
 
         // Create a simple unmixing matrix
-        use ndarray::Array2;
-        let unmix_matrix = Array2::from_shape_vec((2, 2), vec![1.0, 0.15, 0.1, 1.0]).unwrap();
+        let unmix_matrix = faer::mat![[1.0, 0.15], [0.1, 1.0]];
 
         let channels = vec!["FSC-A", "SSC-A"];
         let unmixed = fcs
-            .apply_spectral_unmixing(&unmix_matrix, &channels, None)
+            .apply_spectral_unmixing(unmix_matrix.as_ref(), &channels, None)
             .expect("Should apply spectral unmixing");
 
         let fcs_unmixed = Fcs {
@@ -318,13 +308,13 @@ mod polars_tests {
             ..fcs.clone()
         };
 
-        // Verify data was unmixed
-        let unmixed_fsc = fcs_unmixed
-            .get_parameter_events_slice("FSC-A")
-            .expect("Should get unmixed FSC-A");
+        // Verify data was unmixed (unmixed columns are Endmember1, Endmember2 when endmember_names=None)
+        let unmixed_col = fcs_unmixed
+            .get_parameter_events_slice("Endmember1")
+            .expect("Should get unmixed Endmember1");
         let orig_fsc = fcs.get_parameter_events_slice("FSC-A").unwrap();
 
-        assert_ne!(unmixed_fsc[0], orig_fsc[0], "Data should be unmixed");
+        assert_ne!(unmixed_col[0], orig_fsc[0], "Data should be unmixed");
     }
 
     #[test]
@@ -487,12 +477,13 @@ mod polars_tests {
         assert!(result.is_some(), "Should have spillover matrix");
 
         let (matrix, names) = result.unwrap();
-        assert_eq!(matrix.shape(), &[2, 2], "Should be 2x2 matrix");
+        assert_eq!(matrix.nrows(), 2, "Should be 2x2 matrix");
+        assert_eq!(matrix.ncols(), 2, "Should be 2x2 matrix");
         assert_eq!(names.len(), 2, "Should have 2 channel names");
         assert_eq!(names[0], "FL1-A");
         assert_eq!(names[1], "FL2-A");
-        assert_eq!(matrix[[0, 0]], 1.0);
-        assert_eq!(matrix[[0, 1]], 0.1);
+        assert_eq!(matrix[(0, 0)], 1.0);
+        assert_eq!(matrix[(0, 1)], 0.1);
     }
 
     #[test]

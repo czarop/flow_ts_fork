@@ -19,7 +19,7 @@ use anyhow::{Context, Result, anyhow};
 use byteorder::{BigEndian as BE, ByteOrder as BO, LittleEndian as LE};
 use itertools::{Itertools, MinMaxResult};
 use memmap3::{Mmap, MmapOptions};
-use ndarray::Array2;
+use faer::Mat;
 use polars::prelude::*;
 use rayon::prelude::*;
 
@@ -280,7 +280,7 @@ impl Fcs {
     /// Reads raw data from FCS file and stores it as a Polars DataFrame
     /// Returns columnar data optimized for parameter-wise access patterns
     ///
-    /// This function provides significant performance benefits over ndarray:
+    /// This function provides significant performance benefits over row-based array storage:
     /// - 2-5x faster data filtering and transformations
     /// - Native columnar storage (optimal for FCS parameter access patterns)
     /// - Zero-copy operations via Apache Arrow
@@ -1458,7 +1458,7 @@ impl Fcs {
     ///
     /// # Errors
     /// Will return `Err` if spillover keyword is malformed
-    pub fn get_spillover_matrix(&self) -> Result<Option<(Array2<f32>, Vec<String>)>> {
+    pub fn get_spillover_matrix(&self) -> Result<Option<(Mat<f32>, Vec<String>)>> {
         use crate::keyword::{Keyword, MixedKeyword};
 
         // Try to get compensation matrix from $SPILLOVER (FCS 3.1+), $SPILL (unofficial/custom), or $COMP (FCS 3.0)
@@ -1527,17 +1527,11 @@ impl Fcs {
                                     }
 
                                     if matrix_values.len() == expected_matrix_size {
-                                        let matrix = Array2::from_shape_vec(
-                                            (n_parameters, n_parameters),
-                                            matrix_values,
-                                        )
-                                        .map_err(|e| {
-                                            anyhow!(
-                                                "Failed to create compensation matrix from {}: {}",
-                                                keyword_name,
-                                                e
-                                            )
-                                        })?;
+                                        let matrix = Mat::from_fn(
+                                            n_parameters,
+                                            n_parameters,
+                                            |i, j| matrix_values[i * n_parameters + j],
+                                        );
                                         return Ok(Some((matrix, parameter_names)));
                                     }
                                 }
@@ -1572,10 +1566,9 @@ impl Fcs {
             ));
         }
 
-        // Create Array2 from matrix values
-        // FCS spillover is stored row-major order
-        let matrix = Array2::from_shape_vec((n_params, n_params), matrix_values)
-            .map_err(|e| anyhow!("Failed to create compensation matrix from SPILLOVER: {}", e))?;
+        // Create Mat from matrix values (FCS spillover is stored row-major)
+        let matrix =
+            Mat::from_fn(n_params, n_params, |i, j| matrix_values[i * n_params + j]);
 
         Ok(Some((matrix, param_names)))
     }
@@ -1600,7 +1593,7 @@ impl Fcs {
 
         let channel_refs: Vec<&str> = channel_names.iter().map(|s| s.as_str()).collect();
 
-        self.apply_compensation(&comp_matrix, &channel_refs)
+        self.apply_compensation(comp_matrix.as_ref(), &channel_refs)
     }
 
     /// OPTIMIZED: Get compensated data for specific parameters only (lazy/partial compensation)
@@ -1640,7 +1633,7 @@ impl Fcs {
             for i in 0..comp_matrix.nrows() {
                 for j in 0..comp_matrix.ncols() {
                     let expected = if i == j { 1.0 } else { 0.0 };
-                    if (comp_matrix[[i, j]] - expected).abs() > 1e-6 {
+                    if (comp_matrix[(i, j)] - expected).abs() > 1e-6 {
                         is_id = false;
                         break;
                     }
@@ -1664,8 +1657,15 @@ impl Fcs {
         }
 
         // OPTIMIZATION 2: Analyze sparsity
-        let total_elements = comp_matrix.len();
-        let non_zero_count = comp_matrix.iter().filter(|&&x| x.abs() > 1e-6).count();
+        let total_elements = comp_matrix.nrows() * comp_matrix.ncols();
+        let mut non_zero_count = 0;
+        for i in 0..comp_matrix.nrows() {
+            for j in 0..comp_matrix.ncols() {
+                if comp_matrix[(i, j)].abs() > 1e-6 {
+                    non_zero_count += 1;
+                }
+            }
+        }
         let sparsity = 1.0 - (non_zero_count as f64 / total_elements as f64);
         let is_sparse = sparsity > 0.8;
 
@@ -1703,7 +1703,7 @@ impl Fcs {
             // Add channels with non-zero spillover
             if is_sparse {
                 for col_idx in 0..comp_matrix.ncols() {
-                    if comp_matrix[[row_idx, col_idx]].abs() > 1e-6 {
+                    if comp_matrix[(row_idx, col_idx)].abs() > 1e-6 {
                         involved_indices.insert(col_idx);
                     }
                 }
@@ -1733,39 +1733,29 @@ impl Fcs {
         }
 
         // Extract sub-matrix for involved channels
-        let sub_matrix = {
-            let mut sub = Array2::<f32>::zeros((involved_vec.len(), involved_vec.len()));
-            for (i, &orig_i) in involved_vec.iter().enumerate() {
-                for (j, &orig_j) in involved_vec.iter().enumerate() {
-                    sub[[i, j]] = comp_matrix[[orig_i, orig_j]];
-                }
-            }
-            sub
-        };
+        let sub_matrix = Mat::from_fn(involved_vec.len(), involved_vec.len(), |i, j| {
+            comp_matrix[(involved_vec[i], involved_vec[j])]
+        });
 
         // Use CPU compensation (benchmarked: GPU was slower due to transfer overhead)
-        // Invert sub-matrix
-        use ndarray_linalg::Inverse;
-        let comp_inv = sub_matrix
-            .inv()
+        // Invert sub-matrix using faer (pure Rust, no system BLAS)
+        let comp_inv = crate::matrix::MatrixOps::invert_matrix(sub_matrix.as_ref())
             .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
 
         // Compensate ONLY the involved channels
         use rayon::prelude::*;
-        let compensated_data: Vec<Vec<f32>> = (0..involved_vec.len())
+        let n_involved = involved_vec.len();
+        let compensated_data: Vec<Vec<f32>> = (0..n_involved)
             .into_par_iter()
             .map(|i| {
-                let row = comp_inv.row(i);
                 let mut result = vec![0.0; n_events];
-
                 for event_idx in 0..n_events {
                     let mut sum = 0.0;
-                    for (j, &coeff) in row.iter().enumerate() {
-                        sum += coeff * channel_data[j][event_idx];
+                    for j in 0..n_involved {
+                        sum += comp_inv[(i, j)] * channel_data[j][event_idx];
                     }
                     result[event_idx] = sum;
                 }
-
                 result
             })
             .collect();
@@ -1795,26 +1785,28 @@ impl Fcs {
     /// # Example
     /// ```ignore
     /// // Create a 3x3 compensation matrix
-    /// let comp_matrix = Array2::from_shape_vec((3, 3), vec![
-    ///     1.0, 0.1, 0.05,  // FL1-A compensation
-    ///     0.2, 1.0, 0.1,   // FL2-A compensation
-    ///     0.1, 0.15, 1.0,  // FL3-A compensation
-    /// ]).unwrap();
+    /// use faer::mat;
+    /// let comp_matrix = mat![
+    ///     [1.0, 0.1, 0.05],  // FL1-A compensation
+    ///     [0.2, 1.0, 0.1],   // FL2-A compensation
+    ///     [0.1, 0.15, 1.0],  // FL3-A compensation
+    /// ];
     /// let channels = vec!["FL1-A", "FL2-A", "FL3-A"];
-    /// let compensated = fcs.apply_compensation(&comp_matrix, &channels)?;
+    /// let compensated = fcs.apply_compensation(comp_matrix.as_ref(), &channels)?;
     /// ```
     pub fn apply_compensation(
         &self,
-        compensation_matrix: &Array2<f32>,
+        compensation_matrix: faer::MatRef<'_, f32>,
         channel_names: &[&str],
     ) -> Result<EventDataFrame> {
+        let comp = compensation_matrix;
         // Verify matrix dimensions match channel names
         let n_channels = channel_names.len();
-        if compensation_matrix.nrows() != n_channels || compensation_matrix.ncols() != n_channels {
+        if comp.nrows() != n_channels || comp.ncols() != n_channels {
             return Err(anyhow!(
                 "Compensation matrix dimensions ({}, {}) don't match number of channels ({})",
-                compensation_matrix.nrows(),
-                compensation_matrix.ncols(),
+                comp.nrows(),
+                comp.ncols(),
                 n_channels
             ));
         }
@@ -1830,28 +1822,25 @@ impl Fcs {
 
         // Use CPU compensation (benchmarked: GPU was slower due to transfer overhead)
         // Apply compensation: compensated = original * inverse(compensation_matrix)
-        // For efficiency, we pre-compute the inverse
-        use ndarray_linalg::Inverse;
-        let comp_inv = compensation_matrix
-            .inv()
-            .map_err(|e| anyhow!("Failed to invert compensation matrix: {:?}", e))?;
+        // For efficiency, we pre-compute the inverse using faer (pure Rust, no system BLAS)
+        let comp_inv =
+            crate::matrix::MatrixOps::invert_matrix(comp).map_err(|e| {
+                anyhow!("Failed to invert compensation matrix: {:?}", e)
+            })?;
 
         // Perform matrix multiplication for each event
         use rayon::prelude::*;
         let compensated_data: Vec<Vec<f32>> = (0..n_channels)
             .into_par_iter()
             .map(|i| {
-                let row = comp_inv.row(i);
                 let mut result = vec![0.0; n_events];
-
                 for event_idx in 0..n_events {
                     let mut sum = 0.0;
-                    for (j, &coeff) in row.iter().enumerate() {
-                        sum += coeff * channel_data[j][event_idx];
+                    for j in 0..n_channels {
+                        sum += comp_inv[(i, j)] * channel_data[j][event_idx];
                     }
                     result[event_idx] = sum;
                 }
-
                 result
             })
             .collect();
@@ -1887,11 +1876,11 @@ impl Fcs {
     /// Returns error if detector names don't match matrix dimensions or data cannot be extracted
     pub fn apply_spectral_unmixing(
         &self,
-        unmixing_matrix: &Array2<f32>,
+        unmixing_matrix: faer::MatRef<'_, f32>,
         detector_names: &[&str],
         endmember_names: Option<&[&str]>,
     ) -> Result<EventDataFrame> {
-        use ndarray_linalg::LeastSquaresSvd;
+        use faer::linalg::solvers::{Qr, SolveLstsq};
 
         // Verify matrix dimensions match detector names
         let n_detectors = detector_names.len();
@@ -1913,28 +1902,24 @@ impl Fcs {
             detector_data.push(data.to_vec());
         }
 
-        // Convert to Array2 for matrix operations
         // Observations matrix: events × detectors
-        let mut observations = Array2::<f32>::zeros((n_events, n_detectors));
-        for (detector_idx, data) in detector_data.iter().enumerate() {
-            for (event_idx, &value) in data.iter().enumerate() {
-                observations[(event_idx, detector_idx)] = value;
-            }
-        }
+        let observations =
+            Mat::from_fn(n_events, n_detectors, |event_idx, detector_idx| {
+                detector_data[detector_idx][event_idx]
+            });
 
         // Perform unmixing: for each event, solve: observation = unmixing_matrix × abundances
-        // For overdetermined systems (n_detectors > n_endmembers), use least squares
-        let mut unmixed_data: Vec<Vec<f32>> = Vec::with_capacity(n_events);
+        // For overdetermined systems (n_detectors > n_endmembers), use QR least squares (faer)
+        let qr = Qr::new(unmixing_matrix);
 
+        let mut unmixed_data: Vec<Vec<f32>> = Vec::with_capacity(n_events);
         for event_idx in 0..n_events {
-            let observation = observations.row(event_idx);
-            let abundances = unmixing_matrix
-                .least_squares(&observation.to_owned())
-                .map_err(|e| {
-                    anyhow!("Failed to solve unmixing for event {}: {:?}", event_idx, e)
-                })?
-                .solution;
-            unmixed_data.push(abundances.to_vec());
+            let b_col =
+                Mat::from_fn(n_detectors, 1, |i, _| observations[(event_idx, i)]);
+            let x_faer = qr.solve_lstsq(b_col.as_ref());
+            let abundances: Vec<f32> =
+                (0..n_endmembers).map(|i| x_faer[(i, 0)]).collect();
+            unmixed_data.push(abundances);
         }
 
         // Create DataFrame with endmember abundances
@@ -1944,14 +1929,14 @@ impl Fcs {
                 .iter()
                 .map(|abundances| abundances[endmember_idx])
                 .collect();
-            
+
             // Use provided endmember name if available, otherwise use generic "Endmember{i}" format
             let column_name = if let Some(names) = endmember_names {
                 names[endmember_idx].to_string()
             } else {
                 format!("Endmember{}", endmember_idx + 1)
             };
-            
+
             let series = Column::new(column_name.into(), values);
             columns.push(series);
         }
