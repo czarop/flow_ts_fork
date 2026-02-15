@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod output;
+mod synthetic_data;
 
 use anyhow::Result;
 use clap::Parser;
@@ -19,8 +20,7 @@ struct Cli {
 
 fn main() -> Result<()> {
     // Initialize tracing subscriber
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_target(false)
@@ -28,8 +28,11 @@ fn main() -> Result<()> {
 
     let args = Cli::parse();
 
-    println!("🧬 TRU-OLS - Flow Cytometry Unmixing");
-    println!("=====================================\n");
+    println!(
+        "🧬 TRU-OLS - Flow Cytometry Unmixing v{}",
+        env!("CARGO_PKG_VERSION")
+    );
+    println!("============================================\n");
 
     run_command(&args.command)?;
 

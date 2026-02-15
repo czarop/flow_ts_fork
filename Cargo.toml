@@ -10,7 +10,6 @@ members = [
     "utils",
 ]
 resolver = "3"
-repository="https://github.com/jrmoynihan/flow"
 
 [workspace.package]
 edition = "2024"
