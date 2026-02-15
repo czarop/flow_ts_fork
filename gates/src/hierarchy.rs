@@ -48,6 +48,17 @@ impl GateHierarchy {
         Self::default()
     }
 
+    /// Add a root gate (gate with no parent)
+    ///
+    /// Ensures a gate is registered in the hierarchy as a root node.
+    /// This is necessary for gates that don't have parents to appear in get_roots().
+    pub fn add_root(&mut self, gate_id: impl Into<Arc<str>>) {
+        let gate_id = gate_id.into();
+        // Ensure the gate exists in the children map with an empty list
+        // This makes it appear in get_roots() without having a parent
+        self.children.entry(gate_id).or_default();
+    }
+
     /// Add a child-parent relationship
     ///
     /// Returns `true` if the relationship was added, `false` if it would create a cycle

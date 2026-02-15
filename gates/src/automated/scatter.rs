@@ -6,7 +6,7 @@
 use crate::{Gate, GateError, GateResult, GateStatistics};
 use crate::geometry::{create_ellipse_geometry, create_polygon_geometry};
 use flow_fcs::Fcs;
-use flow_utils::kde::{KernelDensity, KernelDensity2D};
+use flow_utils::kde::KernelDensity2D;
 use ndarray::Array2;
 use std::sync::Arc;
 
