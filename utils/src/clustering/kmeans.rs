@@ -30,7 +30,7 @@ impl Default for KMeansConfig {
 }
 
 /// K-means clustering result
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KMeansResult {
     /// Cluster assignments for each point
     pub assignments: Vec<usize>,

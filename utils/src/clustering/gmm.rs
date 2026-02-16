@@ -30,7 +30,7 @@ impl Default for GmmConfig {
 }
 
 /// GMM clustering result
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GmmResult {
     /// Cluster assignments for each point
     pub assignments: Vec<usize>,

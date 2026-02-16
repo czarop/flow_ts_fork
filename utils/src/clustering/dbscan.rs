@@ -22,7 +22,7 @@ impl Default for DbscanConfig {
 }
 
 /// DBSCAN clustering result
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DbscanResult {
     /// Cluster assignments for each point (-1 indicates noise/outlier)
     pub assignments: Vec<i32>,
