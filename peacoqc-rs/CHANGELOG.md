@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.1 (2026-02-16)
+
+### Documentation
+
+ - <csr-id-a6df2248b415f4cb6650b4a3efc96a6f80f2a1ee/> improve formatting and clarity in DEV_NOTES.md
+   - Updated table formatting for batched operations to enhance readability.
+   - Added backticks around `cubeCL` and `burn` for consistency in terminology.
+   - Clarified GPU usage and fallback mechanisms in implementation details.
+
+### New Features
+
+ - <csr-id-442c53cc3018e84661fca51603e175c67be11531/> add Serialize/Deserialize and Clone/PartialEq derives
+   - Add Serialize/Deserialize to PeacoQCResult, PeakInfo, ChannelPeakFrame
+   - Add #[serde(skip)] on PeacoQCResult.good_cells for JSON sidecar use
+   - Add Clone to result types (PeacoQCResult, IsolationTreeResult, etc.)
+   - Add PartialEq to config types (PeakDetectionConfig, MADConfig, etc.)
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Improve formatting and clarity in DEV_NOTES.md ([`a6df224`](https://github.com/jrmoynihan/flow/commit/a6df2248b415f4cb6650b4a3efc96a6f80f2a1ee))
+    - Add Serialize/Deserialize and Clone/PartialEq derives ([`442c53c`](https://github.com/jrmoynihan/flow/commit/442c53cc3018e84661fca51603e175c67be11531))
+    - Merge pull request #14 from jrmoynihan/gpu-acceleration ([`01edbec`](https://github.com/jrmoynihan/flow/commit/01edbecfc222685a8e052eb26b001d3fae4dfe13))
+</details>
+
 ## 0.2.0 (2026-02-15)
 
 <csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
@@ -57,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 14 commits contributed to the release over the course of 24 calendar days.
+ - 15 commits contributed to the release over the course of 24 calendar days.
  - 27 days passed between releases.
  - 9 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -69,6 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`b758024`](https://github.com/jrmoynihan/flow/commit/b7580243ad5dfba389d80f55d9d2b0a0adf26348))
     - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
     - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
@@ -84,9 +122,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Remove GPU thresholds, always use GPU when available ([`6a911f3`](https://github.com/jrmoynihan/flow/commit/6a911f32c2ae53a4cc4e956e6ce4efc6df49aa66))
     - Add GPU acceleration for KDE and feature matrix operations ([`6e66d11`](https://github.com/jrmoynihan/flow/commit/6e66d118e5c249b95ba7262d1b2f5ee8393bf3cf))
 </details>
-
-<csr-unknown>
-Update README.md to reference DEV_NOTES.md for GPU detailsDocument which operations use GPU and their benefitsDocument what was tried and not used (for future reference)Remove standalone GPU_PERFORMANCE.md fileAlways use GPU acceleration when available (no size-based checks)Batched operations provide speedup even for smaller datasets (50K+ events)Update KDE and feature matrix code to always attempt GPU pathAdd GPU module with WGPU backend via burn frameworkImplement GPU-accelerated FFT-based KDE with complex multiplicationAdd batched GPU operations for multi-channel processingAdd GPU feature matrix building for isolation treeAdd cubeCL custom kernel support (optional feature)Add GPU correctness testsAdd GPU benchmarks for performance analysisFix Fcs::open() calls to use string slice instead of PathBuf referenceFix preprocess_fcs() call to use correct function signatureRemove unused variable warning<csr-unknown/>
 
 ## 0.1.3 (2026-01-18)
 

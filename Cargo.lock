@@ -3134,7 +3134,7 @@ dependencies = [
 
 [[package]]
 name = "flow-gates"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -3227,7 +3227,7 @@ dependencies = [
 
 [[package]]
 name = "flow-utils"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "approx 0.5.1",
@@ -6032,7 +6032,7 @@ dependencies = [
 
 [[package]]
 name = "peacoqc-rs"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "approx 0.5.1",

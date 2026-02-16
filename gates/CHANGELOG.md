@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.2 (2026-02-16)
+
+### Refactor
+
+ - <csr-id-1016027ac34ae0cb187d59d0d9562200321d5281/> derive PartialEq, Eq, Hash on FilterCacheKey
+   Replace manual impls with derive macro
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Derive PartialEq, Eq, Hash on FilterCacheKey ([`1016027`](https://github.com/jrmoynihan/flow/commit/1016027ac34ae0cb187d59d0d9562200321d5281))
+    - Merge pull request #14 from jrmoynihan/gpu-acceleration ([`01edbec`](https://github.com/jrmoynihan/flow/commit/01edbecfc222685a8e052eb26b001d3fae4dfe13))
+</details>
+
 ## 0.2.1 (2026-02-15)
 
 <csr-id-46bee42d4f28d185b38446c0d950c2579c422f43/>
@@ -91,7 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 37 commits contributed to the release over the course of 24 calendar days.
+ - 38 commits contributed to the release over the course of 24 calendar days.
  - 24 days passed between releases.
  - 33 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -103,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`b758024`](https://github.com/jrmoynihan/flow/commit/b7580243ad5dfba389d80f55d9d2b0a0adf26348))
     - Release flow-fcs v0.2.1, flow-plots v0.2.1, flow-utils v0.1.0, flow-gates v0.2.1, peacoqc-rs v0.2.0, peacoqc-cli v0.2.0, flow-tru-ols v0.1.0, flow-tru-ols-cli v0.1.0 ([`1e3ae1e`](https://github.com/jrmoynihan/flow/commit/1e3ae1e2a91b53f70120cb96987ba5a8f02dc21e))
     - Update changelogs prior to release ([`089feff`](https://github.com/jrmoynihan/flow/commit/089feff624625a5ddf0b1da570e4f60b6fedf09b))
     - Update dependencies and align workspace configurations ([`46bee42`](https://github.com/jrmoynihan/flow/commit/46bee42d4f28d185b38446c0d950c2579c422f43))
@@ -141,9 +168,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Release flow-fcs v0.2.0, safety bump 4 crates ([`cd26a89`](https://github.com/jrmoynihan/flow/commit/cd26a8970fc25dbe70c1cc9ac342b367613bcda6))
     - Adjusting changelogs prior to release of flow-fcs v0.1.6 ([`7fb88db`](https://github.com/jrmoynihan/flow/commit/7fb88db9ede05b317a03d367cea18a3b8b73c5a1))
 </details>
-
-<csr-unknown>
-Note performance targets and achievementsList future enhancementsUpdate testing statusAdd README for flow-utils crate with usage examplesAdd CRATE_RESEARCH.md documenting crate evaluation and decisionsAdd RESEARCH_NOTES.md for automated gating algorithms and decisionsDocument performance vs accuracy tradeoffsNote known limitations and future workDocument scatter gating methods and usageDocument doublet detection methods and usageDocument preprocessing pipelineInclude algorithm details and performance notesNote known limitations (clustering API, multi-population)Minor updates to scatter, filtering, gatingmlTriple total events: 20k -> 60k (most scenarios), 30k -> 90k (with_debris)Reduce FSC mean by 35% for single-population and with_doublets (50000 -> 32500)Narrow all distributions by ~40% for more concentration (except debris)Debris population keeps original wider distributionAll plots regenerated with new parametersAdd generate_with_debris function to test_helpers.rs15% debris population near origin (low FSC/SSC)All 5 scenarios now use Gaussian distributionsTests should compile and passReplace all uniform random generation with Normal distributionsUse rand_distr::Normal for realistic flow cytometry data patternsProper correlations between FSC-A/FSC-H and SSC-A/SSC-HAll scenarios now generate Poisson/Gaussian-like distributionsFixes compilation errors and improves data realismReplace uniform random blocks with Gaussian distributions using rand_distrAdd proper correlations between FSC-A/FSC-H and SSC-A/SSC-HIncrease event density (20k events for visualization)Add WithDebris scenario: 15% debris population near origin (low FSC/SSC)Debris population tests automated gating’s ability to ignore low eventsAll scenarios now use Poisson/Gaussian-like distributions for realismAdd peak_bias_negative for left-side biasing of negative peaksKeep peak_bias for right-side biasing of positive peaksBoth configurable via CLI flagsImplement extract_negative_event_autofluorescence functionUse peak detection to find negative peak (left/low peak)Calculate AF medians from negative events per endmemberSupport threshold-based fallback methodStore negative event AF separately from universal AFImplement autofluorescence_mode selection (universal, negative-events, hybrid)Weighted combination: α * universal + (1-α) * negative_eventsFallback to universal AF if negative events insufficientConfigurable af_weight (default: 0.7)Fix PNG output path in visualization exampleMove generated plots to gates/examples/synthetic_plots/Create example to visualize synthetic FCS scenarios using flow-plotsGenerate scatter plots for all 4 test scenariosDocument decision to keep synthetic FCS generation in crate-specific test helpersAvoid cyclic dependency risk by not moving to flow-utilsAdd K-means clustering method for scatter gatingAdd GMM clustering method for scatter gatingIdentify main population cluster/componentGenerate ellipse gates around main populationSupport multi-population detection structureImplement KernelDensity2D for 2D scatter plot density estimationUse 2D FFT convolution for efficient computationAdd contour extraction at density thresholdsUpdate scatter gating to use 2D KDE for better density contoursGenerate polygon gates from density contoursAdd compare_doublet_methods for head-to-head comparisonAdd compare_with_peacoqc convenience functionCalculate agreement matrix between methodsRecommend method based on agreement and performanceSupports performance vs accuracy tradeoff analysisAdd DoubletGateConfig and DoubletMethod enumsImplement ratio-based MAD method (peacoqc-rs compatible)Implement density-based detection using KDEAdd hybrid method combining multiple approachesSupport for multiple channel pairs (FSC-A/FSC-H, FSC-W/FSC-H, etc.)Note: Clustering method pending linfa API fixAdd ScatterGateConfig and ScatterGateMethod enumsImplement density contour and ellipse fit methodsAdd support for multi-population detection (placeholder)Integrate with flow-utils KDE for density estimationAdd interactive pipeline support with user review breakpointsNote: Clustering methods pending linfa API fixUpdate generate_single_population, generate_multi_population, generate_with_doublets, generate_noisy_dataIncrease main population density for with_debris (10% debris, 90% main, 30k events)All scenarios now generate realistic Gaussian/Poisson-like distributionsFixes square/rectangular distribution issue in plotsFix auto_gate dereference in function callRegenerate synthetic FCS plots with latest codeAll compilation errors resolvedAdd explicit f64->f32 casts for Normal distribution samplesFix ambiguous numeric type errorsAll generation functions now compile correctlyMaintains realistic Gaussian distributions for all scenariosChange rand from 0.9 to 0.8 to match rand_distr 0.4 requirementsFixes compilation errors in test_helpers.rsAll generation functions now use Gaussian distributions correctlyAdd WithDebris to TestScenario enumImplement generate_with_debris function with 15% debris near originUpdate match statement to include WithDebrisAll generation functions now use Gaussian distributions via rand_distrFix width/height types (u32 instead of i32)Use correct builder pattern for axis optionsImport Plot trait for render methodAdd fit_from_rows helper methods to KMeans and GMMConvert Array2 from ndarray 0.17 to Vec<Vec<f64>> for compatibilityResolve type mismatch between flow-gates (ndarray 0.17) and flow-utils (ndarray 0.16)Accidentally removed in cleanup, restore for compilationExtract recommended_method before moving results into return valueAll compilation errors resolvedRemove unnecessary clone of method_nameAdd check for empty methods vectorAll compilation errors resolvedGateHierarchy tracks relationships, not gates themselvesRemove incorrect add_gate callsGates are stored in result structsHierarchy can be used to track parent-child relationships if neededFix create_ellipse_geometry calls to use Vec<(f32, f32)> formatFix anyhow::Error conversion (doesn’t implement StdError)Fix GateStatistics::empty access (create empty stats manually)All compilation errors resolvedUse get_parameter_events_slice instead of get_channel_f64Convert f32 to f64 for processingFix error handling to use GateError::Other instead of non-existent variantsAll compilation errors resolved<csr-unknown/>
 
 ## 0.1.2 (2026-01-21)
 
