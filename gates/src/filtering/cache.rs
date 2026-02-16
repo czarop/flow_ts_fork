@@ -1,4 +1,3 @@
-use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 /// Cache key for filtered event indices
@@ -7,7 +6,7 @@ use std::sync::Arc;
 /// - The file being filtered
 /// - The gate being applied
 /// - The parent gate chain (for hierarchical filtering)
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FilterCacheKey {
     /// File GUID
     pub file_guid: Arc<str>,
@@ -42,24 +41,6 @@ impl FilterCacheKey {
             file_guid: file_guid.into(),
             gate_id: gate_id.into(),
             parent_chain: Vec::new(),
-        }
-    }
-}
-
-impl PartialEq for FilterCacheKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.file_guid == other.file_guid
-            && self.gate_id == other.gate_id
-            && self.parent_chain == other.parent_chain
-    }
-}
-
-impl Hash for FilterCacheKey {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.file_guid.hash(state);
-        self.gate_id.hash(state);
-        for parent in &self.parent_chain {
-            parent.hash(state);
         }
     }
 }
