@@ -6,7 +6,7 @@
 use crate::error::TruOlsError;
 use crate::preprocessing::{CutoffCalculator, NonspecificObservation, solve_linear_system};
 use faer::{Col, ColRef, Mat, MatRef};
-use rand::Rng;
+use rand::RngExt;
 
 /// Strategy for handling irrelevant endmember abundances.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

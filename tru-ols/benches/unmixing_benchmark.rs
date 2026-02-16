@@ -3,7 +3,7 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use faer::Mat;
 use flow_tru_ols::TruOls;
-use rand::Rng;
+use rand::RngExt;
 
 fn generate_test_data(
     n_events: usize,

@@ -545,7 +545,7 @@ impl TruOlsUnmixing for Fcs {
         }
 
         // Create new DataFrame from unmixed columns only (not the original detectors)
-        let result_df = polars::frame::DataFrame::new(result_df_columns).map_err(|e| {
+        let result_df = polars::frame::DataFrame::new_infer_height(result_df_columns).map_err(|e| {
             TruOlsError::InsufficientData(format!(
                 "Failed to create DataFrame from unmixed columns: {}",
                 e
@@ -604,7 +604,7 @@ mod tests {
             vec![10.0f32, 20.0, 30.0, 40.0, 50.0],
         ));
 
-        let df = DataFrame::new(columns).expect("Failed to create test DataFrame");
+        let df = DataFrame::new_infer_height(columns).expect("Failed to create test DataFrame");
 
         // Create parameter map
         let mut params = ParameterMap::default();
@@ -942,7 +942,7 @@ mod tests {
             vec![10.0f32, 20.0, 30.0, 40.0, 50.0],
         ));
 
-        let df = DataFrame::new(columns).expect("Failed to create test DataFrame");
+        let df = DataFrame::new_infer_height(columns).expect("Failed to create test DataFrame");
 
         let mut params = ParameterMap::default();
         params.insert(

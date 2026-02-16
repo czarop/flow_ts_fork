@@ -2,7 +2,7 @@
 
 use faer::{Mat, MatRef};
 use flow_tru_ols::{TruOls, UnmixingStrategy};
-use rand::Rng;
+use rand::RngExt;
 
 /// Generate a synthetic mixing matrix with specified dimensions
 pub fn generate_mixing_matrix(n_detectors: usize, n_endmembers: usize) -> Mat<f64> {
