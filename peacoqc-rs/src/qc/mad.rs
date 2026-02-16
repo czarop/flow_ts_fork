@@ -13,7 +13,7 @@ use crate::stats::spline::smooth_spline;
 use std::collections::HashMap;
 
 /// Configuration for MAD outlier detection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MADConfig {
     /// MAD threshold multiplier (default: 6.0)
     ///
@@ -38,7 +38,7 @@ impl Default for MADConfig {
 }
 
 /// Result of MAD outlier detection
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MADResult {
     /// Boolean mask indicating outlier bins (true = outlier)
     pub outlier_bins: Vec<bool>,

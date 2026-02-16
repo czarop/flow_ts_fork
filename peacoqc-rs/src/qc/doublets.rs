@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::stats::median_mad::median_mad_scaled;
 
 /// Configuration for doublet removal
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DoubletConfig {
     /// First channel (typically FSC-A)
     pub channel1: String,
@@ -30,7 +30,7 @@ impl Default for DoubletConfig {
 }
 
 /// Result of doublet removal
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DoubletResult {
     /// Boolean mask (true = keep, false = doublet)
     pub mask: Vec<bool>,

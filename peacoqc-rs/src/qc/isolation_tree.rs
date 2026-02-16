@@ -22,7 +22,7 @@ use std::collections::HashMap;
 use crate::gpu::{build_feature_matrix_gpu, is_gpu_available};
 
 /// Configuration for SD-based Isolation Tree
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IsolationTreeConfig {
     /// Gain threshold (default: 0.6)
     ///
@@ -48,7 +48,7 @@ impl Default for IsolationTreeConfig {
 }
 
 /// Result of Isolation Tree analysis
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IsolationTreeResult {
     /// Boolean mask indicating outlier bins (true = outlier, false = good)
     /// Bins in the largest homogeneous node are marked as good (false)
@@ -75,7 +75,7 @@ pub struct TreeNode {
     pub n_datapoints: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TreeStats {
     pub n_bins: usize,
     pub n_features: usize,

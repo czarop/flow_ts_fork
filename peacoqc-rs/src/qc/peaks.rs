@@ -3,10 +3,11 @@ use crate::error::{PeacoQCError, Result};
 use crate::stats::density::KernelDensity;
 use crate::stats::median;
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Configuration for peak detection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PeakDetectionConfig {
     /// Number of events per bin
     pub events_per_bin: usize,
@@ -33,7 +34,7 @@ impl Default for PeakDetectionConfig {
 }
 
 /// Peak information for a single bin
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeakInfo {
     pub bin: usize,
     pub peak_value: f64,
@@ -41,7 +42,7 @@ pub struct PeakInfo {
 }
 
 /// Peak detection results for a channel
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelPeakFrame {
     pub peaks: Vec<PeakInfo>,
 }

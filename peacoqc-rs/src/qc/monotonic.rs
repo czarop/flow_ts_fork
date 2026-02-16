@@ -7,7 +7,7 @@ use crate::stats::median;
 /// Matches the original R implementation parameters:
 /// - Uses kernel smoothing with bandwidth=50 (like R's ksmooth)
 /// - Checks if 75% of smoothed values are in cummax/cummin
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MonotonicConfig {
     /// Kernel smoothing bandwidth (default: 50.0, matching R's ksmooth bandwidth)
     pub bandwidth: f64,

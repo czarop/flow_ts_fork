@@ -1,7 +1,7 @@
 use crate::error::Result;
 
 /// Configuration for consecutive bin filtering
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConsecutiveConfig {
     /// Minimum number of consecutive "good" bins to keep
     pub consecutive_bins: usize,

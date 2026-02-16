@@ -7,6 +7,7 @@ use crate::qc::peaks::{
     ChannelPeakFrame, PeakDetectionConfig, create_breaks, determine_peaks_all_channels,
 };
 use crate::qc::debug;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use tracing::{debug, info, trace, warn};
@@ -129,9 +130,11 @@ impl Default for PeacoQCConfig {
 }
 
 /// PeacoQC result
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeacoQCResult {
-    /// Boolean mask of good cells (true = keep, false = remove)
+    /// Boolean mask of good cells (true = keep, false = remove).
+    /// Stored separately as binary; skipped in JSON serialization.
+    #[serde(skip)]
     pub good_cells: Vec<bool>,
 
     /// Percentage of cells removed

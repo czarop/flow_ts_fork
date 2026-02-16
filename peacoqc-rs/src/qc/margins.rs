@@ -3,7 +3,7 @@ use crate::error::{PeacoQCError, Result};
 use std::collections::HashMap;
 
 /// Configuration for margin removal
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MarginConfig {
     /// Channels to check for margin events
     pub channels: Vec<String>,
@@ -30,7 +30,7 @@ impl Default for MarginConfig {
 }
 
 /// Result of margin removal analysis
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MarginResult {
     /// Boolean mask indicating which events to keep (true = keep, false = remove)
     pub mask: Vec<bool>,
