@@ -3,7 +3,7 @@
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Command-line tool for PeacoQC (Peak-based Quality Control) for flow cytometry FCS files built on top of the [`peacoqc-rs` crate](https://crates.io/crates/peacoqc-rs), which implements the PeacoQC algorithm. The CLI provides a simple interface to run quality control on one or more FCS files with parallel processing support.
+Command-line tool for [PeacoQC (Peak-based Quality Control)](https://doi.org/10.1002/cyto.a.24501) for flow cytometry FCS files built on top of the [`peacoqc-rs` crate](https://crates.io/crates/peacoqc-rs), which implements the PeacoQC algorithm. The CLI provides a simple interface to run quality control on one or more FCS files with parallel processing support.
 
 ## Installation
 
